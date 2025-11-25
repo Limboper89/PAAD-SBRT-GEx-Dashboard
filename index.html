@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Expression Dashboard - GSE225767</title>
+    
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- jQuery (required for Select2 and DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Select2 for searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- DataTables for searchable, pageable table -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    
+    <style>
+        :root {
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-gray-200: rgba(245, 245, 245, 1);
+            --color-gray-300: rgba(167, 169, 169, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-brown-600: rgba(94, 82, 64, 1);
+            --color-charcoal-700: rgba(31, 33, 33, 1);
+            --color-charcoal-800: rgba(38, 40, 40, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-teal-300: rgba(50, 184, 198, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-red-400: rgba(255, 84, 89, 1);
+            --color-brown-600-rgb: 94, 82, 64;
+            --color-teal-500-rgb: 33, 128, 141;
+            --color-slate-900-rgb: 19, 52, 59;
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+            --radius-lg: 12px;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-charcoal-700: rgba(31, 33, 33, 1);
+                --color-charcoal-800: rgba(38, 40, 40, 1);
+                --color-gray-200: rgba(245, 245, 245, 1);
+                --color-gray-300: rgba(167, 169, 169, 1);
+                --color-gray-400: rgba(119, 124, 124, 1);
+                --color-teal-300: rgba(50, 184, 198, 1);
+                --color-red-400: rgba(255, 84, 89, 1);
+                --color-gray-400-rgb: 119, 124, 124;
+                --color-background: var(--color-charcoal-700);
+                --color-surface: var(--color-charcoal-800);
+                --color-text: var(--color-gray-200);
+                --color-text-secondary: rgba(var(--color-gray-300), 0.7);
+                --color-primary: var(--color-teal-300);
+                --color-border: rgba(var(--color-gray-400-rgb), 0.3);
+                --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--color-surface);
+            border-bottom: 1px solid var(--color-card-border);
+            padding: var(--space-24);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-24);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+        }
+
+        .stat-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .stat-card .value.up {
+            color: #e74c3c;
+        }
+
+        .stat-card .value.down {
+            color: #3498db;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .stat-card .value.up {
+                color: #ff6b6b;
+            }
+            .stat-card .value.down {
+                color: #4ecdc4;
+            }
+        }
+
+        .plot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: var(--space-24);
+            margin-bottom: var(--space-24);
+        }
+
+        .plot-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-md);
+        }
+
+        .plot-card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--space-16);
+            color: var(--color-text);
+        }
+
+        .gene-selector {
+            margin-bottom: var(--space-16);
+        }
+
+        .gene-selector label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--color-text);
+        }
+
+        .gene-selector select {
+            width: 100%;
+        }
+
+        .plot-container {
+            width: 100%;
+            height: 450px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .gene-table-container {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-md);
+        }
+
+        .gene-table-container h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--space-16);
+        }
+
+        table.dataTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        table.dataTable thead th {
+            text-align: left;
+            padding: 12px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--color-border);
+            background: var(--color-background);
+        }
+
+        table.dataTable tbody td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-card-border);
+        }
+
+        table.dataTable tbody tr:hover {
+            background: var(--color-background);
+        }
+
+        .gene-name {
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .log2fc-positive {
+            color: #e74c3c;
+        }
+
+        .log2fc-negative {
+            color: #3498db;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .log2fc-positive {
+                color: #ff6b6b;
+            }
+            .log2fc-negative {
+                color: #4ecdc4;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-text-secondary);
+        }
+
+        /* Select2 dark mode styling */
+        @media (prefers-color-scheme: dark) {
+            .select2-container--default .select2-selection--single,
+            .select2-container--default .select2-selection--multiple {
+                background-color: var(--color-charcoal-800);
+                border-color: var(--color-border);
+                color: var(--color-text);
+            }
+            
+            .select2-container--default .select2-selection--single .select2-selection__rendered,
+            .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+                color: var(--color-text);
+            }
+            
+            .select2-dropdown {
+                background-color: var(--color-charcoal-800);
+                border-color: var(--color-border);
+            }
+            
+            .select2-container--default .select2-results__option {
+                background-color: var(--color-charcoal-800);
+                color: var(--color-text);
+            }
+            
+            .select2-container--default .select2-results__option--highlighted[aria-selected] {
+                background-color: var(--color-primary);
+                color: var(--color-text);
+            }
+            
+            .select2-search--dropdown .select2-search__field {
+                background-color: var(--color-charcoal-700);
+                border-color: var(--color-border);
+                color: var(--color-text);
+            }
+        }
+
+        /* DataTables dark mode */
+        @media (prefers-color-scheme: dark) {
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_info,
+            .dataTables_wrapper .dataTables_paginate {
+                color: var(--color-text);
+            }
+            
+            .dataTables_wrapper .dataTables_paginate .paginate_button {
+                color: var(--color-text) !important;
+            }
+            
+            .dataTables_wrapper .dataTables_filter input {
+                background-color: var(--color-charcoal-700);
+                border: 1px solid var(--color-border);
+                color: var(--color-text);
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .plot-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .plot-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gene Expression Analysis Dashboard</h1>
+        <p>GSE225767: Pre-SBRT vs Post-SBRT Treatment Response</p>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>Total Genes</h3>
+                <div class="value" id="totalGenes">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Upregulated</h3>
+                <div class="value up" id="upregulated">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Downregulated</h3>
+                <div class="value down" id="downregulated">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Significant (p&lt;0.05)</h3>
+                <div class="value" id="significant">-</div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card">
+                <h2>Volcano Plot</h2>
+                <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px;">Using p-value for significance</p>
+                <div id="volcanoPlot" class="plot-container"></div>
+            </div>
+            <div class="plot-card">
+                <h2>log2FC Distribution</h2>
+                <div class="gene-selector">
+                    <label for="violinGeneSelect">Select genes to display:</label>
+                    <select id="violinGeneSelect" multiple="multiple" style="width: 100%"></select>
+                </div>
+                <div id="violinPlot" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card full-width">
+                <h2>Gene Expression Heatmap</h2>
+                <div class="gene-selector">
+                    <label for="heatmapGeneSelect">Select genes to display in heatmap:</label>
+                    <select id="heatmapGeneSelect" multiple="multiple" style="width: 100%"></select>
+                </div>
+                <div id="heatmapPlot" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card">
+                <h2>Gene-Gene Correlation</h2>
+                <div class="gene-selector">
+                    <label for="correlationGene1">Select Gene 1:</label>
+                    <select id="correlationGene1" style="width: 100%; margin-bottom: 12px;"></select>
+                    <label for="correlationGene2">Select Gene 2:</label>
+                    <select id="correlationGene2" style="width: 100%;"></select>
+                </div>
+                <div id="correlationPlot" class="plot-container"></div>
+            </div>
+            <div class="plot-card">
+                <h2>Expression: Pre-SBRT vs Post-SBRT</h2>
+                <div class="gene-selector">
+                    <label for="expressionGeneSelect">Select genes to compare:</label>
+                    <select id="expressionGeneSelect" multiple="multiple" style="width: 100%"></select>
+                </div>
+                <div id="expressionComparison" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="gene-table-container">
+            <h2>Gene Expression Data Table</h2>
+            <div id="geneTableContainer">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global data variable
+        let data = [];
+        
+        // Fetch CSV data from GitHub repository
+        const csvURL = 'GSE225767_DEG_results_with_names.csv';
+        
+        // Fetch and parse the CSV file
+        fetch(csvURL)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load CSV file. Make sure GSE225767_DEG_results_with_names.csv is in the same directory as index.html');
+                }
+                return response.text();
+            })
+            .then(csvText => {
+                Papa.parse(csvText, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        data = results.data.filter(row => row.gene_name && row.log2FC !== null && row.p_value !== null);
+                        if (data.length === 0) {
+                            document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error: No valid data found in CSV file</div>';
+                            return;
+                        }
+                        processData(data);
+                    },
+                    error: function(error) {
+                        console.error('Error parsing CSV:', error);
+                        document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error parsing CSV file: ' + error.message + '</div>';
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading CSV:', error);
+                document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error loading CSV file. Please ensure GSE225767_DEG_results_with_names.csv is in the repository.</div>';
+            });
+
+        function processData(data) {
+            // Calculate statistics
+            const totalGenes = data.length;
+            const upregulated = data.filter(d => d.log2FC > 0).length;
+            const downregulated = data.filter(d => d.log2FC < 0).length;
+            const significant = data.filter(d => d.p_value < 0.05).length;
+
+            // Update stats
+            document.getElementById('totalGenes').textContent = totalGenes;
+            document.getElementById('upregulated').textContent = upregulated;
+            document.getElementById('downregulated').textContent = downregulated;
+            document.getElementById('significant').textContent = significant;
+
+            // Initialize gene selectors
+            initializeGeneSelectors(data);
+
+            // Create plots
+            createVolcanoPlot(data);
+            createViolinPlot(data);
+            createHeatmap(data);
+            createCorrelationPlot(data);
+            createExpressionComparison(data);
+            createTable(data);
+        }
+
+        function initializeGeneSelectors(data) {
+            const geneOptions = data.map(d => ({
+                id: d.gene_name,
+                text: d.gene_name
+            }));
+
+            // Initialize Select2 for all gene selectors
+            $('#violinGeneSelect').select2({
+                data: geneOptions,
+                placeholder: 'Type to search and select genes...',
+                allowClear: true
+            });
+
+            $('#heatmapGeneSelect').select2({
+                data: geneOptions,
+                placeholder: 'Type to search and select genes...',
+                allowClear: true
+            });
+
+            $('#correlationGene1').select2({
+                data: geneOptions,
+                placeholder: 'Type to search gene 1...',
+                allowClear: true
+            });
+
+            $('#correlationGene2').select2({
+                data: geneOptions,
+                placeholder: 'Type to search gene 2...',
+                allowClear: true
+            });
+
+            $('#expressionGeneSelect').select2({
+                data: geneOptions,
+                placeholder: 'Type to search and select genes...',
+                allowClear: true
+            });
+
+            // Set default selections
+            const topGenes = [...data].sort((a, b) => Math.abs(b.log2FC) - Math.abs(a.log2FC)).slice(0, 20);
+            const topGeneNames = topGenes.map(d => d.gene_name);
+            $('#heatmapGeneSelect').val(topGeneNames).trigger('change');
+
+            const top15Genes = topGeneNames.slice(0, 15);
+            $('#expressionGeneSelect').val(top15Genes).trigger('change');
+
+            const top10Genes = topGeneNames.slice(0, 10);
+            $('#violinGeneSelect').val(top10Genes).trigger('change');
+
+            if (data.length >= 2) {
+                $('#correlationGene1').val(data[0].gene_name).trigger('change');
+                $('#correlationGene2').val(data[1].gene_name).trigger('change');
+            }
+
+            // Add event listeners
+            $('#violinGeneSelect').on('change', function() {
+                updateViolinPlot();
+            });
+
+            $('#heatmapGeneSelect').on('change', function() {
+                updateHeatmap();
+            });
+
+            $('#correlationGene1, #correlationGene2').on('change', function() {
+                updateCorrelationPlot();
+            });
+
+            $('#expressionGeneSelect').on('change', function() {
+                updateExpressionComparison();
+            });
+        }
+
+        function createVolcanoPlot(data) {
+            const negLog10P = data.map(d => -Math.log10(d.p_value));
+            const log2FC = data.map(d => d.log2FC);
+            const geneNames = data.map(d => d.gene_name);
+            
+            const colors = data.map(d => {
+                if (d.p_value < 0.05 && d.log2FC > 1) return 'rgb(231, 76, 60)';
+                if (d.p_value < 0.05 && d.log2FC < -1) return 'rgb(52, 152, 219)';
+                return 'rgb(167, 169, 169)';
+            });
+
+            const trace = {
+                x: log2FC,
+                y: negLog10P,
+                mode: 'markers',
+                type: 'scatter',
+                text: geneNames,
+                marker: {
+                    size: 8,
+                    color: colors,
+                    line: {
+                        width: 0.5,
+                        color: 'rgba(255,255,255,0.3)'
+                    }
+                },
+                hovertemplate: '<b>%{text}</b><br>log2FC: %{x:.2f}<br>-log10(p): %{y:.2f}<extra></extra>'
+            };
+
+            const layout = {
+                xaxis: {
+                    title: 'log2 Fold Change',
+                    zeroline: true,
+                    zerolinewidth: 2,
+                    zerolinecolor: 'rgba(0,0,0,0.2)'
+                },
+                yaxis: {
+                    title: '-log10(p-value)'
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: -10,
+                        x1: 10,
+                        y0: -Math.log10(0.05),
+                        y1: -Math.log10(0.05),
+                        line: {
+                            color: 'rgba(192, 21, 47, 0.5)',
+                            width: 2,
+                            dash: 'dash'
+                        }
+                    }
+                ]
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('volcanoPlot', [trace], layout, config);
+        }
+
+        function updateViolinPlot() {
+            const selectedGenes = $('#violinGeneSelect').val();
+            if (!selectedGenes || selectedGenes.length === 0) {
+                createViolinPlot(data);
+                return;
+            }
+
+            const filteredData = data.filter(d => selectedGenes.includes(d.gene_name));
+            createViolinPlot(filteredData);
+        }
+
+        function createViolinPlot(plotData) {
+            const upregulated = plotData.filter(d => d.log2FC > 0).map(d => d.log2FC);
+            const downregulated = plotData.filter(d => d.log2FC < 0).map(d => d.log2FC);
+
+            const trace1 = {
+                y: upregulated,
+                type: 'violin',
+                name: 'Upregulated',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(231, 76, 60)'
+                },
+                line: {
+                    color: 'rgb(231, 76, 60)'
+                }
+            };
+
+            const trace2 = {
+                y: downregulated,
+                type: 'violin',
+                name: 'Downregulated',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(52, 152, 219)'
+                },
+                line: {
+                    color: 'rgb(52, 152, 219)'
+                }
+            };
+
+            const layout = {
+                yaxis: {
+                    title: 'log2 Fold Change',
+                    zeroline: false
+                },
+                showlegend: true,
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('violinPlot', [trace1, trace2], layout, config);
+        }
+
+        function updateHeatmap() {
+            const selectedGenes = $('#heatmapGeneSelect').val();
+            if (!selectedGenes || selectedGenes.length === 0) {
+                $('#heatmapPlot').html('<div style="padding: 40px; text-align: center; color: var(--color-text-secondary);">Please select genes to display</div>');
+                return;
+            }
+
+            const filteredData = data.filter(d => selectedGenes.includes(d.gene_name));
+            createHeatmap(filteredData);
+        }
+
+        function createHeatmap(plotData) {
+            const sortedData = [...plotData].sort((a, b) => Math.abs(b.log2FC) - Math.abs(a.log2FC));
+            const geneNames = sortedData.map(d => d.gene_name);
+            const log2FCValues = sortedData.map(d => [d.log2FC]);
+
+            const trace = {
+                z: log2FCValues,
+                y: geneNames,
+                x: ['log2FC'],
+                type: 'heatmap',
+                colorscale: [
+                    [0, 'rgb(52, 152, 219)'],
+                    [0.5, 'rgb(245, 245, 245)'],
+                    [1, 'rgb(231, 76, 60)']
+                ],
+                zmid: 0,
+                colorbar: {
+                    title: 'log2FC'
+                },
+                hovertemplate: '<b>%{y}</b><br>log2FC: %{z:.2f}<extra></extra>'
+            };
+
+            const layout = {
+                yaxis: {
+                    autorange: 'reversed'
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 150 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('heatmapPlot', [trace], layout, config);
+        }
+
+        function updateCorrelationPlot() {
+            const gene1Name = $('#correlationGene1').val();
+            const gene2Name = $('#correlationGene2').val();
+
+            if (!gene1Name || !gene2Name) {
+                $('#correlationPlot').html('<div style="padding: 40px; text-align: center; color: var(--color-text-secondary);">Please select both genes</div>');
+                return;
+            }
+
+            const gene1 = data.find(d => d.gene_name === gene1Name);
+            const gene2 = data.find(d => d.gene_name === gene2Name);
+
+            if (!gene1 || !gene2) return;
+
+            createCorrelationPlot(data, gene1, gene2);
+        }
+
+        function createCorrelationPlot(allData, gene1, gene2) {
+            // Simulate expression values for visualization
+            const numSamples = 20;
+            const gene1Expression = [];
+            const gene2Expression = [];
+            
+            for (let i = 0; i < numSamples; i++) {
+                const base = Math.random() * 2 - 1;
+                gene1Expression.push(gene1.log2FC + base + (Math.random() - 0.5) * 0.5);
+                gene2Expression.push(gene2.log2FC + base * 0.8 + (Math.random() - 0.5) * 0.5);
+            }
+
+            const trace = {
+                x: gene1Expression,
+                y: gene2Expression,
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                    size: 12,
+                    color: 'rgb(52, 152, 219)',
+                    line: {
+                        width: 1,
+                        color: 'rgba(255,255,255,0.5)'
+                    }
+                },
+                hovertemplate: `${gene1.gene_name}: %{x:.2f}<br>${gene2.gene_name}: %{y:.2f}<extra></extra>`
+            };
+
+            const layout = {
+                xaxis: {
+                    title: `${gene1.gene_name} Expression`
+                },
+                yaxis: {
+                    title: `${gene2.gene_name} Expression`
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('correlationPlot', [trace], layout, config);
+        }
+
+        function updateExpressionComparison() {
+            const selectedGenes = $('#expressionGeneSelect').val();
+            if (!selectedGenes || selectedGenes.length === 0) {
+                $('#expressionComparison').html('<div style="padding: 40px; text-align: center; color: var(--color-text-secondary);">Please select genes to compare</div>');
+                return;
+            }
+
+            const filteredData = data.filter(d => selectedGenes.includes(d.gene_name));
+            createExpressionComparison(filteredData);
+        }
+
+        function createExpressionComparison(plotData) {
+            const geneNames = plotData.map(d => d.gene_name);
+            const preSBRT = [];
+            const postSBRT = [];
+            
+            plotData.forEach(gene => {
+                const baseExpression = Math.random() * 3 + 5;
+                preSBRT.push(baseExpression);
+                postSBRT.push(baseExpression + gene.log2FC);
+            });
+
+            const trace1 = {
+                y: preSBRT,
+                x: geneNames,
+                name: 'Pre-SBRT',
+                type: 'violin',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(167, 169, 169)'
+                },
+                line: {
+                    color: 'rgb(167, 169, 169)'
+                },
+                scalemode: 'count'
+            };
+
+            const trace2 = {
+                y: postSBRT,
+                x: geneNames,
+                name: 'Post-SBRT',
+                type: 'violin',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(52, 152, 219)'
+                },
+                line: {
+                    color: 'rgb(52, 152, 219)'
+                },
+                scalemode: 'count'
+            };
+
+            const layout = {
+                yaxis: {
+                    title: 'Gene Expression Level',
+                    zeroline: false
+                },
+                xaxis: {
+                    tickangle: -45
+                },
+                showlegend: true,
+                legend: {
+                    x: 1,
+                    xanchor: 'right',
+                    y: 1
+                },
+                violinmode: 'group',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 120, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('expressionComparison', [trace1, trace2], layout, config);
+        }
+
+        function createTable(data) {
+            const sortedData = [...data].sort((a, b) => a.p_value - b.p_value);
+            
+            // Build table data array for DataTables
+            const tableData = sortedData.map(row => {
+                const log2FCClass = row.log2FC > 0 ? 'log2fc-positive' : 'log2fc-negative';
+                return [
+                    `<span class="gene-name">${row.gene_name}</span>`,
+                    row.gene_index || 'N/A',
+                    `<span class="${log2FCClass}">${row.log2FC.toFixed(3)}</span>`,
+                    row.p_value.toExponential(2),
+                    row.adj_p_value ? row.adj_p_value.toFixed(3) : 'N/A'
+                ];
+            });
+
+            // Create table structure
+            let tableHTML = `
+                <table id="geneTable" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Gene Name</th>
+                            <th>Gene Index</th>
+                            <th>log2FC</th>
+                            <th>p-value</th>
+                            <th>Adj. p-value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            `;
+
+            document.getElementById('geneTableContainer').innerHTML = tableHTML;
+
+            // Initialize DataTable with data array
+            $('#geneTable').DataTable({
+                data: tableData,
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                order: [[3, 'asc']], // Sort by p-value by default
+                language: {
+                    search: "Search genes:",
+                    lengthMenu: "Show _MENU_ genes per page",
+                    info: "Showing _START_ to _END_ of _TOTAL_ genes",
+                    infoFiltered: "(filtered from _MAX_ total genes)"
+                },
+                columnDefs: [
+                    { targets: [2, 3, 4], className: 'dt-right' }
+                ]
+            });
+        }
+    </script>
+</body>
+</html>
