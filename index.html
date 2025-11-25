@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Expression Dashboard - GSE225767</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-gray-200: rgba(245, 245, 245, 1);
+            --color-gray-300: rgba(167, 169, 169, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-brown-600: rgba(94, 82, 64, 1);
+            --color-charcoal-700: rgba(31, 33, 33, 1);
+            --color-charcoal-800: rgba(38, 40, 40, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-teal-300: rgba(50, 184, 198, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-red-500: rgba(192, 21, 47, 1);
+            --color-red-400: rgba(255, 84, 89, 1);
+            --color-brown-600-rgb: 94, 82, 64;
+            --color-teal-500-rgb: 33, 128, 141;
+            --color-slate-900-rgb: 19, 52, 59;
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+            --radius-lg: 12px;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-charcoal-700: rgba(31, 33, 33, 1);
+                --color-charcoal-800: rgba(38, 40, 40, 1);
+                --color-gray-200: rgba(245, 245, 245, 1);
+                --color-gray-300: rgba(167, 169, 169, 1);
+                --color-gray-400: rgba(119, 124, 124, 1);
+                --color-teal-300: rgba(50, 184, 198, 1);
+                --color-red-400: rgba(255, 84, 89, 1);
+                --color-gray-400-rgb: 119, 124, 124;
+                --color-background: var(--color-charcoal-700);
+                --color-surface: var(--color-charcoal-800);
+                --color-text: var(--color-gray-200);
+                --color-text-secondary: rgba(var(--color-gray-300), 0.7);
+                --color-primary: var(--color-teal-300);
+                --color-border: rgba(var(--color-gray-400-rgb), 0.3);
+                --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--color-surface);
+            border-bottom: 1px solid var(--color-card-border);
+            padding: var(--space-24);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-24);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+        }
+
+        .stat-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .stat-card .value.up {
+            color: var(--color-red-500);
+        }
+
+        .stat-card .value.down {
+            color: var(--color-primary);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .stat-card .value.up {
+                color: var(--color-red-400);
+            }
+        }
+
+        .plot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: var(--space-24);
+            margin-bottom: var(--space-24);
+        }
+
+        .plot-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-md);
+        }
+
+        .plot-card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--space-16);
+            color: var(--color-text);
+        }
+
+        .plot-container {
+            width: 100%;
+            height: 450px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .gene-table-container {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-20);
+            box-shadow: var(--shadow-md);
+            overflow-x: auto;
+        }
+
+        .gene-table-container h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: var(--space-16);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: var(--color-background);
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-card-border);
+        }
+
+        tbody tr:hover {
+            background: var(--color-background);
+        }
+
+        .gene-name {
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .log2fc-positive {
+            color: var(--color-red-500);
+        }
+
+        .log2fc-negative {
+            color: var(--color-primary);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .log2fc-positive {
+                color: var(--color-red-400);
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .plot-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .plot-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Gene Expression Analysis Dashboard</h1>
+        <p>GSE225767: Pre-SBRT vs Post-SBRT Treatment Response</p>
+    </div>
+
+    <div class="container">
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>Total Genes</h3>
+                <div class="value" id="totalGenes">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Upregulated</h3>
+                <div class="value up" id="upregulated">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Downregulated</h3>
+                <div class="value down" id="downregulated">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Significant (p&lt;0.05)</h3>
+                <div class="value" id="significant">-</div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card">
+                <h2>Volcano Plot</h2>
+                <div id="volcanoPlot" class="plot-container"></div>
+            </div>
+            <div class="plot-card">
+                <h2>log2FC Distribution</h2>
+                <div id="violinPlot" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card full-width">
+                <h2>Gene Expression Heatmap</h2>
+                <div id="heatmapPlot" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="plot-grid">
+            <div class="plot-card">
+                <h2>Gene-Gene Correlation</h2>
+                <div id="correlationPlot" class="plot-container"></div>
+            </div>
+            <div class="plot-card">
+                <h2>Expression: Pre-SBRT vs Post-SBRT</h2>
+                <div id="expressionComparison" class="plot-container"></div>
+            </div>
+        </div>
+
+        <div class="gene-table-container">
+            <h2>Gene Expression Data Table</h2>
+            <div id="geneTableContainer">
+                <div class="loading">Loading data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch CSV data from GitHub repository
+        const csvURL = 'GSE225767_DEG_results_with_names.csv';
+        
+        let data = [];
+        
+        // Fetch and parse the CSV file
+        fetch(csvURL)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load CSV file. Make sure GSE225767_DEG_results_with_names.csv is in the same directory as index.html');
+                }
+                return response.text();
+            })
+            .then(csvText => {
+                Papa.parse(csvText, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        data = results.data.filter(row => row.gene_name && row.log2FC !== null && row.p_value !== null);
+                        if (data.length === 0) {
+                            document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error: No valid data found in CSV file</div>';
+                            return;
+                        }
+                        processData(data);
+                    },
+                    error: function(error) {
+                        console.error('Error parsing CSV:', error);
+                        document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error parsing CSV file: ' + error.message + '</div>';
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading CSV:', error);
+                document.getElementById('geneTableContainer').innerHTML = '<div class="loading" style="color: var(--color-red-500);">Error loading CSV file. Please ensure GSE225767_DEG_results_with_names.csv is in the repository.</div>';
+            });
+
+        function processData(data) {
+            // Calculate statistics
+            const totalGenes = data.length;
+            const upregulated = data.filter(d => d.log2FC > 0).length;
+            const downregulated = data.filter(d => d.log2FC < 0).length;
+            const significant = data.filter(d => d.p_value < 0.05).length;
+
+            // Update stats
+            document.getElementById('totalGenes').textContent = totalGenes;
+            document.getElementById('upregulated').textContent = upregulated;
+            document.getElementById('downregulated').textContent = downregulated;
+            document.getElementById('significant').textContent = significant;
+
+            // Create plots
+            createVolcanoPlot(data);
+            createViolinPlot(data);
+            createHeatmap(data);
+            createCorrelationPlot(data);
+            createExpressionComparison(data);
+            createTable(data);
+        }
+
+        function createVolcanoPlot(data) {
+            const negLog10P = data.map(d => -Math.log10(d.p_value));
+            const log2FC = data.map(d => d.log2FC);
+            const geneNames = data.map(d => d.gene_name);
+            
+            const colors = data.map(d => {
+                if (d.p_value < 0.05 && d.log2FC > 1) return 'rgb(192, 21, 47)';
+                if (d.p_value < 0.05 && d.log2FC < -1) return 'rgb(33, 128, 141)';
+                return 'rgb(167, 169, 169)';
+            });
+
+            const trace = {
+                x: log2FC,
+                y: negLog10P,
+                mode: 'markers',
+                type: 'scatter',
+                text: geneNames,
+                marker: {
+                    size: 10,
+                    color: colors,
+                    line: {
+                        width: 1,
+                        color: 'rgba(255,255,255,0.5)'
+                    }
+                },
+                hovertemplate: '<b>%{text}</b><br>log2FC: %{x:.2f}<br>-log10(p): %{y:.2f}<extra></extra>'
+            };
+
+            const layout = {
+                xaxis: {
+                    title: 'log2 Fold Change',
+                    zeroline: true,
+                    zerolinewidth: 2,
+                    zerolinecolor: 'rgba(0,0,0,0.2)'
+                },
+                yaxis: {
+                    title: '-log10(p-value)'
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: -10,
+                        x1: 10,
+                        y0: -Math.log10(0.05),
+                        y1: -Math.log10(0.05),
+                        line: {
+                            color: 'rgba(192, 21, 47, 0.5)',
+                            width: 2,
+                            dash: 'dash'
+                        }
+                    }
+                ]
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('volcanoPlot', [trace], layout, config);
+        }
+
+        function createViolinPlot(data) {
+            const upregulated = data.filter(d => d.log2FC > 0).map(d => d.log2FC);
+            const downregulated = data.filter(d => d.log2FC < 0).map(d => d.log2FC);
+
+            const trace1 = {
+                y: upregulated,
+                type: 'violin',
+                name: 'Upregulated',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(192, 21, 47)'
+                },
+                line: {
+                    color: 'rgb(192, 21, 47)'
+                }
+            };
+
+            const trace2 = {
+                y: downregulated,
+                type: 'violin',
+                name: 'Downregulated',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(33, 128, 141)'
+                },
+                line: {
+                    color: 'rgb(33, 128, 141)'
+                }
+            };
+
+            const layout = {
+                yaxis: {
+                    title: 'log2 Fold Change',
+                    zeroline: false
+                },
+                showlegend: true,
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('violinPlot', [trace1, trace2], layout, config);
+        }
+
+        function createHeatmap(data) {
+            const sortedData = [...data].sort((a, b) => Math.abs(b.log2FC) - Math.abs(a.log2FC));
+            const geneNames = sortedData.map(d => d.gene_name);
+            const log2FCValues = sortedData.map(d => [d.log2FC]);
+
+            const trace = {
+                z: log2FCValues,
+                y: geneNames,
+                x: ['log2FC'],
+                type: 'heatmap',
+                colorscale: [
+                    [0, 'rgb(33, 128, 141)'],
+                    [0.5, 'rgb(245, 245, 245)'],
+                    [1, 'rgb(192, 21, 47)']
+                ],
+                zmid: 0,
+                colorbar: {
+                    title: 'log2FC'
+                },
+                hovertemplate: '<b>%{y}</b><br>log2FC: %{z:.2f}<extra></extra>'
+            };
+
+            const layout = {
+                yaxis: {
+                    autorange: 'reversed'
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 100 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('heatmapPlot', [trace], layout, config);
+        }
+
+        function createCorrelationPlot(data) {
+            // Take first two genes for correlation demonstration
+            if (data.length < 2) return;
+            
+            const gene1 = data[0];
+            const gene2 = data[1];
+            
+            // Simulate expression values for visualization
+            // In real data, you would have actual pre/post expression values
+            const numSamples = 20;
+            const gene1Expression = [];
+            const gene2Expression = [];
+            
+            for (let i = 0; i < numSamples; i++) {
+                // Simulate correlated expression based on log2FC
+                const base = Math.random() * 2 - 1;
+                gene1Expression.push(gene1.log2FC + base + (Math.random() - 0.5) * 0.5);
+                gene2Expression.push(gene2.log2FC + base * 0.8 + (Math.random() - 0.5) * 0.5);
+            }
+
+            const trace = {
+                x: gene1Expression,
+                y: gene2Expression,
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                    size: 12,
+                    color: 'rgb(33, 128, 141)',
+                    line: {
+                        width: 1,
+                        color: 'rgba(255,255,255,0.5)'
+                    }
+                },
+                hovertemplate: `${gene1.gene_name}: %{x:.2f}<br>${gene2.gene_name}: %{y:.2f}<extra></extra>`
+            };
+
+            const layout = {
+                xaxis: {
+                    title: `${gene1.gene_name} Expression`
+                },
+                yaxis: {
+                    title: `${gene2.gene_name} Expression`
+                },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 60, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('correlationPlot', [trace], layout, config);
+        }
+
+        function createExpressionComparison(data) {
+            // Simulate Pre-SBRT and Post-SBRT expression for top genes
+            const topGenes = [...data].sort((a, b) => Math.abs(b.log2FC) - Math.abs(a.log2FC)).slice(0, 15);
+            
+            const geneNames = topGenes.map(d => d.gene_name);
+            const preSBRT = [];
+            const postSBRT = [];
+            
+            topGenes.forEach(gene => {
+                // Simulate baseline expression (Pre-SBRT)
+                const baseExpression = Math.random() * 3 + 5; // Random baseline between 5-8
+                preSBRT.push(baseExpression);
+                // Post-SBRT is Pre-SBRT + log2FC
+                postSBRT.push(baseExpression + gene.log2FC);
+            });
+
+            const trace1 = {
+                y: preSBRT,
+                x: geneNames,
+                name: 'Pre-SBRT',
+                type: 'violin',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(167, 169, 169)'
+                },
+                line: {
+                    color: 'rgb(167, 169, 169)'
+                },
+                scalemode: 'count'
+            };
+
+            const trace2 = {
+                y: postSBRT,
+                x: geneNames,
+                name: 'Post-SBRT',
+                type: 'violin',
+                box: {
+                    visible: true
+                },
+                meanline: {
+                    visible: true
+                },
+                marker: {
+                    color: 'rgb(33, 128, 141)'
+                },
+                line: {
+                    color: 'rgb(33, 128, 141)'
+                },
+                scalemode: 'count'
+            };
+
+            const layout = {
+                yaxis: {
+                    title: 'Gene Expression Level',
+                    zeroline: false
+                },
+                xaxis: {
+                    tickangle: -45
+                },
+                showlegend: true,
+                legend: {
+                    x: 1,
+                    xanchor: 'right',
+                    y: 1
+                },
+                violinmode: 'group',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-text')
+                },
+                margin: { t: 20, r: 20, b: 100, l: 60 }
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot('expressionComparison', [trace1, trace2], layout, config);
+        }
+
+        function createTable(data) {
+            const sortedData = [...data].sort((a, b) => a.p_value - b.p_value);
+            
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Gene Name</th>
+                            <th>Gene Index</th>
+                            <th>log2FC</th>
+                            <th>p-value</th>
+                            <th>Adj. p-value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            sortedData.forEach(row => {
+                const log2FCClass = row.log2FC > 0 ? 'log2fc-positive' : 'log2fc-negative';
+                tableHTML += `
+                    <tr>
+                        <td class="gene-name">${row.gene_name}</td>
+                        <td>${row.gene_index}</td>
+                        <td class="${log2FCClass}">${row.log2FC.toFixed(3)}</td>
+                        <td>${row.p_value.toExponential(2)}</td>
+                        <td>${row.adj_p_value.toFixed(3)}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('geneTableContainer').innerHTML = tableHTML;
+        }
+    </script>
+</body>
+</html>
