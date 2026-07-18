@@ -1,0 +1,6807 @@
+{
+  "dataset_id": "PDAC_Spatial",
+  "dataset_name": "PDAC Spatial Transcriptomics (10x Visium)",
+  "description": "Spatial mapping of metabolic reprogramming and cell types in human pancreatic adenocarcinoma.",
+  "spots": [
+    {
+      "id": "spot_0_0",
+      "x": 0.84,
+      "y": -2.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.36,
+        "PHGDH": 3.07,
+        "PSAT1": 1.34,
+        "CD8A": 0.0,
+        "CD68": 0.94,
+        "GAPDH": 7.83,
+        "EPCAM": 0.61,
+        "COL1A1": 9.28,
+        "ACTA2": 8.26
+      }
+    },
+    {
+      "id": "spot_0_1",
+      "x": 13.19,
+      "y": 0.9,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.2,
+        "PHGDH": 2.25,
+        "PSAT1": 2.69,
+        "CD8A": 0.22,
+        "CD68": 0.34,
+        "GAPDH": 7.82,
+        "EPCAM": 0.0,
+        "COL1A1": 9.01,
+        "ACTA2": 8.69
+      }
+    },
+    {
+      "id": "spot_0_2",
+      "x": 32.74,
+      "y": -0.98,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.16,
+        "PHGDH": 2.76,
+        "PSAT1": 1.03,
+        "CD8A": 0.0,
+        "CD68": 0.31,
+        "GAPDH": 6.76,
+        "EPCAM": 0.78,
+        "COL1A1": 9.1,
+        "ACTA2": 7.33
+      }
+    },
+    {
+      "id": "spot_0_3",
+      "x": 45.71,
+      "y": 2.17,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.84,
+        "PHGDH": 2.05,
+        "PSAT1": 1.72,
+        "CD8A": 0.27,
+        "CD68": 0.89,
+        "GAPDH": 7.88,
+        "EPCAM": 0.41,
+        "COL1A1": 9.59,
+        "ACTA2": 8.69
+      }
+    },
+    {
+      "id": "spot_0_4",
+      "x": 60.81,
+      "y": -0.81,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.32,
+        "PHGDH": 2.56,
+        "PSAT1": 2.7,
+        "CD8A": 0.0,
+        "CD68": 0.12,
+        "GAPDH": 7.27,
+        "EPCAM": 0.15,
+        "COL1A1": 8.84,
+        "ACTA2": 7.08
+      }
+    },
+    {
+      "id": "spot_0_5",
+      "x": 75.84,
+      "y": 0.34,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.44,
+        "PHGDH": 2.67,
+        "PSAT1": 1.03,
+        "CD8A": 0.22,
+        "CD68": 0.55,
+        "GAPDH": 7.31,
+        "EPCAM": 0.63,
+        "COL1A1": 9.55,
+        "ACTA2": 9.79
+      }
+    },
+    {
+      "id": "spot_0_6",
+      "x": 92.26,
+      "y": -1.11,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.15,
+        "PHGDH": 2.91,
+        "PSAT1": 1.44,
+        "CD8A": 0.32,
+        "CD68": 0.42,
+        "GAPDH": 8.27,
+        "EPCAM": 0.14,
+        "COL1A1": 9.99,
+        "ACTA2": 8.89
+      }
+    },
+    {
+      "id": "spot_0_7",
+      "x": 103.32,
+      "y": 2.99,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.84,
+        "PHGDH": 2.26,
+        "PSAT1": 2.0,
+        "CD8A": 0.85,
+        "CD68": 0.94,
+        "GAPDH": 7.66,
+        "EPCAM": 0.0,
+        "COL1A1": 9.74,
+        "ACTA2": 8.63
+      }
+    },
+    {
+      "id": "spot_0_8",
+      "x": 122.98,
+      "y": 0.17,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.56,
+        "PHGDH": 3.73,
+        "PSAT1": 3.23,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.89,
+        "EPCAM": 7.82,
+        "COL1A1": 0.17,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_0_9",
+      "x": 137.72,
+      "y": 2.26,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.46,
+        "PHGDH": 1.72,
+        "PSAT1": 1.9,
+        "CD8A": 1.23,
+        "CD68": 0.0,
+        "GAPDH": 7.24,
+        "EPCAM": 1.02,
+        "COL1A1": 8.93,
+        "ACTA2": 8.18
+      }
+    },
+    {
+      "id": "spot_0_10",
+      "x": 151.58,
+      "y": 0.24,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.48,
+        "PHGDH": 1.2,
+        "PSAT1": 1.05,
+        "CD8A": 9.01,
+        "CD68": 1.61,
+        "GAPDH": 6.27,
+        "EPCAM": 0.35,
+        "COL1A1": 0.0,
+        "ACTA2": 1.25
+      }
+    },
+    {
+      "id": "spot_0_11",
+      "x": 167.68,
+      "y": -2.49,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.64,
+        "PHGDH": 3.02,
+        "PSAT1": 2.33,
+        "CD8A": 0.23,
+        "CD68": 0.09,
+        "GAPDH": 6.75,
+        "EPCAM": 0.32,
+        "COL1A1": 9.08,
+        "ACTA2": 9.61
+      }
+    },
+    {
+      "id": "spot_0_12",
+      "x": 179.54,
+      "y": -1.73,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.15,
+        "PHGDH": 1.7,
+        "PSAT1": 1.16,
+        "CD8A": 2.01,
+        "CD68": 0.02,
+        "GAPDH": 6.98,
+        "EPCAM": 0.0,
+        "COL1A1": 9.17,
+        "ACTA2": 8.49
+      }
+    },
+    {
+      "id": "spot_0_13",
+      "x": 195.53,
+      "y": -1.62,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.74,
+        "PHGDH": 2.86,
+        "PSAT1": 2.27,
+        "CD8A": 0.37,
+        "CD68": 1.69,
+        "GAPDH": 7.65,
+        "EPCAM": 0.02,
+        "COL1A1": 9.27,
+        "ACTA2": 9.29
+      }
+    },
+    {
+      "id": "spot_0_14",
+      "x": 208.29,
+      "y": -2.21,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.49,
+        "PHGDH": 1.21,
+        "PSAT1": 1.54,
+        "CD8A": 0.0,
+        "CD68": 9.1,
+        "GAPDH": 7.45,
+        "EPCAM": 0.0,
+        "COL1A1": 0.56,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_0_15",
+      "x": 226.04,
+      "y": 2.9,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.4,
+        "PHGDH": 1.65,
+        "PSAT1": 2.21,
+        "CD8A": 0.49,
+        "CD68": 0.05,
+        "GAPDH": 7.74,
+        "EPCAM": 0.81,
+        "COL1A1": 8.77,
+        "ACTA2": 8.63
+      }
+    },
+    {
+      "id": "spot_0_16",
+      "x": 238.5,
+      "y": 2.54,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.69,
+        "PHGDH": 1.52,
+        "PSAT1": 4.07,
+        "CD8A": 0.91,
+        "CD68": 1.21,
+        "GAPDH": 6.14,
+        "EPCAM": 1.24,
+        "COL1A1": 8.68,
+        "ACTA2": 8.75
+      }
+    },
+    {
+      "id": "spot_0_17",
+      "x": 253.28,
+      "y": -0.59,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.8,
+        "PHGDH": 0.84,
+        "PSAT1": 3.1,
+        "CD8A": 0.1,
+        "CD68": 1.45,
+        "GAPDH": 6.9,
+        "EPCAM": 0.38,
+        "COL1A1": 11.1,
+        "ACTA2": 7.88
+      }
+    },
+    {
+      "id": "spot_0_18",
+      "x": 270.33,
+      "y": 1.31,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.74,
+        "PHGDH": 3.61,
+        "PSAT1": 1.24,
+        "CD8A": 0.0,
+        "CD68": 0.4,
+        "GAPDH": 7.29,
+        "EPCAM": 0.0,
+        "COL1A1": 8.84,
+        "ACTA2": 8.61
+      }
+    },
+    {
+      "id": "spot_0_19",
+      "x": 287.76,
+      "y": -2.52,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.92,
+        "PHGDH": 1.36,
+        "PSAT1": 1.39,
+        "CD8A": 0.23,
+        "CD68": 0.7,
+        "GAPDH": 7.85,
+        "EPCAM": 0.0,
+        "COL1A1": 8.51,
+        "ACTA2": 7.93
+      }
+    },
+    {
+      "id": "spot_1_0",
+      "x": -0.48,
+      "y": 15.5,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.57,
+        "PHGDH": 1.94,
+        "PSAT1": 1.81,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.05,
+        "EPCAM": 0.04,
+        "COL1A1": 9.7,
+        "ACTA2": 8.4
+      }
+    },
+    {
+      "id": "spot_1_1",
+      "x": 14.75,
+      "y": 17.99,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.27,
+        "PHGDH": 4.17,
+        "PSAT1": 3.58,
+        "CD8A": 0.0,
+        "CD68": 1.59,
+        "GAPDH": 8.9,
+        "EPCAM": 7.16,
+        "COL1A1": 0.16,
+        "ACTA2": 0.56
+      }
+    },
+    {
+      "id": "spot_1_2",
+      "x": 32.0,
+      "y": 16.22,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.07,
+        "PHGDH": 2.03,
+        "PSAT1": 3.0,
+        "CD8A": 0.25,
+        "CD68": 0.13,
+        "GAPDH": 8.34,
+        "EPCAM": 0.5,
+        "COL1A1": 9.08,
+        "ACTA2": 8.61
+      }
+    },
+    {
+      "id": "spot_1_3",
+      "x": 45.32,
+      "y": 13.63,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.39,
+        "PHGDH": 2.02,
+        "PSAT1": 1.5,
+        "CD8A": 0.0,
+        "CD68": 0.05,
+        "GAPDH": 6.2,
+        "EPCAM": 0.29,
+        "COL1A1": 9.35,
+        "ACTA2": 8.18
+      }
+    },
+    {
+      "id": "spot_1_4",
+      "x": 59.54,
+      "y": 13.66,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.91,
+        "PHGDH": 7.65,
+        "PSAT1": 8.13,
+        "CD8A": 1.08,
+        "CD68": 0.0,
+        "GAPDH": 8.9,
+        "EPCAM": 9.04,
+        "COL1A1": 0.51,
+        "ACTA2": 1.36
+      }
+    },
+    {
+      "id": "spot_1_5",
+      "x": 75.27,
+      "y": 17.01,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.33,
+        "PHGDH": 2.29,
+        "PSAT1": 2.15,
+        "CD8A": 0.0,
+        "CD68": 1.6,
+        "GAPDH": 7.84,
+        "EPCAM": 0.0,
+        "COL1A1": 9.53,
+        "ACTA2": 8.16
+      }
+    },
+    {
+      "id": "spot_1_6",
+      "x": 88.5,
+      "y": 12.62,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.96,
+        "PHGDH": 0.79,
+        "PSAT1": 0.85,
+        "CD8A": 8.66,
+        "CD68": 1.59,
+        "GAPDH": 6.29,
+        "EPCAM": 1.18,
+        "COL1A1": 0.04,
+        "ACTA2": 0.2
+      }
+    },
+    {
+      "id": "spot_1_7",
+      "x": 106.42,
+      "y": 13.99,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.01,
+        "PHGDH": 1.89,
+        "PSAT1": 0.17,
+        "CD8A": 0.58,
+        "CD68": 8.56,
+        "GAPDH": 7.27,
+        "EPCAM": 0.0,
+        "COL1A1": 1.12,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_1_8",
+      "x": 118.33,
+      "y": 16.9,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.84,
+        "PHGDH": 3.11,
+        "PSAT1": 1.92,
+        "CD8A": 0.33,
+        "CD68": 0.59,
+        "GAPDH": 8.0,
+        "EPCAM": 1.23,
+        "COL1A1": 8.02,
+        "ACTA2": 8.24
+      }
+    },
+    {
+      "id": "spot_1_9",
+      "x": 134.4,
+      "y": 17.89,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.05,
+        "PHGDH": 2.38,
+        "PSAT1": 1.79,
+        "CD8A": 0.57,
+        "CD68": 0.33,
+        "GAPDH": 7.96,
+        "EPCAM": 0.09,
+        "COL1A1": 9.7,
+        "ACTA2": 8.8
+      }
+    },
+    {
+      "id": "spot_1_10",
+      "x": 151.37,
+      "y": 13.88,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.61,
+        "PHGDH": 2.06,
+        "PSAT1": 1.49,
+        "CD8A": 0.0,
+        "CD68": 0.39,
+        "GAPDH": 7.47,
+        "EPCAM": 0.87,
+        "COL1A1": 8.86,
+        "ACTA2": 8.21
+      }
+    },
+    {
+      "id": "spot_1_11",
+      "x": 166.02,
+      "y": 14.19,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.23,
+        "PHGDH": 1.82,
+        "PSAT1": 1.44,
+        "CD8A": 0.0,
+        "CD68": 1.47,
+        "GAPDH": 7.4,
+        "EPCAM": 0.0,
+        "COL1A1": 8.98,
+        "ACTA2": 8.97
+      }
+    },
+    {
+      "id": "spot_1_12",
+      "x": 179.41,
+      "y": 13.77,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 1.95,
+        "PHGDH": 2.78,
+        "PSAT1": 1.33,
+        "CD8A": 0.0,
+        "CD68": 0.02,
+        "GAPDH": 7.16,
+        "EPCAM": 0.18,
+        "COL1A1": 9.19,
+        "ACTA2": 8.25
+      }
+    },
+    {
+      "id": "spot_1_13",
+      "x": 195.48,
+      "y": 15.93,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.82,
+        "PHGDH": 1.71,
+        "PSAT1": 2.05,
+        "CD8A": 0.0,
+        "CD68": 0.62,
+        "GAPDH": 7.6,
+        "EPCAM": 0.0,
+        "COL1A1": 9.82,
+        "ACTA2": 8.77
+      }
+    },
+    {
+      "id": "spot_1_14",
+      "x": 210.8,
+      "y": 14.01,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.51,
+        "PHGDH": 0.3,
+        "PSAT1": 1.16,
+        "CD8A": 9.29,
+        "CD68": 0.94,
+        "GAPDH": 6.87,
+        "EPCAM": 0.0,
+        "COL1A1": 0.38,
+        "ACTA2": 0.66
+      }
+    },
+    {
+      "id": "spot_1_15",
+      "x": 225.78,
+      "y": 13.17,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 1.65,
+        "PSAT1": 1.92,
+        "CD8A": 0.16,
+        "CD68": 0.35,
+        "GAPDH": 7.51,
+        "EPCAM": 0.0,
+        "COL1A1": 9.69,
+        "ACTA2": 8.79
+      }
+    },
+    {
+      "id": "spot_1_16",
+      "x": 238.06,
+      "y": 17.75,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.63,
+        "PHGDH": 2.24,
+        "PSAT1": 2.28,
+        "CD8A": 0.0,
+        "CD68": 0.68,
+        "GAPDH": 6.66,
+        "EPCAM": 1.0,
+        "COL1A1": 9.14,
+        "ACTA2": 9.6
+      }
+    },
+    {
+      "id": "spot_1_17",
+      "x": 255.68,
+      "y": 16.32,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.81,
+        "PHGDH": 2.47,
+        "PSAT1": 1.24,
+        "CD8A": 0.99,
+        "CD68": 0.0,
+        "GAPDH": 7.04,
+        "EPCAM": 0.27,
+        "COL1A1": 9.21,
+        "ACTA2": 9.25
+      }
+    },
+    {
+      "id": "spot_1_18",
+      "x": 271.59,
+      "y": 15.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.16,
+        "PHGDH": 2.34,
+        "PSAT1": 1.79,
+        "CD8A": 0.67,
+        "CD68": 0.08,
+        "GAPDH": 8.18,
+        "EPCAM": 0.48,
+        "COL1A1": 9.53,
+        "ACTA2": 8.08
+      }
+    },
+    {
+      "id": "spot_1_19",
+      "x": 282.39,
+      "y": 14.45,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.32,
+        "PHGDH": 1.75,
+        "PSAT1": 2.11,
+        "CD8A": 0.0,
+        "CD68": 1.03,
+        "GAPDH": 6.7,
+        "EPCAM": 0.0,
+        "COL1A1": 9.84,
+        "ACTA2": 7.6
+      }
+    },
+    {
+      "id": "spot_2_0",
+      "x": -0.72,
+      "y": 27.04,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.23,
+        "PHGDH": 0.92,
+        "PSAT1": 2.5,
+        "CD8A": 0.02,
+        "CD68": 0.39,
+        "GAPDH": 6.75,
+        "EPCAM": 0.0,
+        "COL1A1": 8.94,
+        "ACTA2": 8.52
+      }
+    },
+    {
+      "id": "spot_2_1",
+      "x": 12.17,
+      "y": 29.02,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.83,
+        "PHGDH": 1.8,
+        "PSAT1": 2.1,
+        "CD8A": 0.0,
+        "CD68": 0.46,
+        "GAPDH": 7.4,
+        "EPCAM": 0.1,
+        "COL1A1": 8.59,
+        "ACTA2": 8.88
+      }
+    },
+    {
+      "id": "spot_2_2",
+      "x": 27.16,
+      "y": 30.86,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 2.15,
+        "PSAT1": 1.6,
+        "CD8A": 0.48,
+        "CD68": 0.0,
+        "GAPDH": 8.4,
+        "EPCAM": 0.0,
+        "COL1A1": 9.89,
+        "ACTA2": 8.63
+      }
+    },
+    {
+      "id": "spot_2_3",
+      "x": 42.49,
+      "y": 27.12,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.8,
+        "PHGDH": 2.66,
+        "PSAT1": 1.9,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 6.92,
+        "EPCAM": 0.0,
+        "COL1A1": 9.58,
+        "ACTA2": 8.28
+      }
+    },
+    {
+      "id": "spot_2_4",
+      "x": 57.12,
+      "y": 27.91,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.83,
+        "PHGDH": 1.42,
+        "PSAT1": 2.09,
+        "CD8A": 1.11,
+        "CD68": 0.44,
+        "GAPDH": 7.14,
+        "EPCAM": 0.0,
+        "COL1A1": 8.58,
+        "ACTA2": 9.23
+      }
+    },
+    {
+      "id": "spot_2_5",
+      "x": 77.79,
+      "y": 27.65,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.53,
+        "PHGDH": 8.16,
+        "PSAT1": 9.03,
+        "CD8A": 0.68,
+        "CD68": 0.14,
+        "GAPDH": 9.05,
+        "EPCAM": 8.57,
+        "COL1A1": 0.19,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_2_6",
+      "x": 87.61,
+      "y": 31.63,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.25,
+        "PHGDH": 1.02,
+        "PSAT1": 2.14,
+        "CD8A": 8.79,
+        "CD68": 0.14,
+        "GAPDH": 7.32,
+        "EPCAM": 0.0,
+        "COL1A1": 0.72,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_2_7",
+      "x": 106.93,
+      "y": 27.63,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 4.48,
+        "PHGDH": 3.06,
+        "PSAT1": 2.55,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.84,
+        "EPCAM": 6.45,
+        "COL1A1": 0.26,
+        "ACTA2": 1.38
+      }
+    },
+    {
+      "id": "spot_2_8",
+      "x": 120.23,
+      "y": 29.9,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.14,
+        "PHGDH": 1.63,
+        "PSAT1": 2.57,
+        "CD8A": 0.0,
+        "CD68": 1.46,
+        "GAPDH": 8.14,
+        "EPCAM": 0.23,
+        "COL1A1": 9.87,
+        "ACTA2": 7.95
+      }
+    },
+    {
+      "id": "spot_2_9",
+      "x": 132.17,
+      "y": 32.11,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.83,
+        "PHGDH": 2.35,
+        "PSAT1": 2.94,
+        "CD8A": 0.0,
+        "CD68": 1.44,
+        "GAPDH": 7.35,
+        "EPCAM": 0.0,
+        "COL1A1": 10.66,
+        "ACTA2": 8.49
+      }
+    },
+    {
+      "id": "spot_2_10",
+      "x": 147.51,
+      "y": 31.32,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.25,
+        "PHGDH": 1.18,
+        "PSAT1": 1.48,
+        "CD8A": 0.0,
+        "CD68": 0.47,
+        "GAPDH": 7.24,
+        "EPCAM": 0.36,
+        "COL1A1": 10.11,
+        "ACTA2": 8.13
+      }
+    },
+    {
+      "id": "spot_2_11",
+      "x": 164.84,
+      "y": 30.19,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.94,
+        "PHGDH": 2.09,
+        "PSAT1": 1.36,
+        "CD8A": 0.06,
+        "CD68": 0.0,
+        "GAPDH": 7.5,
+        "EPCAM": 0.5,
+        "COL1A1": 9.31,
+        "ACTA2": 8.68
+      }
+    },
+    {
+      "id": "spot_2_12",
+      "x": 180.22,
+      "y": 31.57,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.34,
+        "PHGDH": 2.78,
+        "PSAT1": 1.64,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.42,
+        "EPCAM": 0.52,
+        "COL1A1": 9.43,
+        "ACTA2": 8.45
+      }
+    },
+    {
+      "id": "spot_2_13",
+      "x": 192.08,
+      "y": 30.2,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.57,
+        "PHGDH": 2.85,
+        "PSAT1": 1.78,
+        "CD8A": 0.1,
+        "CD68": 0.11,
+        "GAPDH": 7.97,
+        "EPCAM": 0.0,
+        "COL1A1": 9.75,
+        "ACTA2": 7.84
+      }
+    },
+    {
+      "id": "spot_2_14",
+      "x": 209.82,
+      "y": 29.64,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.55,
+        "PHGDH": 2.55,
+        "PSAT1": 0.8,
+        "CD8A": 0.36,
+        "CD68": 0.21,
+        "GAPDH": 7.64,
+        "EPCAM": 0.06,
+        "COL1A1": 9.06,
+        "ACTA2": 8.86
+      }
+    },
+    {
+      "id": "spot_2_15",
+      "x": 223.82,
+      "y": 32.96,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.82,
+        "PHGDH": 2.17,
+        "PSAT1": 1.08,
+        "CD8A": 0.31,
+        "CD68": 0.0,
+        "GAPDH": 6.85,
+        "EPCAM": 0.11,
+        "COL1A1": 8.09,
+        "ACTA2": 8.82
+      }
+    },
+    {
+      "id": "spot_2_16",
+      "x": 242.94,
+      "y": 28.83,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.44,
+        "PHGDH": 1.47,
+        "PSAT1": 2.29,
+        "CD8A": 0.07,
+        "CD68": 0.61,
+        "GAPDH": 8.36,
+        "EPCAM": 0.4,
+        "COL1A1": 9.51,
+        "ACTA2": 8.44
+      }
+    },
+    {
+      "id": "spot_2_17",
+      "x": 254.7,
+      "y": 30.56,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.22,
+        "PHGDH": 2.21,
+        "PSAT1": 2.83,
+        "CD8A": 0.01,
+        "CD68": 0.0,
+        "GAPDH": 6.98,
+        "EPCAM": 0.0,
+        "COL1A1": 9.4,
+        "ACTA2": 7.58
+      }
+    },
+    {
+      "id": "spot_2_18",
+      "x": 270.97,
+      "y": 32.6,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.37,
+        "PHGDH": 1.86,
+        "PSAT1": 2.84,
+        "CD8A": 0.0,
+        "CD68": 0.73,
+        "GAPDH": 7.66,
+        "EPCAM": 0.0,
+        "COL1A1": 10.13,
+        "ACTA2": 7.95
+      }
+    },
+    {
+      "id": "spot_2_19",
+      "x": 282.75,
+      "y": 31.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.99,
+        "PHGDH": 2.76,
+        "PSAT1": 1.65,
+        "CD8A": 0.0,
+        "CD68": 0.41,
+        "GAPDH": 8.12,
+        "EPCAM": 0.36,
+        "COL1A1": 9.0,
+        "ACTA2": 8.81
+      }
+    },
+    {
+      "id": "spot_3_0",
+      "x": -2.45,
+      "y": 47.77,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.19,
+        "PHGDH": 0.53,
+        "PSAT1": 2.0,
+        "CD8A": 8.9,
+        "CD68": 0.48,
+        "GAPDH": 6.97,
+        "EPCAM": 0.13,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_3_1",
+      "x": 13.09,
+      "y": 45.51,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.11,
+        "PHGDH": 1.84,
+        "PSAT1": 1.91,
+        "CD8A": 0.0,
+        "CD68": 0.84,
+        "GAPDH": 6.93,
+        "EPCAM": 0.0,
+        "COL1A1": 8.76,
+        "ACTA2": 9.21
+      }
+    },
+    {
+      "id": "spot_3_2",
+      "x": 28.73,
+      "y": 47.67,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.87,
+        "PHGDH": 1.0,
+        "PSAT1": 0.89,
+        "CD8A": 9.39,
+        "CD68": 1.1,
+        "GAPDH": 6.69,
+        "EPCAM": 0.0,
+        "COL1A1": 0.04,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_3_3",
+      "x": 44.48,
+      "y": 43.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.57,
+        "PHGDH": 2.13,
+        "PSAT1": 1.06,
+        "CD8A": 0.23,
+        "CD68": 0.0,
+        "GAPDH": 6.19,
+        "EPCAM": 0.0,
+        "COL1A1": 8.34,
+        "ACTA2": 8.75
+      }
+    },
+    {
+      "id": "spot_3_4",
+      "x": 57.73,
+      "y": 47.84,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.22,
+        "PHGDH": 2.45,
+        "PSAT1": 1.18,
+        "CD8A": 0.0,
+        "CD68": 1.96,
+        "GAPDH": 8.53,
+        "EPCAM": 0.77,
+        "COL1A1": 8.85,
+        "ACTA2": 9.24
+      }
+    },
+    {
+      "id": "spot_3_5",
+      "x": 74.99,
+      "y": 46.3,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.96,
+        "PHGDH": 1.93,
+        "PSAT1": 3.03,
+        "CD8A": 0.65,
+        "CD68": 0.34,
+        "GAPDH": 6.94,
+        "EPCAM": 0.01,
+        "COL1A1": 9.83,
+        "ACTA2": 8.06
+      }
+    },
+    {
+      "id": "spot_3_6",
+      "x": 92.28,
+      "y": 47.18,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.35,
+        "PHGDH": 1.5,
+        "PSAT1": 2.55,
+        "CD8A": 0.0,
+        "CD68": 0.61,
+        "GAPDH": 7.06,
+        "EPCAM": 0.0,
+        "COL1A1": 9.96,
+        "ACTA2": 9.1
+      }
+    },
+    {
+      "id": "spot_3_7",
+      "x": 102.89,
+      "y": 45.23,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.2,
+        "PHGDH": 1.39,
+        "PSAT1": 1.66,
+        "CD8A": 0.0,
+        "CD68": 0.55,
+        "GAPDH": 7.85,
+        "EPCAM": 1.06,
+        "COL1A1": 8.81,
+        "ACTA2": 8.21
+      }
+    },
+    {
+      "id": "spot_3_8",
+      "x": 121.65,
+      "y": 42.26,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.9,
+        "PHGDH": 1.05,
+        "PSAT1": 1.23,
+        "CD8A": 0.78,
+        "CD68": 1.13,
+        "GAPDH": 5.98,
+        "EPCAM": 0.04,
+        "COL1A1": 9.2,
+        "ACTA2": 7.6
+      }
+    },
+    {
+      "id": "spot_3_9",
+      "x": 137.22,
+      "y": 47.25,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.19,
+        "PHGDH": 1.45,
+        "PSAT1": 1.79,
+        "CD8A": 0.09,
+        "CD68": 0.0,
+        "GAPDH": 7.3,
+        "EPCAM": 0.0,
+        "COL1A1": 7.65,
+        "ACTA2": 8.7
+      }
+    },
+    {
+      "id": "spot_3_10",
+      "x": 149.03,
+      "y": 46.16,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.9,
+        "PHGDH": 1.16,
+        "PSAT1": 2.27,
+        "CD8A": 0.0,
+        "CD68": 0.01,
+        "GAPDH": 8.37,
+        "EPCAM": 0.27,
+        "COL1A1": 7.98,
+        "ACTA2": 8.62
+      }
+    },
+    {
+      "id": "spot_3_11",
+      "x": 165.79,
+      "y": 47.53,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.55,
+        "PHGDH": 3.79,
+        "PSAT1": 2.76,
+        "CD8A": 0.79,
+        "CD68": 0.69,
+        "GAPDH": 8.45,
+        "EPCAM": 7.53,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_3_12",
+      "x": 177.28,
+      "y": 46.78,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.96,
+        "PHGDH": 2.34,
+        "PSAT1": 1.14,
+        "CD8A": 0.05,
+        "CD68": 0.5,
+        "GAPDH": 7.15,
+        "EPCAM": 1.27,
+        "COL1A1": 9.78,
+        "ACTA2": 8.07
+      }
+    },
+    {
+      "id": "spot_3_13",
+      "x": 197.48,
+      "y": 42.86,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.9,
+        "PHGDH": 2.09,
+        "PSAT1": 2.36,
+        "CD8A": 1.28,
+        "CD68": 0.46,
+        "GAPDH": 8.23,
+        "EPCAM": 0.0,
+        "COL1A1": 9.55,
+        "ACTA2": 8.94
+      }
+    },
+    {
+      "id": "spot_3_14",
+      "x": 209.07,
+      "y": 45.53,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.8,
+        "PHGDH": 2.31,
+        "PSAT1": 2.13,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.96,
+        "EPCAM": 0.26,
+        "COL1A1": 9.98,
+        "ACTA2": 6.72
+      }
+    },
+    {
+      "id": "spot_3_15",
+      "x": 223.77,
+      "y": 47.87,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.35,
+        "PHGDH": 1.98,
+        "PSAT1": 2.67,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.28,
+        "EPCAM": 0.45,
+        "COL1A1": 7.9,
+        "ACTA2": 8.43
+      }
+    },
+    {
+      "id": "spot_3_16",
+      "x": 238.72,
+      "y": 46.79,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.69,
+        "PHGDH": 2.78,
+        "PSAT1": 1.25,
+        "CD8A": 0.0,
+        "CD68": 0.24,
+        "GAPDH": 6.63,
+        "EPCAM": 0.64,
+        "COL1A1": 8.48,
+        "ACTA2": 9.11
+      }
+    },
+    {
+      "id": "spot_3_17",
+      "x": 253.85,
+      "y": 44.64,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.71,
+        "PHGDH": 2.07,
+        "PSAT1": 1.64,
+        "CD8A": 0.0,
+        "CD68": 1.36,
+        "GAPDH": 7.64,
+        "EPCAM": 0.49,
+        "COL1A1": 7.65,
+        "ACTA2": 8.01
+      }
+    },
+    {
+      "id": "spot_3_18",
+      "x": 270.19,
+      "y": 47.48,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.45,
+        "PHGDH": 2.32,
+        "PSAT1": 0.02,
+        "CD8A": 9.02,
+        "CD68": 0.49,
+        "GAPDH": 6.25,
+        "EPCAM": 1.25,
+        "COL1A1": 1.22,
+        "ACTA2": 1.09
+      }
+    },
+    {
+      "id": "spot_3_19",
+      "x": 287.16,
+      "y": 46.35,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 4.71,
+        "PHGDH": 4.86,
+        "PSAT1": 3.18,
+        "CD8A": 0.0,
+        "CD68": 0.99,
+        "GAPDH": 8.74,
+        "EPCAM": 8.06,
+        "COL1A1": 0.0,
+        "ACTA2": 0.55
+      }
+    },
+    {
+      "id": "spot_4_0",
+      "x": 1.03,
+      "y": 60.51,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.77,
+        "PHGDH": 1.09,
+        "PSAT1": 1.11,
+        "CD8A": 9.03,
+        "CD68": 1.08,
+        "GAPDH": 6.29,
+        "EPCAM": 0.47,
+        "COL1A1": 0.0,
+        "ACTA2": 1.13
+      }
+    },
+    {
+      "id": "spot_4_1",
+      "x": 17.46,
+      "y": 58.81,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.63,
+        "PHGDH": 3.03,
+        "PSAT1": 3.02,
+        "CD8A": 0.0,
+        "CD68": 1.06,
+        "GAPDH": 8.53,
+        "EPCAM": 0.92,
+        "COL1A1": 9.63,
+        "ACTA2": 8.9
+      }
+    },
+    {
+      "id": "spot_4_2",
+      "x": 31.02,
+      "y": 61.46,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.24,
+        "PHGDH": 1.98,
+        "PSAT1": 1.65,
+        "CD8A": 0.91,
+        "CD68": 9.57,
+        "GAPDH": 7.61,
+        "EPCAM": 0.0,
+        "COL1A1": 1.11,
+        "ACTA2": 0.77
+      }
+    },
+    {
+      "id": "spot_4_3",
+      "x": 44.66,
+      "y": 62.7,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.62,
+        "PHGDH": 1.94,
+        "PSAT1": 1.63,
+        "CD8A": 7.31,
+        "CD68": 0.04,
+        "GAPDH": 6.42,
+        "EPCAM": 0.57,
+        "COL1A1": 0.31,
+        "ACTA2": 0.38
+      }
+    },
+    {
+      "id": "spot_4_4",
+      "x": 62.09,
+      "y": 59.73,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.69,
+        "PHGDH": 1.47,
+        "PSAT1": 2.95,
+        "CD8A": 0.34,
+        "CD68": 0.41,
+        "GAPDH": 7.81,
+        "EPCAM": 0.0,
+        "COL1A1": 9.11,
+        "ACTA2": 8.44
+      }
+    },
+    {
+      "id": "spot_4_5",
+      "x": 73.3,
+      "y": 62.22,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.79,
+        "PHGDH": 2.87,
+        "PSAT1": 2.93,
+        "CD8A": 1.39,
+        "CD68": 0.42,
+        "GAPDH": 7.69,
+        "EPCAM": 0.45,
+        "COL1A1": 9.2,
+        "ACTA2": 8.77
+      }
+    },
+    {
+      "id": "spot_4_6",
+      "x": 90.97,
+      "y": 57.15,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.91,
+        "PHGDH": 8.07,
+        "PSAT1": 8.03,
+        "CD8A": 0.43,
+        "CD68": 1.23,
+        "GAPDH": 9.42,
+        "EPCAM": 7.82,
+        "COL1A1": 0.34,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_4_7",
+      "x": 105.08,
+      "y": 57.65,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.35,
+        "PHGDH": 2.27,
+        "PSAT1": 1.84,
+        "CD8A": 0.45,
+        "CD68": 0.0,
+        "GAPDH": 6.84,
+        "EPCAM": 0.11,
+        "COL1A1": 9.41,
+        "ACTA2": 8.35
+      }
+    },
+    {
+      "id": "spot_4_8",
+      "x": 119.87,
+      "y": 59.41,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 1.89,
+        "PHGDH": 2.18,
+        "PSAT1": 2.12,
+        "CD8A": 0.31,
+        "CD68": 0.23,
+        "GAPDH": 7.36,
+        "EPCAM": 0.07,
+        "COL1A1": 10.04,
+        "ACTA2": 7.89
+      }
+    },
+    {
+      "id": "spot_4_9",
+      "x": 137.97,
+      "y": 60.18,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.04,
+        "PHGDH": 1.88,
+        "PSAT1": 1.73,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 6.9,
+        "EPCAM": 0.0,
+        "COL1A1": 9.12,
+        "ACTA2": 7.99
+      }
+    },
+    {
+      "id": "spot_4_10",
+      "x": 149.71,
+      "y": 58.37,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 2.28,
+        "PSAT1": 2.42,
+        "CD8A": 0.56,
+        "CD68": 0.1,
+        "GAPDH": 7.0,
+        "EPCAM": 0.98,
+        "COL1A1": 10.31,
+        "ACTA2": 9.43
+      }
+    },
+    {
+      "id": "spot_4_11",
+      "x": 162.56,
+      "y": 57.58,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.66,
+        "PHGDH": 2.39,
+        "PSAT1": 1.19,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.35,
+        "EPCAM": 0.47,
+        "COL1A1": 8.66,
+        "ACTA2": 9.11
+      }
+    },
+    {
+      "id": "spot_4_12",
+      "x": 181.5,
+      "y": 62.21,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.0,
+        "PHGDH": 1.94,
+        "PSAT1": 1.43,
+        "CD8A": 0.83,
+        "CD68": 0.6,
+        "GAPDH": 8.35,
+        "EPCAM": 0.25,
+        "COL1A1": 9.48,
+        "ACTA2": 8.72
+      }
+    },
+    {
+      "id": "spot_4_13",
+      "x": 196.58,
+      "y": 60.44,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.03,
+        "PHGDH": 2.12,
+        "PSAT1": 0.0,
+        "CD8A": 9.24,
+        "CD68": 0.0,
+        "GAPDH": 6.71,
+        "EPCAM": 0.0,
+        "COL1A1": 1.22,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_4_14",
+      "x": 208.6,
+      "y": 58.08,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.0,
+        "PHGDH": 2.61,
+        "PSAT1": 3.11,
+        "CD8A": 0.25,
+        "CD68": 0.0,
+        "GAPDH": 7.25,
+        "EPCAM": 0.73,
+        "COL1A1": 9.86,
+        "ACTA2": 9.38
+      }
+    },
+    {
+      "id": "spot_4_15",
+      "x": 223.29,
+      "y": 59.52,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.39,
+        "PHGDH": 1.44,
+        "PSAT1": 2.6,
+        "CD8A": 0.33,
+        "CD68": 0.0,
+        "GAPDH": 7.67,
+        "EPCAM": 0.3,
+        "COL1A1": 9.66,
+        "ACTA2": 9.1
+      }
+    },
+    {
+      "id": "spot_4_16",
+      "x": 241.04,
+      "y": 58.63,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.55,
+        "PHGDH": 2.16,
+        "PSAT1": 1.75,
+        "CD8A": 1.2,
+        "CD68": 0.88,
+        "GAPDH": 7.92,
+        "EPCAM": 0.01,
+        "COL1A1": 10.08,
+        "ACTA2": 7.51
+      }
+    },
+    {
+      "id": "spot_4_17",
+      "x": 252.27,
+      "y": 59.37,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.27,
+        "PHGDH": 2.61,
+        "PSAT1": 1.92,
+        "CD8A": 0.28,
+        "CD68": 0.72,
+        "GAPDH": 7.48,
+        "EPCAM": 0.73,
+        "COL1A1": 10.19,
+        "ACTA2": 8.45
+      }
+    },
+    {
+      "id": "spot_4_18",
+      "x": 268.05,
+      "y": 59.28,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.06,
+        "PHGDH": 2.1,
+        "PSAT1": 1.98,
+        "CD8A": 0.0,
+        "CD68": 0.51,
+        "GAPDH": 7.37,
+        "EPCAM": 1.54,
+        "COL1A1": 9.36,
+        "ACTA2": 8.91
+      }
+    },
+    {
+      "id": "spot_4_19",
+      "x": 285.44,
+      "y": 61.26,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 2.19,
+        "PSAT1": 1.98,
+        "CD8A": 0.0,
+        "CD68": 1.36,
+        "GAPDH": 6.66,
+        "EPCAM": 0.0,
+        "COL1A1": 9.43,
+        "ACTA2": 8.28
+      }
+    },
+    {
+      "id": "spot_5_0",
+      "x": 2.07,
+      "y": 73.46,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 2.01,
+        "PSAT1": 1.7,
+        "CD8A": 0.71,
+        "CD68": 0.22,
+        "GAPDH": 7.82,
+        "EPCAM": 0.0,
+        "COL1A1": 9.18,
+        "ACTA2": 7.1
+      }
+    },
+    {
+      "id": "spot_5_1",
+      "x": 14.1,
+      "y": 76.36,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.42,
+        "PHGDH": 1.38,
+        "PSAT1": 0.7,
+        "CD8A": 9.14,
+        "CD68": 0.82,
+        "GAPDH": 5.99,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_5_2",
+      "x": 31.64,
+      "y": 74.96,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.54,
+        "PHGDH": 0.55,
+        "PSAT1": 1.79,
+        "CD8A": 8.55,
+        "CD68": 0.0,
+        "GAPDH": 6.17,
+        "EPCAM": 0.65,
+        "COL1A1": 0.0,
+        "ACTA2": 0.23
+      }
+    },
+    {
+      "id": "spot_5_3",
+      "x": 44.65,
+      "y": 73.82,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.38,
+        "PHGDH": 2.77,
+        "PSAT1": 2.15,
+        "CD8A": 0.0,
+        "CD68": 1.01,
+        "GAPDH": 8.56,
+        "EPCAM": 0.6,
+        "COL1A1": 10.26,
+        "ACTA2": 8.96
+      }
+    },
+    {
+      "id": "spot_5_4",
+      "x": 62.13,
+      "y": 75.69,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.46,
+        "PHGDH": 2.28,
+        "PSAT1": 2.23,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.84,
+        "EPCAM": 0.0,
+        "COL1A1": 8.77,
+        "ACTA2": 8.06
+      }
+    },
+    {
+      "id": "spot_5_5",
+      "x": 72.37,
+      "y": 72.62,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.15,
+        "PHGDH": 0.97,
+        "PSAT1": 2.09,
+        "CD8A": 0.03,
+        "CD68": 8.99,
+        "GAPDH": 7.21,
+        "EPCAM": 0.84,
+        "COL1A1": 0.0,
+        "ACTA2": 0.47
+      }
+    },
+    {
+      "id": "spot_5_6",
+      "x": 87.95,
+      "y": 74.24,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.74,
+        "PHGDH": 2.4,
+        "PSAT1": 1.04,
+        "CD8A": 0.0,
+        "CD68": 0.27,
+        "GAPDH": 7.32,
+        "EPCAM": 0.95,
+        "COL1A1": 9.71,
+        "ACTA2": 8.2
+      }
+    },
+    {
+      "id": "spot_5_7",
+      "x": 105.94,
+      "y": 77.44,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 5.04,
+        "PHGDH": 1.1,
+        "PSAT1": 1.99,
+        "CD8A": 0.75,
+        "CD68": 9.43,
+        "GAPDH": 8.11,
+        "EPCAM": 0.01,
+        "COL1A1": 0.0,
+        "ACTA2": 0.71
+      }
+    },
+    {
+      "id": "spot_5_8",
+      "x": 122.63,
+      "y": 73.86,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.48,
+        "PHGDH": 1.04,
+        "PSAT1": 1.36,
+        "CD8A": 0.0,
+        "CD68": 0.34,
+        "GAPDH": 6.59,
+        "EPCAM": 0.0,
+        "COL1A1": 9.06,
+        "ACTA2": 7.9
+      }
+    },
+    {
+      "id": "spot_5_9",
+      "x": 134.18,
+      "y": 73.08,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.06,
+        "PHGDH": 9.16,
+        "PSAT1": 7.98,
+        "CD8A": 0.15,
+        "CD68": 0.62,
+        "GAPDH": 10.12,
+        "EPCAM": 9.34,
+        "COL1A1": 1.33,
+        "ACTA2": 1.01
+      }
+    },
+    {
+      "id": "spot_5_10",
+      "x": 152.01,
+      "y": 77.3,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.27,
+        "PHGDH": 9.37,
+        "PSAT1": 8.6,
+        "CD8A": 0.53,
+        "CD68": 0.89,
+        "GAPDH": 10.06,
+        "EPCAM": 8.94,
+        "COL1A1": 0.0,
+        "ACTA2": 0.73
+      }
+    },
+    {
+      "id": "spot_5_11",
+      "x": 164.47,
+      "y": 76.06,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.36,
+        "PHGDH": 8.04,
+        "PSAT1": 8.37,
+        "CD8A": 0.09,
+        "CD68": 0.0,
+        "GAPDH": 8.6,
+        "EPCAM": 8.69,
+        "COL1A1": 0.74,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_5_12",
+      "x": 182.01,
+      "y": 74.21,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.76,
+        "PHGDH": 1.43,
+        "PSAT1": 1.18,
+        "CD8A": 0.98,
+        "CD68": 7.46,
+        "GAPDH": 6.93,
+        "EPCAM": 0.64,
+        "COL1A1": 0.0,
+        "ACTA2": 0.49
+      }
+    },
+    {
+      "id": "spot_5_13",
+      "x": 195.85,
+      "y": 77.24,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.55,
+        "PHGDH": 3.03,
+        "PSAT1": 2.6,
+        "CD8A": 0.49,
+        "CD68": 0.0,
+        "GAPDH": 7.54,
+        "EPCAM": 0.0,
+        "COL1A1": 9.48,
+        "ACTA2": 8.21
+      }
+    },
+    {
+      "id": "spot_5_14",
+      "x": 209.62,
+      "y": 77.68,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.27,
+        "PHGDH": 8.67,
+        "PSAT1": 8.4,
+        "CD8A": 0.13,
+        "CD68": 0.0,
+        "GAPDH": 9.09,
+        "EPCAM": 9.38,
+        "COL1A1": 0.48,
+        "ACTA2": 1.77
+      }
+    },
+    {
+      "id": "spot_5_15",
+      "x": 227.04,
+      "y": 75.9,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.74,
+        "PHGDH": 1.52,
+        "PSAT1": 1.48,
+        "CD8A": 9.34,
+        "CD68": 0.0,
+        "GAPDH": 7.4,
+        "EPCAM": 0.82,
+        "COL1A1": 0.14,
+        "ACTA2": 0.12
+      }
+    },
+    {
+      "id": "spot_5_16",
+      "x": 237.48,
+      "y": 73.54,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.58,
+        "PHGDH": 0.91,
+        "PSAT1": 0.81,
+        "CD8A": 8.85,
+        "CD68": 0.38,
+        "GAPDH": 7.29,
+        "EPCAM": 0.7,
+        "COL1A1": 0.39,
+        "ACTA2": 0.28
+      }
+    },
+    {
+      "id": "spot_5_17",
+      "x": 252.67,
+      "y": 77.43,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.56,
+        "PHGDH": 2.82,
+        "PSAT1": 1.97,
+        "CD8A": 0.22,
+        "CD68": 0.73,
+        "GAPDH": 6.75,
+        "EPCAM": 0.56,
+        "COL1A1": 9.24,
+        "ACTA2": 9.02
+      }
+    },
+    {
+      "id": "spot_5_18",
+      "x": 270.99,
+      "y": 72.51,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 4.17,
+        "PHGDH": 4.1,
+        "PSAT1": 1.61,
+        "CD8A": 0.02,
+        "CD68": 0.0,
+        "GAPDH": 7.8,
+        "EPCAM": 7.16,
+        "COL1A1": 0.56,
+        "ACTA2": 0.76
+      }
+    },
+    {
+      "id": "spot_5_19",
+      "x": 282.1,
+      "y": 76.73,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.15,
+        "PHGDH": 2.01,
+        "PSAT1": 1.06,
+        "CD8A": 0.33,
+        "CD68": 0.0,
+        "GAPDH": 7.41,
+        "EPCAM": 0.36,
+        "COL1A1": 8.15,
+        "ACTA2": 8.09
+      }
+    },
+    {
+      "id": "spot_6_0",
+      "x": -1.95,
+      "y": 91.67,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.91,
+        "PHGDH": 1.3,
+        "PSAT1": 1.98,
+        "CD8A": 0.0,
+        "CD68": 0.51,
+        "GAPDH": 6.85,
+        "EPCAM": 0.15,
+        "COL1A1": 9.37,
+        "ACTA2": 8.45
+      }
+    },
+    {
+      "id": "spot_6_1",
+      "x": 17.6,
+      "y": 90.09,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.67,
+        "PHGDH": 3.36,
+        "PSAT1": 3.28,
+        "CD8A": 0.11,
+        "CD68": 0.0,
+        "GAPDH": 7.35,
+        "EPCAM": 8.82,
+        "COL1A1": 0.76,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_6_2",
+      "x": 27.75,
+      "y": 89.21,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.45,
+        "PHGDH": 0.0,
+        "PSAT1": 0.0,
+        "CD8A": 9.96,
+        "CD68": 0.0,
+        "GAPDH": 6.82,
+        "EPCAM": 0.75,
+        "COL1A1": 0.0,
+        "ACTA2": 0.41
+      }
+    },
+    {
+      "id": "spot_6_3",
+      "x": 42.47,
+      "y": 90.61,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.58,
+        "PHGDH": 0.69,
+        "PSAT1": 0.95,
+        "CD8A": 9.67,
+        "CD68": 0.93,
+        "GAPDH": 6.52,
+        "EPCAM": 0.86,
+        "COL1A1": 0.0,
+        "ACTA2": 0.51
+      }
+    },
+    {
+      "id": "spot_6_4",
+      "x": 59.11,
+      "y": 87.25,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 2.82,
+        "PHGDH": 3.2,
+        "PSAT1": 1.04,
+        "CD8A": 2.06,
+        "CD68": 9.22,
+        "GAPDH": 7.12,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.49
+      }
+    },
+    {
+      "id": "spot_6_5",
+      "x": 77.72,
+      "y": 87.86,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.34,
+        "PHGDH": 2.13,
+        "PSAT1": 1.74,
+        "CD8A": 1.15,
+        "CD68": 0.83,
+        "GAPDH": 7.11,
+        "EPCAM": 0.64,
+        "COL1A1": 8.45,
+        "ACTA2": 8.06
+      }
+    },
+    {
+      "id": "spot_6_6",
+      "x": 91.07,
+      "y": 92.69,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.26,
+        "PHGDH": 1.32,
+        "PSAT1": 1.31,
+        "CD8A": 0.09,
+        "CD68": 0.13,
+        "GAPDH": 7.13,
+        "EPCAM": 0.94,
+        "COL1A1": 9.84,
+        "ACTA2": 7.81
+      }
+    },
+    {
+      "id": "spot_6_7",
+      "x": 105.37,
+      "y": 88.57,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.2,
+        "PHGDH": 0.2,
+        "PSAT1": 2.57,
+        "CD8A": 0.0,
+        "CD68": 1.7,
+        "GAPDH": 7.19,
+        "EPCAM": 0.22,
+        "COL1A1": 9.6,
+        "ACTA2": 7.87
+      }
+    },
+    {
+      "id": "spot_6_8",
+      "x": 122.39,
+      "y": 89.67,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.32,
+        "PHGDH": 7.44,
+        "PSAT1": 7.97,
+        "CD8A": 0.6,
+        "CD68": 0.99,
+        "GAPDH": 9.4,
+        "EPCAM": 9.71,
+        "COL1A1": 0.0,
+        "ACTA2": 0.07
+      }
+    },
+    {
+      "id": "spot_6_9",
+      "x": 135.83,
+      "y": 91.76,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.47,
+        "PHGDH": 8.79,
+        "PSAT1": 8.48,
+        "CD8A": 0.78,
+        "CD68": 1.11,
+        "GAPDH": 9.85,
+        "EPCAM": 8.93,
+        "COL1A1": 0.0,
+        "ACTA2": 1.19
+      }
+    },
+    {
+      "id": "spot_6_10",
+      "x": 150.31,
+      "y": 90.67,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.94,
+        "PHGDH": 10.71,
+        "PSAT1": 8.06,
+        "CD8A": 0.0,
+        "CD68": 0.43,
+        "GAPDH": 7.99,
+        "EPCAM": 10.24,
+        "COL1A1": 1.22,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_6_11",
+      "x": 166.08,
+      "y": 89.07,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.59,
+        "PHGDH": 1.66,
+        "PSAT1": 0.46,
+        "CD8A": 1.05,
+        "CD68": 10.42,
+        "GAPDH": 6.0,
+        "EPCAM": 0.74,
+        "COL1A1": 0.59,
+        "ACTA2": 0.31
+      }
+    },
+    {
+      "id": "spot_6_12",
+      "x": 177.92,
+      "y": 87.99,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.66,
+        "PHGDH": 7.96,
+        "PSAT1": 9.39,
+        "CD8A": 0.0,
+        "CD68": 0.56,
+        "GAPDH": 8.72,
+        "EPCAM": 8.3,
+        "COL1A1": 0.0,
+        "ACTA2": 0.76
+      }
+    },
+    {
+      "id": "spot_6_13",
+      "x": 195.2,
+      "y": 90.02,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.16,
+        "PHGDH": 8.82,
+        "PSAT1": 8.08,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.19,
+        "EPCAM": 8.09,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_6_14",
+      "x": 207.17,
+      "y": 87.27,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.43,
+        "PHGDH": 1.7,
+        "PSAT1": 1.97,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 6.96,
+        "EPCAM": 0.0,
+        "COL1A1": 8.84,
+        "ACTA2": 9.06
+      }
+    },
+    {
+      "id": "spot_6_15",
+      "x": 226.83,
+      "y": 91.11,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 2.29,
+        "PSAT1": 1.99,
+        "CD8A": 0.0,
+        "CD68": 0.66,
+        "GAPDH": 7.73,
+        "EPCAM": 0.99,
+        "COL1A1": 8.83,
+        "ACTA2": 9.28
+      }
+    },
+    {
+      "id": "spot_6_16",
+      "x": 241.41,
+      "y": 92.16,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.89,
+        "PHGDH": 4.22,
+        "PSAT1": 2.91,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.1,
+        "EPCAM": 8.0,
+        "COL1A1": 0.67,
+        "ACTA2": 0.15
+      }
+    },
+    {
+      "id": "spot_6_17",
+      "x": 255.69,
+      "y": 88.49,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.07,
+        "PHGDH": 1.49,
+        "PSAT1": 1.55,
+        "CD8A": 8.44,
+        "CD68": 0.26,
+        "GAPDH": 6.86,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.03
+      }
+    },
+    {
+      "id": "spot_6_18",
+      "x": 268.85,
+      "y": 87.14,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 2.54,
+        "PHGDH": 1.45,
+        "PSAT1": 1.42,
+        "CD8A": 0.95,
+        "CD68": 9.67,
+        "GAPDH": 7.42,
+        "EPCAM": 0.85,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_6_19",
+      "x": 287.08,
+      "y": 89.59,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.64,
+        "PHGDH": 1.06,
+        "PSAT1": 0.09,
+        "CD8A": 8.5,
+        "CD68": 0.95,
+        "GAPDH": 6.44,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.02
+      }
+    },
+    {
+      "id": "spot_7_0",
+      "x": 0.03,
+      "y": 106.59,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.1,
+        "PHGDH": 2.04,
+        "PSAT1": 3.1,
+        "CD8A": 1.31,
+        "CD68": 0.0,
+        "GAPDH": 8.16,
+        "EPCAM": 0.0,
+        "COL1A1": 10.4,
+        "ACTA2": 8.41
+      }
+    },
+    {
+      "id": "spot_7_1",
+      "x": 15.05,
+      "y": 105.0,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.4,
+        "PHGDH": 8.85,
+        "PSAT1": 8.61,
+        "CD8A": 0.0,
+        "CD68": 0.41,
+        "GAPDH": 8.53,
+        "EPCAM": 8.35,
+        "COL1A1": 0.11,
+        "ACTA2": 1.13
+      }
+    },
+    {
+      "id": "spot_7_2",
+      "x": 27.98,
+      "y": 107.94,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.03,
+        "PHGDH": 2.62,
+        "PSAT1": 2.25,
+        "CD8A": 0.0,
+        "CD68": 0.27,
+        "GAPDH": 7.01,
+        "EPCAM": 0.43,
+        "COL1A1": 8.67,
+        "ACTA2": 7.63
+      }
+    },
+    {
+      "id": "spot_7_3",
+      "x": 45.5,
+      "y": 106.78,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 1.71,
+        "PHGDH": 2.05,
+        "PSAT1": 1.77,
+        "CD8A": 0.0,
+        "CD68": 0.65,
+        "GAPDH": 7.71,
+        "EPCAM": 0.0,
+        "COL1A1": 8.35,
+        "ACTA2": 7.95
+      }
+    },
+    {
+      "id": "spot_7_4",
+      "x": 60.5,
+      "y": 103.02,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.36,
+        "PHGDH": 1.31,
+        "PSAT1": 2.44,
+        "CD8A": 0.93,
+        "CD68": 1.83,
+        "GAPDH": 7.79,
+        "EPCAM": 0.29,
+        "COL1A1": 9.27,
+        "ACTA2": 8.27
+      }
+    },
+    {
+      "id": "spot_7_5",
+      "x": 76.14,
+      "y": 104.46,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.82,
+        "PHGDH": 2.27,
+        "PSAT1": 0.52,
+        "CD8A": 8.88,
+        "CD68": 0.29,
+        "GAPDH": 7.06,
+        "EPCAM": 0.41,
+        "COL1A1": 0.0,
+        "ACTA2": 0.89
+      }
+    },
+    {
+      "id": "spot_7_6",
+      "x": 90.15,
+      "y": 103.88,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.27,
+        "PHGDH": 8.21,
+        "PSAT1": 7.57,
+        "CD8A": 0.92,
+        "CD68": 0.14,
+        "GAPDH": 8.25,
+        "EPCAM": 8.51,
+        "COL1A1": 0.0,
+        "ACTA2": 0.56
+      }
+    },
+    {
+      "id": "spot_7_7",
+      "x": 105.35,
+      "y": 103.35,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.92,
+        "PHGDH": 3.65,
+        "PSAT1": 3.87,
+        "CD8A": 0.35,
+        "CD68": 1.1,
+        "GAPDH": 7.77,
+        "EPCAM": 8.51,
+        "COL1A1": 1.38,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_7_8",
+      "x": 118.64,
+      "y": 102.73,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.58,
+        "PHGDH": 9.65,
+        "PSAT1": 8.82,
+        "CD8A": 0.0,
+        "CD68": 0.47,
+        "GAPDH": 8.63,
+        "EPCAM": 8.58,
+        "COL1A1": 1.42,
+        "ACTA2": 0.03
+      }
+    },
+    {
+      "id": "spot_7_9",
+      "x": 133.54,
+      "y": 104.87,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.33,
+        "PHGDH": 7.15,
+        "PSAT1": 7.87,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.5,
+        "EPCAM": 8.27,
+        "COL1A1": 0.54,
+        "ACTA2": 1.29
+      }
+    },
+    {
+      "id": "spot_7_10",
+      "x": 150.19,
+      "y": 105.83,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.98,
+        "PHGDH": 8.99,
+        "PSAT1": 9.03,
+        "CD8A": 0.71,
+        "CD68": 1.06,
+        "GAPDH": 9.12,
+        "EPCAM": 9.35,
+        "COL1A1": 0.24,
+        "ACTA2": 1.53
+      }
+    },
+    {
+      "id": "spot_7_11",
+      "x": 164.86,
+      "y": 103.2,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 3.43,
+        "PSAT1": 4.18,
+        "CD8A": 0.32,
+        "CD68": 0.06,
+        "GAPDH": 7.34,
+        "EPCAM": 7.67,
+        "COL1A1": 0.16,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_7_12",
+      "x": 182.48,
+      "y": 103.05,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.71,
+        "PHGDH": 2.7,
+        "PSAT1": 1.9,
+        "CD8A": 0.39,
+        "CD68": 7.59,
+        "GAPDH": 7.24,
+        "EPCAM": 1.53,
+        "COL1A1": 0.0,
+        "ACTA2": 0.26
+      }
+    },
+    {
+      "id": "spot_7_13",
+      "x": 195.41,
+      "y": 102.64,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.44,
+        "PHGDH": 3.41,
+        "PSAT1": 5.16,
+        "CD8A": 0.0,
+        "CD68": 0.01,
+        "GAPDH": 9.08,
+        "EPCAM": 7.56,
+        "COL1A1": 0.02,
+        "ACTA2": 0.38
+      }
+    },
+    {
+      "id": "spot_7_14",
+      "x": 207.68,
+      "y": 102.97,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.18,
+        "PHGDH": 2.48,
+        "PSAT1": 1.81,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.08,
+        "EPCAM": 0.73,
+        "COL1A1": 10.25,
+        "ACTA2": 9.3
+      }
+    },
+    {
+      "id": "spot_7_15",
+      "x": 225.09,
+      "y": 102.52,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.52,
+        "PHGDH": 2.23,
+        "PSAT1": 2.2,
+        "CD8A": 0.0,
+        "CD68": 0.81,
+        "GAPDH": 7.47,
+        "EPCAM": 0.64,
+        "COL1A1": 9.24,
+        "ACTA2": 6.91
+      }
+    },
+    {
+      "id": "spot_7_16",
+      "x": 238.81,
+      "y": 106.34,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.28,
+        "PHGDH": 7.74,
+        "PSAT1": 8.48,
+        "CD8A": 0.21,
+        "CD68": 0.09,
+        "GAPDH": 9.67,
+        "EPCAM": 7.53,
+        "COL1A1": 0.48,
+        "ACTA2": 0.25
+      }
+    },
+    {
+      "id": "spot_7_17",
+      "x": 252.7,
+      "y": 107.5,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.7,
+        "PHGDH": 1.78,
+        "PSAT1": 1.62,
+        "CD8A": 0.43,
+        "CD68": 0.66,
+        "GAPDH": 7.49,
+        "EPCAM": 0.0,
+        "COL1A1": 8.55,
+        "ACTA2": 8.78
+      }
+    },
+    {
+      "id": "spot_7_18",
+      "x": 269.82,
+      "y": 105.23,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.29,
+        "PHGDH": 2.54,
+        "PSAT1": 1.94,
+        "CD8A": 0.0,
+        "CD68": 0.97,
+        "GAPDH": 7.82,
+        "EPCAM": 0.13,
+        "COL1A1": 8.97,
+        "ACTA2": 8.2
+      }
+    },
+    {
+      "id": "spot_7_19",
+      "x": 285.29,
+      "y": 105.03,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.12,
+        "PHGDH": 2.41,
+        "PSAT1": 2.33,
+        "CD8A": 0.0,
+        "CD68": 0.36,
+        "GAPDH": 7.72,
+        "EPCAM": 0.96,
+        "COL1A1": 9.8,
+        "ACTA2": 8.79
+      }
+    },
+    {
+      "id": "spot_8_0",
+      "x": 1.85,
+      "y": 119.72,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.0,
+        "PHGDH": 2.16,
+        "PSAT1": 0.84,
+        "CD8A": 0.45,
+        "CD68": 0.3,
+        "GAPDH": 6.91,
+        "EPCAM": 0.6,
+        "COL1A1": 8.29,
+        "ACTA2": 8.24
+      }
+    },
+    {
+      "id": "spot_8_1",
+      "x": 14.07,
+      "y": 117.38,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.41,
+        "PHGDH": 4.01,
+        "PSAT1": 3.31,
+        "CD8A": 0.24,
+        "CD68": 0.14,
+        "GAPDH": 7.14,
+        "EPCAM": 8.56,
+        "COL1A1": 0.56,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_8_2",
+      "x": 30.88,
+      "y": 119.52,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 4.62,
+        "PSAT1": 3.89,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.19,
+        "EPCAM": 7.15,
+        "COL1A1": 0.19,
+        "ACTA2": 0.08
+      }
+    },
+    {
+      "id": "spot_8_3",
+      "x": 45.22,
+      "y": 120.17,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.51,
+        "PHGDH": 2.11,
+        "PSAT1": 1.95,
+        "CD8A": 0.7,
+        "CD68": 0.47,
+        "GAPDH": 7.15,
+        "EPCAM": 0.0,
+        "COL1A1": 8.11,
+        "ACTA2": 8.18
+      }
+    },
+    {
+      "id": "spot_8_4",
+      "x": 58.49,
+      "y": 119.08,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.09,
+        "PHGDH": 1.73,
+        "PSAT1": 2.73,
+        "CD8A": 0.91,
+        "CD68": 0.0,
+        "GAPDH": 8.0,
+        "EPCAM": 0.28,
+        "COL1A1": 9.13,
+        "ACTA2": 8.48
+      }
+    },
+    {
+      "id": "spot_8_5",
+      "x": 72.2,
+      "y": 120.59,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 3.04,
+        "PSAT1": 2.2,
+        "CD8A": 0.0,
+        "CD68": 0.65,
+        "GAPDH": 7.74,
+        "EPCAM": 1.37,
+        "COL1A1": 9.87,
+        "ACTA2": 8.65
+      }
+    },
+    {
+      "id": "spot_8_6",
+      "x": 88.74,
+      "y": 121.89,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.86,
+        "PHGDH": 2.84,
+        "PSAT1": 1.65,
+        "CD8A": 0.0,
+        "CD68": 0.29,
+        "GAPDH": 7.82,
+        "EPCAM": 0.0,
+        "COL1A1": 8.84,
+        "ACTA2": 8.33
+      }
+    },
+    {
+      "id": "spot_8_7",
+      "x": 107.69,
+      "y": 122.28,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.7,
+        "PHGDH": 3.35,
+        "PSAT1": 2.95,
+        "CD8A": 0.0,
+        "CD68": 0.24,
+        "GAPDH": 8.84,
+        "EPCAM": 7.68,
+        "COL1A1": 0.52,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_8_8",
+      "x": 119.5,
+      "y": 117.9,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.82,
+        "PHGDH": 7.82,
+        "PSAT1": 8.5,
+        "CD8A": 0.0,
+        "CD68": 0.01,
+        "GAPDH": 8.05,
+        "EPCAM": 9.46,
+        "COL1A1": 0.11,
+        "ACTA2": 1.15
+      }
+    },
+    {
+      "id": "spot_8_9",
+      "x": 132.8,
+      "y": 118.46,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.65,
+        "PHGDH": 7.68,
+        "PSAT1": 7.12,
+        "CD8A": 0.25,
+        "CD68": 0.08,
+        "GAPDH": 9.04,
+        "EPCAM": 8.41,
+        "COL1A1": 0.4,
+        "ACTA2": 1.29
+      }
+    },
+    {
+      "id": "spot_8_10",
+      "x": 150.62,
+      "y": 122.24,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.87,
+        "PHGDH": 7.54,
+        "PSAT1": 7.56,
+        "CD8A": 0.0,
+        "CD68": 0.67,
+        "GAPDH": 8.71,
+        "EPCAM": 8.9,
+        "COL1A1": 0.47,
+        "ACTA2": 1.82
+      }
+    },
+    {
+      "id": "spot_8_11",
+      "x": 162.7,
+      "y": 123.0,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.21,
+        "PHGDH": 8.54,
+        "PSAT1": 9.02,
+        "CD8A": 0.48,
+        "CD68": 1.58,
+        "GAPDH": 8.12,
+        "EPCAM": 8.47,
+        "COL1A1": 0.0,
+        "ACTA2": 0.91
+      }
+    },
+    {
+      "id": "spot_8_12",
+      "x": 179.16,
+      "y": 118.57,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.53,
+        "PHGDH": 8.5,
+        "PSAT1": 8.87,
+        "CD8A": 0.02,
+        "CD68": 1.01,
+        "GAPDH": 7.98,
+        "EPCAM": 8.37,
+        "COL1A1": 0.95,
+        "ACTA2": 0.01
+      }
+    },
+    {
+      "id": "spot_8_13",
+      "x": 192.88,
+      "y": 118.56,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.34,
+        "PHGDH": 3.25,
+        "PSAT1": 3.1,
+        "CD8A": 0.41,
+        "CD68": 0.64,
+        "GAPDH": 7.17,
+        "EPCAM": 8.78,
+        "COL1A1": 0.0,
+        "ACTA2": 0.3
+      }
+    },
+    {
+      "id": "spot_8_14",
+      "x": 211.11,
+      "y": 118.54,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.94,
+        "PHGDH": 1.32,
+        "PSAT1": 0.94,
+        "CD8A": 0.42,
+        "CD68": 9.1,
+        "GAPDH": 6.85,
+        "EPCAM": 0.07,
+        "COL1A1": 0.0,
+        "ACTA2": 0.85
+      }
+    },
+    {
+      "id": "spot_8_15",
+      "x": 225.85,
+      "y": 117.35,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.43,
+        "PHGDH": 9.33,
+        "PSAT1": 7.01,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.12,
+        "EPCAM": 9.4,
+        "COL1A1": 0.61,
+        "ACTA2": 1.33
+      }
+    },
+    {
+      "id": "spot_8_16",
+      "x": 237.05,
+      "y": 120.03,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.54,
+        "PHGDH": 1.5,
+        "PSAT1": 1.39,
+        "CD8A": 0.0,
+        "CD68": 0.33,
+        "GAPDH": 7.51,
+        "EPCAM": 0.11,
+        "COL1A1": 9.17,
+        "ACTA2": 7.93
+      }
+    },
+    {
+      "id": "spot_8_17",
+      "x": 257.86,
+      "y": 117.1,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.41,
+        "PHGDH": 0.7,
+        "PSAT1": 0.13,
+        "CD8A": 9.14,
+        "CD68": 0.35,
+        "GAPDH": 7.08,
+        "EPCAM": 0.29,
+        "COL1A1": 0.46,
+        "ACTA2": 0.79
+      }
+    },
+    {
+      "id": "spot_8_18",
+      "x": 271.89,
+      "y": 118.6,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.77,
+        "PHGDH": 2.54,
+        "PSAT1": 0.22,
+        "CD8A": 0.0,
+        "CD68": 0.54,
+        "GAPDH": 8.4,
+        "EPCAM": 0.7,
+        "COL1A1": 8.49,
+        "ACTA2": 9.04
+      }
+    },
+    {
+      "id": "spot_8_19",
+      "x": 282.56,
+      "y": 119.28,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.41,
+        "PHGDH": 2.18,
+        "PSAT1": 1.93,
+        "CD8A": 0.53,
+        "CD68": 1.02,
+        "GAPDH": 6.54,
+        "EPCAM": 0.62,
+        "COL1A1": 8.11,
+        "ACTA2": 7.92
+      }
+    },
+    {
+      "id": "spot_9_0",
+      "x": -2.43,
+      "y": 135.17,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.09,
+        "PHGDH": 9.67,
+        "PSAT1": 8.72,
+        "CD8A": 0.0,
+        "CD68": 0.53,
+        "GAPDH": 9.17,
+        "EPCAM": 9.95,
+        "COL1A1": 0.0,
+        "ACTA2": 0.26
+      }
+    },
+    {
+      "id": "spot_9_1",
+      "x": 17.57,
+      "y": 133.89,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.44,
+        "PHGDH": 2.94,
+        "PSAT1": 2.88,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.32,
+        "EPCAM": 8.17,
+        "COL1A1": 0.47,
+        "ACTA2": 1.44
+      }
+    },
+    {
+      "id": "spot_9_2",
+      "x": 29.33,
+      "y": 137.38,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.21,
+        "PHGDH": 1.77,
+        "PSAT1": 2.86,
+        "CD8A": 0.13,
+        "CD68": 0.0,
+        "GAPDH": 7.49,
+        "EPCAM": 0.81,
+        "COL1A1": 9.41,
+        "ACTA2": 8.69
+      }
+    },
+    {
+      "id": "spot_9_3",
+      "x": 46.61,
+      "y": 137.73,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.74,
+        "PHGDH": 2.12,
+        "PSAT1": 1.75,
+        "CD8A": 0.0,
+        "CD68": 2.26,
+        "GAPDH": 6.94,
+        "EPCAM": 0.23,
+        "COL1A1": 9.79,
+        "ACTA2": 8.17
+      }
+    },
+    {
+      "id": "spot_9_4",
+      "x": 61.08,
+      "y": 135.96,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.01,
+        "PHGDH": 7.77,
+        "PSAT1": 8.14,
+        "CD8A": 0.0,
+        "CD68": 0.84,
+        "GAPDH": 9.88,
+        "EPCAM": 8.14,
+        "COL1A1": 0.0,
+        "ACTA2": 0.28
+      }
+    },
+    {
+      "id": "spot_9_5",
+      "x": 72.03,
+      "y": 133.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.46,
+        "PHGDH": 2.06,
+        "PSAT1": 2.22,
+        "CD8A": 0.45,
+        "CD68": 1.0,
+        "GAPDH": 6.92,
+        "EPCAM": 0.0,
+        "COL1A1": 9.75,
+        "ACTA2": 8.49
+      }
+    },
+    {
+      "id": "spot_9_6",
+      "x": 87.56,
+      "y": 135.59,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.43,
+        "PHGDH": 8.83,
+        "PSAT1": 8.01,
+        "CD8A": 0.26,
+        "CD68": 1.36,
+        "GAPDH": 8.34,
+        "EPCAM": 9.57,
+        "COL1A1": 0.39,
+        "ACTA2": 0.68
+      }
+    },
+    {
+      "id": "spot_9_7",
+      "x": 102.83,
+      "y": 133.81,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.31,
+        "PHGDH": 9.09,
+        "PSAT1": 8.45,
+        "CD8A": 0.0,
+        "CD68": 0.63,
+        "GAPDH": 9.5,
+        "EPCAM": 9.01,
+        "COL1A1": 0.52,
+        "ACTA2": 1.24
+      }
+    },
+    {
+      "id": "spot_9_8",
+      "x": 120.56,
+      "y": 133.17,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.31,
+        "PHGDH": 9.88,
+        "PSAT1": 7.79,
+        "CD8A": 0.83,
+        "CD68": 0.48,
+        "GAPDH": 8.59,
+        "EPCAM": 8.24,
+        "COL1A1": 1.45,
+        "ACTA2": 1.43
+      }
+    },
+    {
+      "id": "spot_9_9",
+      "x": 132.82,
+      "y": 133.92,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 2.25,
+        "PHGDH": 3.96,
+        "PSAT1": 3.9,
+        "CD8A": 1.64,
+        "CD68": 0.0,
+        "GAPDH": 7.76,
+        "EPCAM": 8.89,
+        "COL1A1": 0.0,
+        "ACTA2": 0.34
+      }
+    },
+    {
+      "id": "spot_9_10",
+      "x": 148.45,
+      "y": 134.26,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.87,
+        "PHGDH": 1.68,
+        "PSAT1": 0.56,
+        "CD8A": 0.09,
+        "CD68": 8.13,
+        "GAPDH": 6.94,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_9_11",
+      "x": 164.63,
+      "y": 133.75,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.02,
+        "PHGDH": 8.95,
+        "PSAT1": 7.23,
+        "CD8A": 0.0,
+        "CD68": 0.68,
+        "GAPDH": 8.8,
+        "EPCAM": 8.47,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_9_12",
+      "x": 181.73,
+      "y": 132.44,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 2.9,
+        "PHGDH": 3.88,
+        "PSAT1": 2.05,
+        "CD8A": 0.04,
+        "CD68": 0.0,
+        "GAPDH": 7.3,
+        "EPCAM": 8.14,
+        "COL1A1": 0.0,
+        "ACTA2": 0.89
+      }
+    },
+    {
+      "id": "spot_9_13",
+      "x": 195.83,
+      "y": 132.51,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.05,
+        "PHGDH": 0.89,
+        "PSAT1": 0.63,
+        "CD8A": 8.79,
+        "CD68": 0.36,
+        "GAPDH": 7.7,
+        "EPCAM": 0.01,
+        "COL1A1": 0.0,
+        "ACTA2": 0.69
+      }
+    },
+    {
+      "id": "spot_9_14",
+      "x": 212.79,
+      "y": 134.58,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.76,
+        "PHGDH": 9.22,
+        "PSAT1": 7.41,
+        "CD8A": 0.01,
+        "CD68": 0.0,
+        "GAPDH": 8.8,
+        "EPCAM": 8.0,
+        "COL1A1": 1.15,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_9_15",
+      "x": 224.07,
+      "y": 132.15,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.43,
+        "PHGDH": 7.18,
+        "PSAT1": 8.97,
+        "CD8A": 1.16,
+        "CD68": 1.25,
+        "GAPDH": 9.43,
+        "EPCAM": 9.2,
+        "COL1A1": 0.11,
+        "ACTA2": 0.51
+      }
+    },
+    {
+      "id": "spot_9_16",
+      "x": 239.9,
+      "y": 134.86,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.03,
+        "PHGDH": 1.6,
+        "PSAT1": 1.56,
+        "CD8A": 1.24,
+        "CD68": 1.28,
+        "GAPDH": 8.27,
+        "EPCAM": 0.0,
+        "COL1A1": 8.48,
+        "ACTA2": 9.28
+      }
+    },
+    {
+      "id": "spot_9_17",
+      "x": 253.46,
+      "y": 133.05,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 9.28,
+        "PHGDH": 7.09,
+        "PSAT1": 7.64,
+        "CD8A": 0.17,
+        "CD68": 0.91,
+        "GAPDH": 9.44,
+        "EPCAM": 9.59,
+        "COL1A1": 0.37,
+        "ACTA2": 0.46
+      }
+    },
+    {
+      "id": "spot_9_18",
+      "x": 270.68,
+      "y": 133.18,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.48,
+        "PHGDH": 2.7,
+        "PSAT1": 2.17,
+        "CD8A": 1.16,
+        "CD68": 0.48,
+        "GAPDH": 7.3,
+        "EPCAM": 1.18,
+        "COL1A1": 9.93,
+        "ACTA2": 8.61
+      }
+    },
+    {
+      "id": "spot_9_19",
+      "x": 284.75,
+      "y": 133.57,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.99,
+        "PHGDH": 0.36,
+        "PSAT1": 0.95,
+        "CD8A": 8.22,
+        "CD68": 0.03,
+        "GAPDH": 6.33,
+        "EPCAM": 0.0,
+        "COL1A1": 0.67,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_10_0",
+      "x": 1.88,
+      "y": 151.24,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 1.93,
+        "PSAT1": 2.1,
+        "CD8A": 0.42,
+        "CD68": 0.27,
+        "GAPDH": 7.86,
+        "EPCAM": 0.0,
+        "COL1A1": 8.53,
+        "ACTA2": 8.12
+      }
+    },
+    {
+      "id": "spot_10_1",
+      "x": 14.3,
+      "y": 148.11,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.36,
+        "PHGDH": 1.8,
+        "PSAT1": 1.09,
+        "CD8A": 0.96,
+        "CD68": 0.4,
+        "GAPDH": 7.17,
+        "EPCAM": 0.22,
+        "COL1A1": 8.94,
+        "ACTA2": 9.0
+      }
+    },
+    {
+      "id": "spot_10_2",
+      "x": 27.32,
+      "y": 149.15,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.52,
+        "PHGDH": 9.33,
+        "PSAT1": 8.89,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 9.13,
+        "EPCAM": 7.81,
+        "COL1A1": 1.08,
+        "ACTA2": 0.15
+      }
+    },
+    {
+      "id": "spot_10_3",
+      "x": 42.19,
+      "y": 151.57,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.22,
+        "PHGDH": 1.98,
+        "PSAT1": 2.64,
+        "CD8A": 0.53,
+        "CD68": 0.98,
+        "GAPDH": 7.45,
+        "EPCAM": 0.0,
+        "COL1A1": 8.92,
+        "ACTA2": 8.31
+      }
+    },
+    {
+      "id": "spot_10_4",
+      "x": 57.69,
+      "y": 151.65,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.75,
+        "PHGDH": 2.03,
+        "PSAT1": 2.02,
+        "CD8A": 9.15,
+        "CD68": 0.0,
+        "GAPDH": 6.28,
+        "EPCAM": 1.0,
+        "COL1A1": 0.88,
+        "ACTA2": 0.1
+      }
+    },
+    {
+      "id": "spot_10_5",
+      "x": 78.0,
+      "y": 149.7,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.7,
+        "PHGDH": 2.36,
+        "PSAT1": 1.31,
+        "CD8A": 1.24,
+        "CD68": 0.36,
+        "GAPDH": 7.59,
+        "EPCAM": 1.29,
+        "COL1A1": 8.73,
+        "ACTA2": 8.11
+      }
+    },
+    {
+      "id": "spot_10_6",
+      "x": 91.26,
+      "y": 150.8,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.06,
+        "PHGDH": 8.81,
+        "PSAT1": 8.26,
+        "CD8A": 0.3,
+        "CD68": 0.01,
+        "GAPDH": 9.49,
+        "EPCAM": 8.29,
+        "COL1A1": 0.37,
+        "ACTA2": 0.26
+      }
+    },
+    {
+      "id": "spot_10_7",
+      "x": 103.6,
+      "y": 152.15,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.02,
+        "PHGDH": 3.68,
+        "PSAT1": 3.16,
+        "CD8A": 1.12,
+        "CD68": 0.0,
+        "GAPDH": 9.64,
+        "EPCAM": 7.08,
+        "COL1A1": 0.61,
+        "ACTA2": 0.07
+      }
+    },
+    {
+      "id": "spot_10_8",
+      "x": 122.2,
+      "y": 148.5,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.68,
+        "PHGDH": 1.21,
+        "PSAT1": 1.59,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.28,
+        "EPCAM": 0.0,
+        "COL1A1": 9.54,
+        "ACTA2": 7.57
+      }
+    },
+    {
+      "id": "spot_10_9",
+      "x": 132.56,
+      "y": 150.09,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.88,
+        "PHGDH": 9.03,
+        "PSAT1": 7.98,
+        "CD8A": 0.61,
+        "CD68": 0.14,
+        "GAPDH": 10.13,
+        "EPCAM": 8.82,
+        "COL1A1": 0.39,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_10_10",
+      "x": 149.75,
+      "y": 150.98,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.48,
+        "PHGDH": 8.79,
+        "PSAT1": 8.33,
+        "CD8A": 0.72,
+        "CD68": 0.41,
+        "GAPDH": 9.56,
+        "EPCAM": 9.06,
+        "COL1A1": 0.02,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_10_11",
+      "x": 164.91,
+      "y": 149.06,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.44,
+        "PHGDH": 8.76,
+        "PSAT1": 8.28,
+        "CD8A": 0.24,
+        "CD68": 0.0,
+        "GAPDH": 9.94,
+        "EPCAM": 9.63,
+        "COL1A1": 0.48,
+        "ACTA2": 0.41
+      }
+    },
+    {
+      "id": "spot_10_12",
+      "x": 182.75,
+      "y": 148.21,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.39,
+        "PHGDH": 9.14,
+        "PSAT1": 8.95,
+        "CD8A": 1.27,
+        "CD68": 0.17,
+        "GAPDH": 9.96,
+        "EPCAM": 8.8,
+        "COL1A1": 1.08,
+        "ACTA2": 0.7
+      }
+    },
+    {
+      "id": "spot_10_13",
+      "x": 194.38,
+      "y": 148.83,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.59,
+        "PHGDH": 8.59,
+        "PSAT1": 9.07,
+        "CD8A": 0.09,
+        "CD68": 0.27,
+        "GAPDH": 8.78,
+        "EPCAM": 8.85,
+        "COL1A1": 0.63,
+        "ACTA2": 1.3
+      }
+    },
+    {
+      "id": "spot_10_14",
+      "x": 207.06,
+      "y": 151.17,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.73,
+        "PHGDH": 1.45,
+        "PSAT1": 1.46,
+        "CD8A": 0.57,
+        "CD68": 8.28,
+        "GAPDH": 7.85,
+        "EPCAM": 0.62,
+        "COL1A1": 0.61,
+        "ACTA2": 0.44
+      }
+    },
+    {
+      "id": "spot_10_15",
+      "x": 226.64,
+      "y": 151.52,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.58,
+        "PHGDH": 8.83,
+        "PSAT1": 8.19,
+        "CD8A": 0.02,
+        "CD68": 0.29,
+        "GAPDH": 8.72,
+        "EPCAM": 8.28,
+        "COL1A1": 0.35,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_10_16",
+      "x": 237.91,
+      "y": 149.47,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.36,
+        "PHGDH": 1.9,
+        "PSAT1": 2.71,
+        "CD8A": 0.79,
+        "CD68": 0.0,
+        "GAPDH": 7.18,
+        "EPCAM": 0.71,
+        "COL1A1": 9.08,
+        "ACTA2": 8.71
+      }
+    },
+    {
+      "id": "spot_10_17",
+      "x": 252.51,
+      "y": 150.32,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.57,
+        "PHGDH": 1.29,
+        "PSAT1": 1.25,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.22,
+        "EPCAM": 0.0,
+        "COL1A1": 8.49,
+        "ACTA2": 8.32
+      }
+    },
+    {
+      "id": "spot_10_18",
+      "x": 271.49,
+      "y": 148.77,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.4,
+        "PHGDH": 1.21,
+        "PSAT1": 1.61,
+        "CD8A": 0.21,
+        "CD68": 0.0,
+        "GAPDH": 7.5,
+        "EPCAM": 0.0,
+        "COL1A1": 8.91,
+        "ACTA2": 9.79
+      }
+    },
+    {
+      "id": "spot_10_19",
+      "x": 282.79,
+      "y": 152.16,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.08,
+        "PHGDH": 1.5,
+        "PSAT1": 2.58,
+        "CD8A": 0.32,
+        "CD68": 0.0,
+        "GAPDH": 7.51,
+        "EPCAM": 0.09,
+        "COL1A1": 9.63,
+        "ACTA2": 8.59
+      }
+    },
+    {
+      "id": "spot_11_0",
+      "x": -2.76,
+      "y": 162.36,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.66,
+        "PHGDH": 1.16,
+        "PSAT1": 0.48,
+        "CD8A": 8.9,
+        "CD68": 0.43,
+        "GAPDH": 6.56,
+        "EPCAM": 0.0,
+        "COL1A1": 0.01,
+        "ACTA2": 0.01
+      }
+    },
+    {
+      "id": "spot_11_1",
+      "x": 15.07,
+      "y": 163.22,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 0.62,
+        "PSAT1": 0.96,
+        "CD8A": 8.14,
+        "CD68": 0.0,
+        "GAPDH": 6.71,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_11_2",
+      "x": 32.08,
+      "y": 162.35,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 2.36,
+        "PSAT1": 1.5,
+        "CD8A": 0.0,
+        "CD68": 0.35,
+        "GAPDH": 6.52,
+        "EPCAM": 0.89,
+        "COL1A1": 9.84,
+        "ACTA2": 8.29
+      }
+    },
+    {
+      "id": "spot_11_3",
+      "x": 47.72,
+      "y": 165.14,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.16,
+        "PHGDH": 1.13,
+        "PSAT1": 0.74,
+        "CD8A": 9.63,
+        "CD68": 1.25,
+        "GAPDH": 6.65,
+        "EPCAM": 1.34,
+        "COL1A1": 0.22,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_11_4",
+      "x": 61.84,
+      "y": 163.63,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.62,
+        "PHGDH": 7.74,
+        "PSAT1": 8.79,
+        "CD8A": 0.41,
+        "CD68": 0.0,
+        "GAPDH": 9.64,
+        "EPCAM": 8.28,
+        "COL1A1": 0.27,
+        "ACTA2": 0.39
+      }
+    },
+    {
+      "id": "spot_11_5",
+      "x": 75.44,
+      "y": 166.34,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.08,
+        "PHGDH": 8.32,
+        "PSAT1": 8.19,
+        "CD8A": 0.39,
+        "CD68": 0.0,
+        "GAPDH": 8.52,
+        "EPCAM": 8.9,
+        "COL1A1": 1.32,
+        "ACTA2": 1.52
+      }
+    },
+    {
+      "id": "spot_11_6",
+      "x": 92.14,
+      "y": 165.32,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.46,
+        "PHGDH": 3.18,
+        "PSAT1": 3.13,
+        "CD8A": 0.66,
+        "CD68": 0.11,
+        "GAPDH": 7.53,
+        "EPCAM": 8.51,
+        "COL1A1": 0.67,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_11_7",
+      "x": 103.08,
+      "y": 166.83,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.48,
+        "PHGDH": 4.02,
+        "PSAT1": 3.34,
+        "CD8A": 0.0,
+        "CD68": 0.31,
+        "GAPDH": 8.3,
+        "EPCAM": 7.56,
+        "COL1A1": 0.33,
+        "ACTA2": 0.28
+      }
+    },
+    {
+      "id": "spot_11_8",
+      "x": 118.2,
+      "y": 165.38,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.32,
+        "PHGDH": 8.03,
+        "PSAT1": 7.61,
+        "CD8A": 0.0,
+        "CD68": 0.36,
+        "GAPDH": 8.71,
+        "EPCAM": 9.62,
+        "COL1A1": 0.0,
+        "ACTA2": 0.4
+      }
+    },
+    {
+      "id": "spot_11_9",
+      "x": 134.46,
+      "y": 163.4,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.87,
+        "PHGDH": 9.16,
+        "PSAT1": 7.16,
+        "CD8A": 0.13,
+        "CD68": 0.29,
+        "GAPDH": 8.46,
+        "EPCAM": 7.83,
+        "COL1A1": 0.46,
+        "ACTA2": 0.12
+      }
+    },
+    {
+      "id": "spot_11_10",
+      "x": 150.18,
+      "y": 163.43,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 9.7,
+        "PHGDH": 9.25,
+        "PSAT1": 8.14,
+        "CD8A": 0.0,
+        "CD68": 1.43,
+        "GAPDH": 8.49,
+        "EPCAM": 7.88,
+        "COL1A1": 0.38,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_11_11",
+      "x": 162.51,
+      "y": 162.57,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.97,
+        "PHGDH": 8.6,
+        "PSAT1": 7.99,
+        "CD8A": 0.0,
+        "CD68": 0.03,
+        "GAPDH": 9.53,
+        "EPCAM": 8.7,
+        "COL1A1": 0.46,
+        "ACTA2": 0.92
+      }
+    },
+    {
+      "id": "spot_11_12",
+      "x": 181.8,
+      "y": 166.2,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.0,
+        "PHGDH": 2.53,
+        "PSAT1": 2.26,
+        "CD8A": 0.38,
+        "CD68": 0.55,
+        "GAPDH": 6.72,
+        "EPCAM": 0.4,
+        "COL1A1": 9.5,
+        "ACTA2": 7.8
+      }
+    },
+    {
+      "id": "spot_11_13",
+      "x": 195.22,
+      "y": 167.79,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.93,
+        "PHGDH": 8.33,
+        "PSAT1": 8.64,
+        "CD8A": 0.36,
+        "CD68": 0.54,
+        "GAPDH": 8.66,
+        "EPCAM": 7.77,
+        "COL1A1": 0.44,
+        "ACTA2": 0.24
+      }
+    },
+    {
+      "id": "spot_11_14",
+      "x": 212.02,
+      "y": 163.97,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.81,
+        "PHGDH": 9.06,
+        "PSAT1": 7.3,
+        "CD8A": 0.02,
+        "CD68": 0.18,
+        "GAPDH": 10.93,
+        "EPCAM": 9.4,
+        "COL1A1": 0.62,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_11_15",
+      "x": 223.5,
+      "y": 164.77,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.79,
+        "PHGDH": 1.26,
+        "PSAT1": 1.17,
+        "CD8A": 9.73,
+        "CD68": 0.0,
+        "GAPDH": 7.56,
+        "EPCAM": 0.92,
+        "COL1A1": 0.0,
+        "ACTA2": 0.71
+      }
+    },
+    {
+      "id": "spot_11_16",
+      "x": 240.87,
+      "y": 165.49,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.25,
+        "PHGDH": 1.98,
+        "PSAT1": 3.09,
+        "CD8A": 0.71,
+        "CD68": 0.1,
+        "GAPDH": 7.61,
+        "EPCAM": 1.13,
+        "COL1A1": 8.57,
+        "ACTA2": 8.31
+      }
+    },
+    {
+      "id": "spot_11_17",
+      "x": 254.77,
+      "y": 163.01,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.35,
+        "PHGDH": 2.36,
+        "PSAT1": 1.36,
+        "CD8A": 1.09,
+        "CD68": 0.57,
+        "GAPDH": 7.69,
+        "EPCAM": 0.57,
+        "COL1A1": 9.39,
+        "ACTA2": 8.85
+      }
+    },
+    {
+      "id": "spot_11_18",
+      "x": 272.3,
+      "y": 162.21,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.21,
+        "PHGDH": 2.6,
+        "PSAT1": 1.25,
+        "CD8A": 0.6,
+        "CD68": 0.85,
+        "GAPDH": 7.68,
+        "EPCAM": 0.46,
+        "COL1A1": 9.5,
+        "ACTA2": 8.95
+      }
+    },
+    {
+      "id": "spot_11_19",
+      "x": 285.78,
+      "y": 166.81,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.01,
+        "PHGDH": 2.24,
+        "PSAT1": 1.03,
+        "CD8A": 8.42,
+        "CD68": 1.08,
+        "GAPDH": 5.48,
+        "EPCAM": 0.23,
+        "COL1A1": 0.0,
+        "ACTA2": 0.09
+      }
+    },
+    {
+      "id": "spot_12_0",
+      "x": -1.92,
+      "y": 178.91,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.03,
+        "PHGDH": 1.47,
+        "PSAT1": 3.63,
+        "CD8A": 0.87,
+        "CD68": 0.0,
+        "GAPDH": 7.31,
+        "EPCAM": 1.82,
+        "COL1A1": 9.2,
+        "ACTA2": 9.11
+      }
+    },
+    {
+      "id": "spot_12_1",
+      "x": 13.6,
+      "y": 181.9,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.62,
+        "PHGDH": 3.39,
+        "PSAT1": 1.99,
+        "CD8A": 0.62,
+        "CD68": 10.14,
+        "GAPDH": 7.36,
+        "EPCAM": 0.0,
+        "COL1A1": 0.92,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_12_2",
+      "x": 28.06,
+      "y": 180.56,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.07,
+        "PHGDH": 0.0,
+        "PSAT1": 2.02,
+        "CD8A": 9.06,
+        "CD68": 1.23,
+        "GAPDH": 6.55,
+        "EPCAM": 0.0,
+        "COL1A1": 0.05,
+        "ACTA2": 1.34
+      }
+    },
+    {
+      "id": "spot_12_3",
+      "x": 44.95,
+      "y": 178.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.11,
+        "PHGDH": 2.47,
+        "PSAT1": 2.13,
+        "CD8A": 0.34,
+        "CD68": 1.12,
+        "GAPDH": 8.84,
+        "EPCAM": 0.21,
+        "COL1A1": 9.3,
+        "ACTA2": 8.7
+      }
+    },
+    {
+      "id": "spot_12_4",
+      "x": 61.3,
+      "y": 182.51,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.44,
+        "PHGDH": 1.31,
+        "PSAT1": 0.0,
+        "CD8A": 8.21,
+        "CD68": 0.68,
+        "GAPDH": 5.65,
+        "EPCAM": 1.08,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_12_5",
+      "x": 74.37,
+      "y": 177.61,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.22,
+        "PHGDH": 2.33,
+        "PSAT1": 2.17,
+        "CD8A": 1.21,
+        "CD68": 0.06,
+        "GAPDH": 8.34,
+        "EPCAM": 0.0,
+        "COL1A1": 9.92,
+        "ACTA2": 9.8
+      }
+    },
+    {
+      "id": "spot_12_6",
+      "x": 91.16,
+      "y": 182.57,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.63,
+        "PHGDH": 1.99,
+        "PSAT1": 1.33,
+        "CD8A": 9.36,
+        "CD68": 0.38,
+        "GAPDH": 6.51,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.67
+      }
+    },
+    {
+      "id": "spot_12_7",
+      "x": 107.97,
+      "y": 182.79,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.61,
+        "PHGDH": 7.42,
+        "PSAT1": 7.39,
+        "CD8A": 0.52,
+        "CD68": 0.21,
+        "GAPDH": 7.81,
+        "EPCAM": 8.24,
+        "COL1A1": 1.13,
+        "ACTA2": 1.17
+      }
+    },
+    {
+      "id": "spot_12_8",
+      "x": 118.43,
+      "y": 182.89,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.99,
+        "PHGDH": 8.33,
+        "PSAT1": 7.98,
+        "CD8A": 0.0,
+        "CD68": 0.79,
+        "GAPDH": 8.67,
+        "EPCAM": 8.76,
+        "COL1A1": 0.95,
+        "ACTA2": 0.82
+      }
+    },
+    {
+      "id": "spot_12_9",
+      "x": 132.65,
+      "y": 177.01,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.99,
+        "PHGDH": 8.33,
+        "PSAT1": 6.63,
+        "CD8A": 0.62,
+        "CD68": 0.0,
+        "GAPDH": 8.55,
+        "EPCAM": 9.32,
+        "COL1A1": 1.05,
+        "ACTA2": 0.81
+      }
+    },
+    {
+      "id": "spot_12_10",
+      "x": 152.18,
+      "y": 180.91,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.92,
+        "PHGDH": 8.7,
+        "PSAT1": 8.48,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 10.44,
+        "EPCAM": 9.13,
+        "COL1A1": 0.66,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_12_11",
+      "x": 165.28,
+      "y": 182.39,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.49,
+        "PHGDH": 7.81,
+        "PSAT1": 7.74,
+        "CD8A": 0.0,
+        "CD68": 0.32,
+        "GAPDH": 9.44,
+        "EPCAM": 8.67,
+        "COL1A1": 0.77,
+        "ACTA2": 0.18
+      }
+    },
+    {
+      "id": "spot_12_12",
+      "x": 177.61,
+      "y": 178.23,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.49,
+        "PHGDH": 7.59,
+        "PSAT1": 8.14,
+        "CD8A": 0.0,
+        "CD68": 0.21,
+        "GAPDH": 9.53,
+        "EPCAM": 9.54,
+        "COL1A1": 0.74,
+        "ACTA2": 0.59
+      }
+    },
+    {
+      "id": "spot_12_13",
+      "x": 194.16,
+      "y": 179.57,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.51,
+        "PHGDH": 8.07,
+        "PSAT1": 7.51,
+        "CD8A": 0.14,
+        "CD68": 0.43,
+        "GAPDH": 9.34,
+        "EPCAM": 9.24,
+        "COL1A1": 1.51,
+        "ACTA2": 0.97
+      }
+    },
+    {
+      "id": "spot_12_14",
+      "x": 208.85,
+      "y": 179.38,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.66,
+        "PHGDH": 8.28,
+        "PSAT1": 7.83,
+        "CD8A": 0.0,
+        "CD68": 0.73,
+        "GAPDH": 8.72,
+        "EPCAM": 8.36,
+        "COL1A1": 0.66,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_12_15",
+      "x": 223.61,
+      "y": 177.37,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.59,
+        "PHGDH": 1.07,
+        "PSAT1": 0.88,
+        "CD8A": 8.48,
+        "CD68": 1.12,
+        "GAPDH": 7.59,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_12_16",
+      "x": 241.91,
+      "y": 179.51,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.66,
+        "PHGDH": 1.59,
+        "PSAT1": 2.4,
+        "CD8A": 0.0,
+        "CD68": 1.54,
+        "GAPDH": 8.12,
+        "EPCAM": 0.04,
+        "COL1A1": 8.51,
+        "ACTA2": 9.27
+      }
+    },
+    {
+      "id": "spot_12_17",
+      "x": 256.07,
+      "y": 180.72,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.17,
+        "PHGDH": 8.52,
+        "PSAT1": 7.83,
+        "CD8A": 1.7,
+        "CD68": 0.14,
+        "GAPDH": 9.21,
+        "EPCAM": 8.51,
+        "COL1A1": 0.0,
+        "ACTA2": 1.23
+      }
+    },
+    {
+      "id": "spot_12_18",
+      "x": 269.61,
+      "y": 182.98,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.43,
+        "PHGDH": 1.7,
+        "PSAT1": 3.03,
+        "CD8A": 0.0,
+        "CD68": 0.94,
+        "GAPDH": 7.74,
+        "EPCAM": 0.0,
+        "COL1A1": 9.52,
+        "ACTA2": 8.29
+      }
+    },
+    {
+      "id": "spot_12_19",
+      "x": 287.24,
+      "y": 181.72,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.86,
+        "PHGDH": 1.48,
+        "PSAT1": 1.81,
+        "CD8A": 0.0,
+        "CD68": 0.57,
+        "GAPDH": 6.64,
+        "EPCAM": 0.0,
+        "COL1A1": 10.47,
+        "ACTA2": 7.89
+      }
+    },
+    {
+      "id": "spot_13_0",
+      "x": 0.38,
+      "y": 192.61,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.66,
+        "PHGDH": 1.98,
+        "PSAT1": 1.4,
+        "CD8A": 0.51,
+        "CD68": 0.0,
+        "GAPDH": 7.57,
+        "EPCAM": 0.67,
+        "COL1A1": 9.31,
+        "ACTA2": 8.91
+      }
+    },
+    {
+      "id": "spot_13_1",
+      "x": 16.16,
+      "y": 192.23,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.15,
+        "PHGDH": 0.98,
+        "PSAT1": 1.49,
+        "CD8A": 8.86,
+        "CD68": 0.0,
+        "GAPDH": 6.9,
+        "EPCAM": 0.03,
+        "COL1A1": 0.41,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_13_2",
+      "x": 28.68,
+      "y": 194.95,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.19,
+        "PHGDH": 2.8,
+        "PSAT1": 2.98,
+        "CD8A": 1.41,
+        "CD68": 0.0,
+        "GAPDH": 7.89,
+        "EPCAM": 0.12,
+        "COL1A1": 9.82,
+        "ACTA2": 8.16
+      }
+    },
+    {
+      "id": "spot_13_3",
+      "x": 43.27,
+      "y": 196.94,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.89,
+        "PHGDH": 2.17,
+        "PSAT1": 0.7,
+        "CD8A": 0.51,
+        "CD68": 0.0,
+        "GAPDH": 7.78,
+        "EPCAM": 0.64,
+        "COL1A1": 8.88,
+        "ACTA2": 8.39
+      }
+    },
+    {
+      "id": "spot_13_4",
+      "x": 62.11,
+      "y": 197.28,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.2,
+        "PHGDH": 9.56,
+        "PSAT1": 8.44,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 9.46,
+        "EPCAM": 8.66,
+        "COL1A1": 0.04,
+        "ACTA2": 0.72
+      }
+    },
+    {
+      "id": "spot_13_5",
+      "x": 75.81,
+      "y": 192.74,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.16,
+        "PHGDH": 7.94,
+        "PSAT1": 8.78,
+        "CD8A": 0.63,
+        "CD68": 1.39,
+        "GAPDH": 8.62,
+        "EPCAM": 8.51,
+        "COL1A1": 1.16,
+        "ACTA2": 1.49
+      }
+    },
+    {
+      "id": "spot_13_6",
+      "x": 91.49,
+      "y": 196.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.93,
+        "PHGDH": 2.33,
+        "PSAT1": 0.5,
+        "CD8A": 0.0,
+        "CD68": 0.94,
+        "GAPDH": 6.82,
+        "EPCAM": 0.0,
+        "COL1A1": 8.77,
+        "ACTA2": 8.3
+      }
+    },
+    {
+      "id": "spot_13_7",
+      "x": 106.68,
+      "y": 196.61,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.87,
+        "PHGDH": 9.24,
+        "PSAT1": 7.74,
+        "CD8A": 0.04,
+        "CD68": 0.25,
+        "GAPDH": 9.08,
+        "EPCAM": 9.88,
+        "COL1A1": 0.0,
+        "ACTA2": 1.87
+      }
+    },
+    {
+      "id": "spot_13_8",
+      "x": 120.86,
+      "y": 194.54,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.53,
+        "PHGDH": 8.87,
+        "PSAT1": 7.32,
+        "CD8A": 0.29,
+        "CD68": 0.57,
+        "GAPDH": 8.56,
+        "EPCAM": 9.37,
+        "COL1A1": 0.93,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_13_9",
+      "x": 134.25,
+      "y": 195.88,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.82,
+        "PHGDH": 8.41,
+        "PSAT1": 8.47,
+        "CD8A": 1.75,
+        "CD68": 1.0,
+        "GAPDH": 8.34,
+        "EPCAM": 7.88,
+        "COL1A1": 0.43,
+        "ACTA2": 1.34
+      }
+    },
+    {
+      "id": "spot_13_10",
+      "x": 152.35,
+      "y": 193.79,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.92,
+        "PHGDH": 7.22,
+        "PSAT1": 8.57,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.58,
+        "EPCAM": 8.4,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_13_11",
+      "x": 163.56,
+      "y": 194.51,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.08,
+        "PHGDH": 9.42,
+        "PSAT1": 8.41,
+        "CD8A": 0.0,
+        "CD68": 0.13,
+        "GAPDH": 9.04,
+        "EPCAM": 8.38,
+        "COL1A1": 0.0,
+        "ACTA2": 0.17
+      }
+    },
+    {
+      "id": "spot_13_12",
+      "x": 182.44,
+      "y": 196.03,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.45,
+        "PHGDH": 7.55,
+        "PSAT1": 8.47,
+        "CD8A": 0.0,
+        "CD68": 0.56,
+        "GAPDH": 9.28,
+        "EPCAM": 8.74,
+        "COL1A1": 1.59,
+        "ACTA2": 0.43
+      }
+    },
+    {
+      "id": "spot_13_13",
+      "x": 196.08,
+      "y": 194.01,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.42,
+        "PHGDH": 7.89,
+        "PSAT1": 8.98,
+        "CD8A": 0.0,
+        "CD68": 1.29,
+        "GAPDH": 8.87,
+        "EPCAM": 9.21,
+        "COL1A1": 0.18,
+        "ACTA2": 1.53
+      }
+    },
+    {
+      "id": "spot_13_14",
+      "x": 209.82,
+      "y": 197.2,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.42,
+        "PHGDH": 2.02,
+        "PSAT1": 2.44,
+        "CD8A": 0.0,
+        "CD68": 0.8,
+        "GAPDH": 7.06,
+        "EPCAM": 0.14,
+        "COL1A1": 9.39,
+        "ACTA2": 8.6
+      }
+    },
+    {
+      "id": "spot_13_15",
+      "x": 223.2,
+      "y": 194.46,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.94,
+        "PHGDH": 2.65,
+        "PSAT1": 1.53,
+        "CD8A": 0.0,
+        "CD68": 1.27,
+        "GAPDH": 7.63,
+        "EPCAM": 0.0,
+        "COL1A1": 8.95,
+        "ACTA2": 8.13
+      }
+    },
+    {
+      "id": "spot_13_16",
+      "x": 240.81,
+      "y": 192.03,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.23,
+        "PHGDH": 1.74,
+        "PSAT1": 1.96,
+        "CD8A": 0.0,
+        "CD68": 0.42,
+        "GAPDH": 7.24,
+        "EPCAM": 0.0,
+        "COL1A1": 8.64,
+        "ACTA2": 7.12
+      }
+    },
+    {
+      "id": "spot_13_17",
+      "x": 254.3,
+      "y": 192.23,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.69,
+        "PHGDH": 8.43,
+        "PSAT1": 8.27,
+        "CD8A": 0.0,
+        "CD68": 1.32,
+        "GAPDH": 9.43,
+        "EPCAM": 9.64,
+        "COL1A1": 0.18,
+        "ACTA2": 0.08
+      }
+    },
+    {
+      "id": "spot_13_18",
+      "x": 271.16,
+      "y": 194.07,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.6,
+        "PHGDH": 2.63,
+        "PSAT1": 2.46,
+        "CD8A": 1.17,
+        "CD68": 0.25,
+        "GAPDH": 7.97,
+        "EPCAM": 0.09,
+        "COL1A1": 8.4,
+        "ACTA2": 7.74
+      }
+    },
+    {
+      "id": "spot_13_19",
+      "x": 287.97,
+      "y": 194.06,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 5.17,
+        "PHGDH": 1.25,
+        "PSAT1": 1.6,
+        "CD8A": 1.67,
+        "CD68": 8.57,
+        "GAPDH": 6.85,
+        "EPCAM": 0.45,
+        "COL1A1": 0.25,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_14_0",
+      "x": 1.4,
+      "y": 210.54,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.62,
+        "PHGDH": 2.75,
+        "PSAT1": 3.09,
+        "CD8A": 0.49,
+        "CD68": 0.37,
+        "GAPDH": 8.24,
+        "EPCAM": 2.05,
+        "COL1A1": 9.78,
+        "ACTA2": 7.94
+      }
+    },
+    {
+      "id": "spot_14_1",
+      "x": 12.12,
+      "y": 211.14,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.46,
+        "PHGDH": 1.55,
+        "PSAT1": 2.42,
+        "CD8A": 0.0,
+        "CD68": 0.46,
+        "GAPDH": 7.21,
+        "EPCAM": 0.0,
+        "COL1A1": 8.92,
+        "ACTA2": 9.24
+      }
+    },
+    {
+      "id": "spot_14_2",
+      "x": 30.97,
+      "y": 208.62,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.94,
+        "PHGDH": 2.96,
+        "PSAT1": 2.66,
+        "CD8A": 0.79,
+        "CD68": 0.62,
+        "GAPDH": 7.7,
+        "EPCAM": 0.51,
+        "COL1A1": 9.45,
+        "ACTA2": 8.55
+      }
+    },
+    {
+      "id": "spot_14_3",
+      "x": 45.14,
+      "y": 208.21,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.65,
+        "PHGDH": 2.05,
+        "PSAT1": 2.06,
+        "CD8A": 0.0,
+        "CD68": 0.41,
+        "GAPDH": 7.99,
+        "EPCAM": 0.0,
+        "COL1A1": 10.1,
+        "ACTA2": 8.42
+      }
+    },
+    {
+      "id": "spot_14_4",
+      "x": 62.44,
+      "y": 212.01,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.35,
+        "PHGDH": 2.31,
+        "PSAT1": 0.94,
+        "CD8A": 0.13,
+        "CD68": 0.77,
+        "GAPDH": 7.77,
+        "EPCAM": 0.41,
+        "COL1A1": 10.98,
+        "ACTA2": 8.21
+      }
+    },
+    {
+      "id": "spot_14_5",
+      "x": 72.6,
+      "y": 208.05,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.44,
+        "PHGDH": 8.23,
+        "PSAT1": 9.24,
+        "CD8A": 0.0,
+        "CD68": 1.21,
+        "GAPDH": 9.94,
+        "EPCAM": 9.37,
+        "COL1A1": 1.62,
+        "ACTA2": 0.73
+      }
+    },
+    {
+      "id": "spot_14_6",
+      "x": 90.98,
+      "y": 208.02,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.43,
+        "PHGDH": 2.42,
+        "PSAT1": 2.09,
+        "CD8A": 0.02,
+        "CD68": 0.55,
+        "GAPDH": 7.15,
+        "EPCAM": 0.0,
+        "COL1A1": 10.1,
+        "ACTA2": 8.32
+      }
+    },
+    {
+      "id": "spot_14_7",
+      "x": 107.1,
+      "y": 211.8,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.79,
+        "PHGDH": 2.19,
+        "PSAT1": 1.62,
+        "CD8A": 0.13,
+        "CD68": 0.2,
+        "GAPDH": 7.83,
+        "EPCAM": 0.07,
+        "COL1A1": 8.51,
+        "ACTA2": 8.8
+      }
+    },
+    {
+      "id": "spot_14_8",
+      "x": 121.81,
+      "y": 211.07,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.39,
+        "PHGDH": 8.89,
+        "PSAT1": 9.1,
+        "CD8A": 0.26,
+        "CD68": 1.15,
+        "GAPDH": 7.73,
+        "EPCAM": 9.72,
+        "COL1A1": 1.49,
+        "ACTA2": 0.87
+      }
+    },
+    {
+      "id": "spot_14_9",
+      "x": 132.28,
+      "y": 208.57,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.2,
+        "PHGDH": 8.25,
+        "PSAT1": 7.33,
+        "CD8A": 0.19,
+        "CD68": 0.0,
+        "GAPDH": 7.58,
+        "EPCAM": 8.14,
+        "COL1A1": 0.24,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_14_10",
+      "x": 150.14,
+      "y": 211.2,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.56,
+        "PHGDH": 8.11,
+        "PSAT1": 7.69,
+        "CD8A": 0.84,
+        "CD68": 0.0,
+        "GAPDH": 9.86,
+        "EPCAM": 7.14,
+        "COL1A1": 0.0,
+        "ACTA2": 1.21
+      }
+    },
+    {
+      "id": "spot_14_11",
+      "x": 162.94,
+      "y": 212.09,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.39,
+        "PHGDH": 1.66,
+        "PSAT1": 1.13,
+        "CD8A": 0.0,
+        "CD68": 9.02,
+        "GAPDH": 7.39,
+        "EPCAM": 0.16,
+        "COL1A1": 0.45,
+        "ACTA2": 1.05
+      }
+    },
+    {
+      "id": "spot_14_12",
+      "x": 179.42,
+      "y": 208.41,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.01,
+        "PHGDH": 7.88,
+        "PSAT1": 8.61,
+        "CD8A": 0.0,
+        "CD68": 0.82,
+        "GAPDH": 9.58,
+        "EPCAM": 8.64,
+        "COL1A1": 0.27,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_14_13",
+      "x": 192.0,
+      "y": 207.55,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.6,
+        "PHGDH": 1.73,
+        "PSAT1": 1.55,
+        "CD8A": 0.0,
+        "CD68": 0.38,
+        "GAPDH": 6.8,
+        "EPCAM": 0.0,
+        "COL1A1": 9.07,
+        "ACTA2": 8.55
+      }
+    },
+    {
+      "id": "spot_14_14",
+      "x": 208.34,
+      "y": 209.73,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.7,
+        "PHGDH": 1.64,
+        "PSAT1": 1.38,
+        "CD8A": 0.0,
+        "CD68": 1.16,
+        "GAPDH": 8.17,
+        "EPCAM": 0.3,
+        "COL1A1": 9.74,
+        "ACTA2": 9.15
+      }
+    },
+    {
+      "id": "spot_14_15",
+      "x": 223.75,
+      "y": 210.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 1.84,
+        "PHGDH": 2.44,
+        "PSAT1": 2.0,
+        "CD8A": 0.81,
+        "CD68": 1.14,
+        "GAPDH": 7.45,
+        "EPCAM": 0.0,
+        "COL1A1": 8.9,
+        "ACTA2": 8.15
+      }
+    },
+    {
+      "id": "spot_14_16",
+      "x": 242.58,
+      "y": 209.36,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.39,
+        "PHGDH": 1.17,
+        "PSAT1": 2.38,
+        "CD8A": 0.59,
+        "CD68": 1.42,
+        "GAPDH": 6.99,
+        "EPCAM": 0.0,
+        "COL1A1": 8.65,
+        "ACTA2": 7.56
+      }
+    },
+    {
+      "id": "spot_14_17",
+      "x": 257.74,
+      "y": 207.81,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 1.91,
+        "PSAT1": 1.86,
+        "CD8A": 1.25,
+        "CD68": 0.0,
+        "GAPDH": 6.79,
+        "EPCAM": 0.28,
+        "COL1A1": 9.53,
+        "ACTA2": 8.22
+      }
+    },
+    {
+      "id": "spot_14_18",
+      "x": 270.47,
+      "y": 211.38,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.58,
+        "PHGDH": 2.63,
+        "PSAT1": 2.43,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.61,
+        "EPCAM": 1.08,
+        "COL1A1": 8.69,
+        "ACTA2": 8.17
+      }
+    },
+    {
+      "id": "spot_14_19",
+      "x": 287.82,
+      "y": 209.72,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.73,
+        "PHGDH": 1.31,
+        "PSAT1": 2.39,
+        "CD8A": 0.2,
+        "CD68": 0.0,
+        "GAPDH": 7.14,
+        "EPCAM": 0.0,
+        "COL1A1": 8.87,
+        "ACTA2": 7.04
+      }
+    },
+    {
+      "id": "spot_15_0",
+      "x": 0.8,
+      "y": 223.21,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.06,
+        "PHGDH": 2.63,
+        "PSAT1": 1.11,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 6.28,
+        "EPCAM": 0.0,
+        "COL1A1": 9.18,
+        "ACTA2": 8.27
+      }
+    },
+    {
+      "id": "spot_15_1",
+      "x": 14.11,
+      "y": 224.88,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 1.79,
+        "PSAT1": 1.36,
+        "CD8A": 0.18,
+        "CD68": 0.0,
+        "GAPDH": 7.24,
+        "EPCAM": 1.33,
+        "COL1A1": 9.46,
+        "ACTA2": 7.72
+      }
+    },
+    {
+      "id": "spot_15_2",
+      "x": 27.15,
+      "y": 222.87,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.51,
+        "PHGDH": 3.05,
+        "PSAT1": 2.16,
+        "CD8A": 0.62,
+        "CD68": 0.4,
+        "GAPDH": 8.65,
+        "EPCAM": 0.02,
+        "COL1A1": 8.73,
+        "ACTA2": 8.4
+      }
+    },
+    {
+      "id": "spot_15_3",
+      "x": 46.88,
+      "y": 222.61,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.35,
+        "PHGDH": 1.12,
+        "PSAT1": 0.0,
+        "CD8A": 8.86,
+        "CD68": 0.0,
+        "GAPDH": 6.88,
+        "EPCAM": 1.15,
+        "COL1A1": 0.35,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_15_4",
+      "x": 60.99,
+      "y": 227.56,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.78,
+        "PHGDH": 1.66,
+        "PSAT1": 1.61,
+        "CD8A": 0.9,
+        "CD68": 0.86,
+        "GAPDH": 7.54,
+        "EPCAM": 0.0,
+        "COL1A1": 8.48,
+        "ACTA2": 9.17
+      }
+    },
+    {
+      "id": "spot_15_5",
+      "x": 77.47,
+      "y": 226.23,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.38,
+        "PHGDH": 2.12,
+        "PSAT1": 1.15,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.99,
+        "EPCAM": 0.09,
+        "COL1A1": 9.6,
+        "ACTA2": 9.22
+      }
+    },
+    {
+      "id": "spot_15_6",
+      "x": 88.12,
+      "y": 223.04,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.75,
+        "PHGDH": 2.54,
+        "PSAT1": 1.6,
+        "CD8A": 0.09,
+        "CD68": 0.0,
+        "GAPDH": 7.27,
+        "EPCAM": 0.0,
+        "COL1A1": 10.03,
+        "ACTA2": 8.6
+      }
+    },
+    {
+      "id": "spot_15_7",
+      "x": 103.94,
+      "y": 222.31,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.39,
+        "PHGDH": 0.84,
+        "PSAT1": 0.71,
+        "CD8A": 0.0,
+        "CD68": 9.05,
+        "GAPDH": 6.54,
+        "EPCAM": 1.02,
+        "COL1A1": 0.13,
+        "ACTA2": 0.59
+      }
+    },
+    {
+      "id": "spot_15_8",
+      "x": 118.1,
+      "y": 222.41,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.56,
+        "PHGDH": 2.48,
+        "PSAT1": 2.26,
+        "CD8A": 0.43,
+        "CD68": 0.52,
+        "GAPDH": 8.02,
+        "EPCAM": 0.0,
+        "COL1A1": 9.52,
+        "ACTA2": 8.41
+      }
+    },
+    {
+      "id": "spot_15_9",
+      "x": 137.98,
+      "y": 226.94,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 2.76,
+        "PHGDH": 4.69,
+        "PSAT1": 3.45,
+        "CD8A": 0.0,
+        "CD68": 0.64,
+        "GAPDH": 7.37,
+        "EPCAM": 7.45,
+        "COL1A1": 1.28,
+        "ACTA2": 0.07
+      }
+    },
+    {
+      "id": "spot_15_10",
+      "x": 148.93,
+      "y": 227.5,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.54,
+        "PHGDH": 1.99,
+        "PSAT1": 1.03,
+        "CD8A": 1.69,
+        "CD68": 9.25,
+        "GAPDH": 6.68,
+        "EPCAM": 0.41,
+        "COL1A1": 0.0,
+        "ACTA2": 1.43
+      }
+    },
+    {
+      "id": "spot_15_11",
+      "x": 163.16,
+      "y": 225.08,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 4.45,
+        "PHGDH": 2.24,
+        "PSAT1": 2.6,
+        "CD8A": 0.33,
+        "CD68": 8.98,
+        "GAPDH": 8.02,
+        "EPCAM": 0.56,
+        "COL1A1": 0.48,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_15_12",
+      "x": 179.55,
+      "y": 222.62,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.72,
+        "PHGDH": 0.53,
+        "PSAT1": 2.04,
+        "CD8A": 0.0,
+        "CD68": 1.32,
+        "GAPDH": 7.13,
+        "EPCAM": 0.58,
+        "COL1A1": 9.75,
+        "ACTA2": 8.27
+      }
+    },
+    {
+      "id": "spot_15_13",
+      "x": 192.33,
+      "y": 226.77,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.42,
+        "PHGDH": 1.72,
+        "PSAT1": 1.7,
+        "CD8A": 0.17,
+        "CD68": 0.99,
+        "GAPDH": 7.06,
+        "EPCAM": 0.0,
+        "COL1A1": 10.09,
+        "ACTA2": 8.5
+      }
+    },
+    {
+      "id": "spot_15_14",
+      "x": 210.21,
+      "y": 225.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.23,
+        "PHGDH": 1.3,
+        "PSAT1": 1.83,
+        "CD8A": 0.0,
+        "CD68": 0.66,
+        "GAPDH": 7.38,
+        "EPCAM": 0.32,
+        "COL1A1": 8.71,
+        "ACTA2": 9.27
+      }
+    },
+    {
+      "id": "spot_15_15",
+      "x": 224.63,
+      "y": 224.37,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.73,
+        "PHGDH": 1.37,
+        "PSAT1": 2.02,
+        "CD8A": 0.59,
+        "CD68": 0.85,
+        "GAPDH": 7.72,
+        "EPCAM": 0.0,
+        "COL1A1": 9.52,
+        "ACTA2": 8.32
+      }
+    },
+    {
+      "id": "spot_15_16",
+      "x": 241.06,
+      "y": 227.49,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.42,
+        "PHGDH": 0.63,
+        "PSAT1": 1.82,
+        "CD8A": 8.66,
+        "CD68": 0.21,
+        "GAPDH": 6.7,
+        "EPCAM": 0.91,
+        "COL1A1": 0.23,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_15_17",
+      "x": 253.83,
+      "y": 226.49,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.76,
+        "PHGDH": 1.16,
+        "PSAT1": 1.81,
+        "CD8A": 0.0,
+        "CD68": 8.43,
+        "GAPDH": 7.42,
+        "EPCAM": 0.56,
+        "COL1A1": 0.5,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_15_18",
+      "x": 268.09,
+      "y": 226.8,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.33,
+        "PHGDH": 0.08,
+        "PSAT1": 1.77,
+        "CD8A": 8.88,
+        "CD68": 0.03,
+        "GAPDH": 6.65,
+        "EPCAM": 0.35,
+        "COL1A1": 0.31,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_15_19",
+      "x": 283.99,
+      "y": 222.77,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.51,
+        "PHGDH": 2.77,
+        "PSAT1": 2.39,
+        "CD8A": 0.62,
+        "CD68": 0.09,
+        "GAPDH": 6.71,
+        "EPCAM": 0.45,
+        "COL1A1": 8.93,
+        "ACTA2": 9.15
+      }
+    },
+    {
+      "id": "spot_16_0",
+      "x": 0.39,
+      "y": 239.19,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.15,
+        "PHGDH": 2.13,
+        "PSAT1": 1.91,
+        "CD8A": 0.62,
+        "CD68": 0.36,
+        "GAPDH": 6.86,
+        "EPCAM": 0.37,
+        "COL1A1": 8.93,
+        "ACTA2": 8.27
+      }
+    },
+    {
+      "id": "spot_16_1",
+      "x": 14.78,
+      "y": 239.15,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 1.98,
+        "PHGDH": 1.75,
+        "PSAT1": 1.78,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.71,
+        "EPCAM": 0.0,
+        "COL1A1": 8.74,
+        "ACTA2": 8.29
+      }
+    },
+    {
+      "id": "spot_16_2",
+      "x": 32.32,
+      "y": 237.46,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.91,
+        "PHGDH": 2.18,
+        "PSAT1": 2.68,
+        "CD8A": 0.35,
+        "CD68": 0.0,
+        "GAPDH": 7.95,
+        "EPCAM": 0.83,
+        "COL1A1": 8.78,
+        "ACTA2": 6.29
+      }
+    },
+    {
+      "id": "spot_16_3",
+      "x": 44.83,
+      "y": 241.65,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.61,
+        "PHGDH": 2.27,
+        "PSAT1": 2.92,
+        "CD8A": 0.15,
+        "CD68": 0.0,
+        "GAPDH": 6.8,
+        "EPCAM": 0.36,
+        "COL1A1": 8.64,
+        "ACTA2": 8.83
+      }
+    },
+    {
+      "id": "spot_16_4",
+      "x": 60.98,
+      "y": 242.09,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.23,
+        "PHGDH": 0.96,
+        "PSAT1": 0.45,
+        "CD8A": 8.84,
+        "CD68": 1.13,
+        "GAPDH": 8.12,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.04
+      }
+    },
+    {
+      "id": "spot_16_5",
+      "x": 74.15,
+      "y": 238.31,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.51,
+        "PHGDH": 2.63,
+        "PSAT1": 2.12,
+        "CD8A": 0.59,
+        "CD68": 0.51,
+        "GAPDH": 7.98,
+        "EPCAM": 0.0,
+        "COL1A1": 8.55,
+        "ACTA2": 8.53
+      }
+    },
+    {
+      "id": "spot_16_6",
+      "x": 87.28,
+      "y": 242.88,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.99,
+        "PHGDH": 1.4,
+        "PSAT1": 2.45,
+        "CD8A": 0.0,
+        "CD68": 0.34,
+        "GAPDH": 8.25,
+        "EPCAM": 0.6,
+        "COL1A1": 9.98,
+        "ACTA2": 7.82
+      }
+    },
+    {
+      "id": "spot_16_7",
+      "x": 107.01,
+      "y": 240.1,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.85,
+        "PHGDH": 2.7,
+        "PSAT1": 1.5,
+        "CD8A": 0.0,
+        "CD68": 1.36,
+        "GAPDH": 6.81,
+        "EPCAM": 0.26,
+        "COL1A1": 8.64,
+        "ACTA2": 7.97
+      }
+    },
+    {
+      "id": "spot_16_8",
+      "x": 117.83,
+      "y": 237.99,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.54,
+        "PHGDH": 8.18,
+        "PSAT1": 8.42,
+        "CD8A": 0.62,
+        "CD68": 0.24,
+        "GAPDH": 8.81,
+        "EPCAM": 8.93,
+        "COL1A1": 1.59,
+        "ACTA2": 0.27
+      }
+    },
+    {
+      "id": "spot_16_9",
+      "x": 134.87,
+      "y": 238.26,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.12,
+        "PHGDH": 8.56,
+        "PSAT1": 8.09,
+        "CD8A": 0.85,
+        "CD68": 0.51,
+        "GAPDH": 9.55,
+        "EPCAM": 9.52,
+        "COL1A1": 1.26,
+        "ACTA2": 0.59
+      }
+    },
+    {
+      "id": "spot_16_10",
+      "x": 147.34,
+      "y": 238.55,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.58,
+        "PHGDH": 8.29,
+        "PSAT1": 8.09,
+        "CD8A": 0.05,
+        "CD68": 0.13,
+        "GAPDH": 8.23,
+        "EPCAM": 8.75,
+        "COL1A1": 0.75,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_16_11",
+      "x": 167.2,
+      "y": 238.02,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.09,
+        "PHGDH": 0.34,
+        "PSAT1": 0.47,
+        "CD8A": 9.06,
+        "CD68": 0.16,
+        "GAPDH": 6.55,
+        "EPCAM": 0.0,
+        "COL1A1": 0.11,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_16_12",
+      "x": 179.72,
+      "y": 240.54,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.58,
+        "PHGDH": 8.69,
+        "PSAT1": 8.55,
+        "CD8A": 1.24,
+        "CD68": 0.0,
+        "GAPDH": 9.08,
+        "EPCAM": 8.96,
+        "COL1A1": 0.72,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_16_13",
+      "x": 192.23,
+      "y": 241.7,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.33,
+        "PHGDH": 2.61,
+        "PSAT1": 2.36,
+        "CD8A": 0.76,
+        "CD68": 1.0,
+        "GAPDH": 8.1,
+        "EPCAM": 0.0,
+        "COL1A1": 9.34,
+        "ACTA2": 7.54
+      }
+    },
+    {
+      "id": "spot_16_14",
+      "x": 210.13,
+      "y": 239.22,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.37,
+        "PHGDH": 8.42,
+        "PSAT1": 8.54,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 9.64,
+        "EPCAM": 8.75,
+        "COL1A1": 0.0,
+        "ACTA2": 0.31
+      }
+    },
+    {
+      "id": "spot_16_15",
+      "x": 222.8,
+      "y": 239.86,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.54,
+        "PHGDH": 8.81,
+        "PSAT1": 7.82,
+        "CD8A": 0.54,
+        "CD68": 0.0,
+        "GAPDH": 9.45,
+        "EPCAM": 9.67,
+        "COL1A1": 0.69,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_16_16",
+      "x": 237.71,
+      "y": 237.04,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.0,
+        "PHGDH": 1.62,
+        "PSAT1": 1.67,
+        "CD8A": 0.46,
+        "CD68": 0.13,
+        "GAPDH": 7.13,
+        "EPCAM": 0.59,
+        "COL1A1": 8.7,
+        "ACTA2": 8.08
+      }
+    },
+    {
+      "id": "spot_16_17",
+      "x": 256.08,
+      "y": 241.53,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.56,
+        "PHGDH": 2.25,
+        "PSAT1": 1.23,
+        "CD8A": 0.0,
+        "CD68": 0.96,
+        "GAPDH": 7.49,
+        "EPCAM": 0.71,
+        "COL1A1": 8.68,
+        "ACTA2": 9.18
+      }
+    },
+    {
+      "id": "spot_16_18",
+      "x": 271.41,
+      "y": 242.13,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.19,
+        "PHGDH": 1.45,
+        "PSAT1": 1.79,
+        "CD8A": 0.0,
+        "CD68": 0.53,
+        "GAPDH": 8.09,
+        "EPCAM": 0.0,
+        "COL1A1": 9.84,
+        "ACTA2": 8.09
+      }
+    },
+    {
+      "id": "spot_16_19",
+      "x": 282.96,
+      "y": 242.79,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.91,
+        "PHGDH": 8.78,
+        "PSAT1": 8.38,
+        "CD8A": 0.67,
+        "CD68": 0.01,
+        "GAPDH": 9.49,
+        "EPCAM": 8.97,
+        "COL1A1": 0.65,
+        "ACTA2": 0.48
+      }
+    },
+    {
+      "id": "spot_17_0",
+      "x": -0.69,
+      "y": 257.91,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.26,
+        "PHGDH": 1.98,
+        "PSAT1": 0.71,
+        "CD8A": 0.0,
+        "CD68": 0.77,
+        "GAPDH": 6.72,
+        "EPCAM": 0.0,
+        "COL1A1": 9.35,
+        "ACTA2": 7.8
+      }
+    },
+    {
+      "id": "spot_17_1",
+      "x": 13.72,
+      "y": 252.2,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.3,
+        "PHGDH": 1.67,
+        "PSAT1": 1.86,
+        "CD8A": 0.28,
+        "CD68": 0.54,
+        "GAPDH": 7.5,
+        "EPCAM": 0.21,
+        "COL1A1": 10.32,
+        "ACTA2": 10.1
+      }
+    },
+    {
+      "id": "spot_17_2",
+      "x": 31.68,
+      "y": 254.12,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.58,
+        "PHGDH": 1.73,
+        "PSAT1": 1.88,
+        "CD8A": 0.0,
+        "CD68": 0.81,
+        "GAPDH": 7.76,
+        "EPCAM": 0.84,
+        "COL1A1": 8.03,
+        "ACTA2": 7.51
+      }
+    },
+    {
+      "id": "spot_17_3",
+      "x": 43.66,
+      "y": 255.64,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.46,
+        "PHGDH": 2.81,
+        "PSAT1": 1.56,
+        "CD8A": 0.16,
+        "CD68": 1.01,
+        "GAPDH": 7.68,
+        "EPCAM": 0.34,
+        "COL1A1": 8.8,
+        "ACTA2": 9.8
+      }
+    },
+    {
+      "id": "spot_17_4",
+      "x": 61.82,
+      "y": 257.74,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.8,
+        "PHGDH": 0.48,
+        "PSAT1": 0.56,
+        "CD8A": 7.43,
+        "CD68": 0.0,
+        "GAPDH": 6.4,
+        "EPCAM": 0.17,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_17_5",
+      "x": 75.52,
+      "y": 252.16,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.37,
+        "PHGDH": 2.87,
+        "PSAT1": 2.25,
+        "CD8A": 1.1,
+        "CD68": 0.37,
+        "GAPDH": 7.57,
+        "EPCAM": 0.72,
+        "COL1A1": 9.9,
+        "ACTA2": 8.2
+      }
+    },
+    {
+      "id": "spot_17_6",
+      "x": 87.06,
+      "y": 256.99,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.95,
+        "PHGDH": 2.6,
+        "PSAT1": 2.0,
+        "CD8A": 0.0,
+        "CD68": 1.02,
+        "GAPDH": 7.21,
+        "EPCAM": 0.0,
+        "COL1A1": 10.21,
+        "ACTA2": 8.23
+      }
+    },
+    {
+      "id": "spot_17_7",
+      "x": 106.1,
+      "y": 257.46,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.64,
+        "PHGDH": 2.4,
+        "PSAT1": 2.83,
+        "CD8A": 0.48,
+        "CD68": 0.11,
+        "GAPDH": 7.63,
+        "EPCAM": 0.63,
+        "COL1A1": 8.94,
+        "ACTA2": 8.16
+      }
+    },
+    {
+      "id": "spot_17_8",
+      "x": 117.64,
+      "y": 257.52,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.77,
+        "PHGDH": 1.39,
+        "PSAT1": 1.97,
+        "CD8A": 0.0,
+        "CD68": 1.06,
+        "GAPDH": 7.68,
+        "EPCAM": 0.0,
+        "COL1A1": 8.72,
+        "ACTA2": 9.67
+      }
+    },
+    {
+      "id": "spot_17_9",
+      "x": 137.21,
+      "y": 254.94,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.38,
+        "PHGDH": 4.22,
+        "PSAT1": 3.15,
+        "CD8A": 0.24,
+        "CD68": 0.97,
+        "GAPDH": 9.01,
+        "EPCAM": 8.36,
+        "COL1A1": 0.0,
+        "ACTA2": 0.4
+      }
+    },
+    {
+      "id": "spot_17_10",
+      "x": 150.01,
+      "y": 254.36,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.95,
+        "PHGDH": 3.56,
+        "PSAT1": 1.69,
+        "CD8A": 0.0,
+        "CD68": 0.37,
+        "GAPDH": 7.41,
+        "EPCAM": 0.39,
+        "COL1A1": 9.97,
+        "ACTA2": 8.02
+      }
+    },
+    {
+      "id": "spot_17_11",
+      "x": 163.56,
+      "y": 255.29,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 8.54,
+        "PHGDH": 7.69,
+        "PSAT1": 8.35,
+        "CD8A": 0.0,
+        "CD68": 0.83,
+        "GAPDH": 9.33,
+        "EPCAM": 9.7,
+        "COL1A1": 0.0,
+        "ACTA2": 1.25
+      }
+    },
+    {
+      "id": "spot_17_12",
+      "x": 178.68,
+      "y": 253.08,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.42,
+        "PHGDH": 8.3,
+        "PSAT1": 8.59,
+        "CD8A": 0.38,
+        "CD68": 0.36,
+        "GAPDH": 9.74,
+        "EPCAM": 8.55,
+        "COL1A1": 0.73,
+        "ACTA2": 0.73
+      }
+    },
+    {
+      "id": "spot_17_13",
+      "x": 196.83,
+      "y": 253.06,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.11,
+        "PHGDH": 3.27,
+        "PSAT1": 1.87,
+        "CD8A": 0.0,
+        "CD68": 0.3,
+        "GAPDH": 7.61,
+        "EPCAM": 0.0,
+        "COL1A1": 8.48,
+        "ACTA2": 8.1
+      }
+    },
+    {
+      "id": "spot_17_14",
+      "x": 209.39,
+      "y": 256.14,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 1.47,
+        "PSAT1": 1.45,
+        "CD8A": 0.0,
+        "CD68": 0.11,
+        "GAPDH": 7.99,
+        "EPCAM": 0.0,
+        "COL1A1": 8.69,
+        "ACTA2": 8.39
+      }
+    },
+    {
+      "id": "spot_17_15",
+      "x": 222.73,
+      "y": 257.2,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.62,
+        "PHGDH": 4.05,
+        "PSAT1": 4.15,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 8.11,
+        "EPCAM": 7.45,
+        "COL1A1": 0.08,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_17_16",
+      "x": 241.42,
+      "y": 257.34,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 2.93,
+        "PSAT1": 2.12,
+        "CD8A": 0.49,
+        "CD68": 0.59,
+        "GAPDH": 6.99,
+        "EPCAM": 0.0,
+        "COL1A1": 8.63,
+        "ACTA2": 8.53
+      }
+    },
+    {
+      "id": "spot_17_17",
+      "x": 252.97,
+      "y": 253.37,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.01,
+        "PHGDH": 1.98,
+        "PSAT1": 2.36,
+        "CD8A": 0.0,
+        "CD68": 0.02,
+        "GAPDH": 6.38,
+        "EPCAM": 0.61,
+        "COL1A1": 8.68,
+        "ACTA2": 9.0
+      }
+    },
+    {
+      "id": "spot_17_18",
+      "x": 272.79,
+      "y": 254.48,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 4.16,
+        "PHGDH": 2.24,
+        "PSAT1": 1.15,
+        "CD8A": 0.0,
+        "CD68": 0.33,
+        "GAPDH": 7.27,
+        "EPCAM": 0.34,
+        "COL1A1": 9.44,
+        "ACTA2": 9.53
+      }
+    },
+    {
+      "id": "spot_17_19",
+      "x": 285.29,
+      "y": 252.16,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.68,
+        "PHGDH": 2.12,
+        "PSAT1": 1.65,
+        "CD8A": 0.17,
+        "CD68": 0.75,
+        "GAPDH": 6.8,
+        "EPCAM": 0.0,
+        "COL1A1": 9.04,
+        "ACTA2": 8.82
+      }
+    },
+    {
+      "id": "spot_18_0",
+      "x": -1.29,
+      "y": 270.76,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.28,
+        "PHGDH": 1.98,
+        "PSAT1": 1.28,
+        "CD8A": 0.0,
+        "CD68": 0.09,
+        "GAPDH": 8.11,
+        "EPCAM": 0.94,
+        "COL1A1": 9.08,
+        "ACTA2": 8.31
+      }
+    },
+    {
+      "id": "spot_18_1",
+      "x": 17.82,
+      "y": 271.19,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.84,
+        "PHGDH": 1.41,
+        "PSAT1": 1.41,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 6.65,
+        "EPCAM": 0.07,
+        "COL1A1": 9.0,
+        "ACTA2": 8.92
+      }
+    },
+    {
+      "id": "spot_18_2",
+      "x": 30.24,
+      "y": 271.83,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.89,
+        "PHGDH": 2.45,
+        "PSAT1": 1.9,
+        "CD8A": 0.21,
+        "CD68": 0.87,
+        "GAPDH": 6.43,
+        "EPCAM": 0.0,
+        "COL1A1": 9.76,
+        "ACTA2": 9.75
+      }
+    },
+    {
+      "id": "spot_18_3",
+      "x": 47.68,
+      "y": 269.86,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.87,
+        "PHGDH": 8.05,
+        "PSAT1": 8.41,
+        "CD8A": 0.11,
+        "CD68": 0.37,
+        "GAPDH": 8.67,
+        "EPCAM": 9.24,
+        "COL1A1": 0.0,
+        "ACTA2": 0.18
+      }
+    },
+    {
+      "id": "spot_18_4",
+      "x": 57.98,
+      "y": 271.42,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.86,
+        "PHGDH": 2.42,
+        "PSAT1": 1.51,
+        "CD8A": 0.41,
+        "CD68": 0.52,
+        "GAPDH": 6.19,
+        "EPCAM": 0.52,
+        "COL1A1": 8.35,
+        "ACTA2": 8.19
+      }
+    },
+    {
+      "id": "spot_18_5",
+      "x": 76.85,
+      "y": 269.48,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.47,
+        "PHGDH": 1.4,
+        "PSAT1": 1.55,
+        "CD8A": 8.36,
+        "CD68": 0.0,
+        "GAPDH": 6.68,
+        "EPCAM": 0.93,
+        "COL1A1": 0.25,
+        "ACTA2": 0.21
+      }
+    },
+    {
+      "id": "spot_18_6",
+      "x": 87.3,
+      "y": 270.21,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.58,
+        "PHGDH": 2.38,
+        "PSAT1": 1.69,
+        "CD8A": 0.0,
+        "CD68": 0.44,
+        "GAPDH": 7.84,
+        "EPCAM": 0.0,
+        "COL1A1": 9.22,
+        "ACTA2": 7.99
+      }
+    },
+    {
+      "id": "spot_18_7",
+      "x": 107.99,
+      "y": 269.78,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.5,
+        "PHGDH": 0.64,
+        "PSAT1": 2.11,
+        "CD8A": 9.09,
+        "CD68": 0.44,
+        "GAPDH": 6.84,
+        "EPCAM": 0.0,
+        "COL1A1": 0.0,
+        "ACTA2": 0.17
+      }
+    },
+    {
+      "id": "spot_18_8",
+      "x": 122.05,
+      "y": 271.9,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.24,
+        "PHGDH": 1.91,
+        "PSAT1": 1.11,
+        "CD8A": 9.93,
+        "CD68": 0.0,
+        "GAPDH": 7.14,
+        "EPCAM": 0.75,
+        "COL1A1": 0.34,
+        "ACTA2": 0.2
+      }
+    },
+    {
+      "id": "spot_18_9",
+      "x": 137.89,
+      "y": 269.84,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.48,
+        "PHGDH": 1.9,
+        "PSAT1": 2.39,
+        "CD8A": 0.08,
+        "CD68": 0.27,
+        "GAPDH": 8.17,
+        "EPCAM": 0.0,
+        "COL1A1": 9.18,
+        "ACTA2": 9.26
+      }
+    },
+    {
+      "id": "spot_18_10",
+      "x": 148.19,
+      "y": 272.33,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.56,
+        "PHGDH": 1.49,
+        "PSAT1": 0.74,
+        "CD8A": 8.51,
+        "CD68": 0.74,
+        "GAPDH": 7.22,
+        "EPCAM": 0.87,
+        "COL1A1": 0.92,
+        "ACTA2": 0.28
+      }
+    },
+    {
+      "id": "spot_18_11",
+      "x": 166.7,
+      "y": 269.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.21,
+        "PHGDH": 1.92,
+        "PSAT1": 2.09,
+        "CD8A": 0.34,
+        "CD68": 0.62,
+        "GAPDH": 6.48,
+        "EPCAM": 0.0,
+        "COL1A1": 10.04,
+        "ACTA2": 8.38
+      }
+    },
+    {
+      "id": "spot_18_12",
+      "x": 177.36,
+      "y": 270.87,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.28,
+        "PHGDH": 1.8,
+        "PSAT1": 2.08,
+        "CD8A": 1.89,
+        "CD68": 0.64,
+        "GAPDH": 6.52,
+        "EPCAM": 0.42,
+        "COL1A1": 8.59,
+        "ACTA2": 8.72
+      }
+    },
+    {
+      "id": "spot_18_13",
+      "x": 194.15,
+      "y": 267.81,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.36,
+        "PHGDH": 0.56,
+        "PSAT1": 1.16,
+        "CD8A": 8.64,
+        "CD68": 1.39,
+        "GAPDH": 6.94,
+        "EPCAM": 0.46,
+        "COL1A1": 0.0,
+        "ACTA2": 0.9
+      }
+    },
+    {
+      "id": "spot_18_14",
+      "x": 208.65,
+      "y": 271.99,
+      "cell_type": "Macrophages",
+      "expressions": {
+        "NFE2L2": 3.89,
+        "PHGDH": 1.42,
+        "PSAT1": 1.58,
+        "CD8A": 0.82,
+        "CD68": 8.95,
+        "GAPDH": 7.77,
+        "EPCAM": 1.06,
+        "COL1A1": 0.3,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_18_15",
+      "x": 222.11,
+      "y": 272.14,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.76,
+        "PHGDH": 1.27,
+        "PSAT1": 2.06,
+        "CD8A": 8.49,
+        "CD68": 0.0,
+        "GAPDH": 6.24,
+        "EPCAM": 0.57,
+        "COL1A1": 0.0,
+        "ACTA2": 0.11
+      }
+    },
+    {
+      "id": "spot_18_16",
+      "x": 240.68,
+      "y": 268.94,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.76,
+        "PHGDH": 2.57,
+        "PSAT1": 2.94,
+        "CD8A": 0.66,
+        "CD68": 1.24,
+        "GAPDH": 8.39,
+        "EPCAM": 0.41,
+        "COL1A1": 9.86,
+        "ACTA2": 9.04
+      }
+    },
+    {
+      "id": "spot_18_17",
+      "x": 257.02,
+      "y": 270.95,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.65,
+        "PHGDH": 1.96,
+        "PSAT1": 1.46,
+        "CD8A": 0.0,
+        "CD68": 1.01,
+        "GAPDH": 8.75,
+        "EPCAM": 0.8,
+        "COL1A1": 9.38,
+        "ACTA2": 9.07
+      }
+    },
+    {
+      "id": "spot_18_18",
+      "x": 272.34,
+      "y": 267.48,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 3.21,
+        "PHGDH": 1.49,
+        "PSAT1": 1.68,
+        "CD8A": 8.66,
+        "CD68": 0.0,
+        "GAPDH": 7.49,
+        "EPCAM": 0.31,
+        "COL1A1": 0.0,
+        "ACTA2": 0.32
+      }
+    },
+    {
+      "id": "spot_18_19",
+      "x": 283.82,
+      "y": 272.67,
+      "cell_type": "Normal Ductal Cells",
+      "expressions": {
+        "NFE2L2": 3.56,
+        "PHGDH": 4.59,
+        "PSAT1": 3.95,
+        "CD8A": 0.0,
+        "CD68": 0.12,
+        "GAPDH": 7.55,
+        "EPCAM": 7.93,
+        "COL1A1": 0.13,
+        "ACTA2": 0.03
+      }
+    },
+    {
+      "id": "spot_19_0",
+      "x": 1.5,
+      "y": 284.49,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.84,
+        "PHGDH": 1.67,
+        "PSAT1": 1.04,
+        "CD8A": 0.43,
+        "CD68": 0.67,
+        "GAPDH": 7.26,
+        "EPCAM": 0.46,
+        "COL1A1": 9.75,
+        "ACTA2": 8.22
+      }
+    },
+    {
+      "id": "spot_19_1",
+      "x": 17.99,
+      "y": 284.66,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.5,
+        "PHGDH": 1.36,
+        "PSAT1": 3.6,
+        "CD8A": 0.0,
+        "CD68": 0.92,
+        "GAPDH": 7.56,
+        "EPCAM": 0.0,
+        "COL1A1": 9.08,
+        "ACTA2": 7.59
+      }
+    },
+    {
+      "id": "spot_19_2",
+      "x": 30.38,
+      "y": 283.28,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.91,
+        "PHGDH": 0.99,
+        "PSAT1": 1.73,
+        "CD8A": 8.74,
+        "CD68": 0.0,
+        "GAPDH": 7.38,
+        "EPCAM": 0.9,
+        "COL1A1": 0.11,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_19_3",
+      "x": 43.81,
+      "y": 283.8,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.99,
+        "PHGDH": 2.18,
+        "PSAT1": 1.8,
+        "CD8A": 0.6,
+        "CD68": 0.0,
+        "GAPDH": 7.38,
+        "EPCAM": 0.95,
+        "COL1A1": 7.92,
+        "ACTA2": 7.93
+      }
+    },
+    {
+      "id": "spot_19_4",
+      "x": 57.93,
+      "y": 282.23,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.57,
+        "PHGDH": 2.54,
+        "PSAT1": 1.52,
+        "CD8A": 0.0,
+        "CD68": 0.5,
+        "GAPDH": 7.26,
+        "EPCAM": 0.0,
+        "COL1A1": 9.99,
+        "ACTA2": 8.31
+      }
+    },
+    {
+      "id": "spot_19_5",
+      "x": 76.76,
+      "y": 283.04,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 1.54,
+        "PHGDH": 0.91,
+        "PSAT1": 0.37,
+        "CD8A": 9.57,
+        "CD68": 0.06,
+        "GAPDH": 6.5,
+        "EPCAM": 1.02,
+        "COL1A1": 0.0,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_19_6",
+      "x": 87.34,
+      "y": 286.63,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.46,
+        "PHGDH": 1.53,
+        "PSAT1": 2.72,
+        "CD8A": 0.0,
+        "CD68": 0.53,
+        "GAPDH": 8.36,
+        "EPCAM": 0.13,
+        "COL1A1": 9.15,
+        "ACTA2": 8.5
+      }
+    },
+    {
+      "id": "spot_19_7",
+      "x": 103.83,
+      "y": 282.25,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.62,
+        "PHGDH": 2.52,
+        "PSAT1": 2.47,
+        "CD8A": 0.24,
+        "CD68": 0.59,
+        "GAPDH": 7.43,
+        "EPCAM": 0.0,
+        "COL1A1": 8.44,
+        "ACTA2": 8.67
+      }
+    },
+    {
+      "id": "spot_19_8",
+      "x": 120.03,
+      "y": 283.33,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.95,
+        "PHGDH": 2.3,
+        "PSAT1": 2.58,
+        "CD8A": 0.59,
+        "CD68": 0.98,
+        "GAPDH": 7.68,
+        "EPCAM": 0.81,
+        "COL1A1": 9.56,
+        "ACTA2": 8.45
+      }
+    },
+    {
+      "id": "spot_19_9",
+      "x": 132.81,
+      "y": 285.36,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.89,
+        "PHGDH": 1.87,
+        "PSAT1": 1.58,
+        "CD8A": 0.0,
+        "CD68": 0.0,
+        "GAPDH": 7.51,
+        "EPCAM": 0.43,
+        "COL1A1": 9.29,
+        "ACTA2": 7.88
+      }
+    },
+    {
+      "id": "spot_19_10",
+      "x": 152.54,
+      "y": 282.54,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.71,
+        "PHGDH": 2.36,
+        "PSAT1": 1.55,
+        "CD8A": 0.93,
+        "CD68": 0.91,
+        "GAPDH": 7.58,
+        "EPCAM": 1.03,
+        "COL1A1": 9.14,
+        "ACTA2": 9.05
+      }
+    },
+    {
+      "id": "spot_19_11",
+      "x": 162.87,
+      "y": 282.27,
+      "cell_type": "T-cells",
+      "expressions": {
+        "NFE2L2": 2.46,
+        "PHGDH": 1.38,
+        "PSAT1": 1.65,
+        "CD8A": 8.96,
+        "CD68": 0.0,
+        "GAPDH": 6.95,
+        "EPCAM": 0.23,
+        "COL1A1": 1.5,
+        "ACTA2": 0.0
+      }
+    },
+    {
+      "id": "spot_19_12",
+      "x": 182.21,
+      "y": 286.92,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.7,
+        "PHGDH": 8.23,
+        "PSAT1": 8.08,
+        "CD8A": 0.14,
+        "CD68": 0.49,
+        "GAPDH": 9.82,
+        "EPCAM": 9.01,
+        "COL1A1": 1.2,
+        "ACTA2": 0.36
+      }
+    },
+    {
+      "id": "spot_19_13",
+      "x": 196.38,
+      "y": 282.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.89,
+        "PHGDH": 2.89,
+        "PSAT1": 1.99,
+        "CD8A": 0.11,
+        "CD68": 0.25,
+        "GAPDH": 7.74,
+        "EPCAM": 0.63,
+        "COL1A1": 9.4,
+        "ACTA2": 7.59
+      }
+    },
+    {
+      "id": "spot_19_14",
+      "x": 207.32,
+      "y": 285.93,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 7.43,
+        "PHGDH": 8.81,
+        "PSAT1": 8.73,
+        "CD8A": 0.0,
+        "CD68": 0.38,
+        "GAPDH": 9.01,
+        "EPCAM": 9.38,
+        "COL1A1": 0.0,
+        "ACTA2": 0.47
+      }
+    },
+    {
+      "id": "spot_19_15",
+      "x": 227.86,
+      "y": 282.6,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.78,
+        "PHGDH": 2.59,
+        "PSAT1": 1.35,
+        "CD8A": 0.48,
+        "CD68": 1.05,
+        "GAPDH": 6.18,
+        "EPCAM": 0.56,
+        "COL1A1": 9.65,
+        "ACTA2": 8.46
+      }
+    },
+    {
+      "id": "spot_19_16",
+      "x": 240.18,
+      "y": 284.0,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.51,
+        "PHGDH": 2.56,
+        "PSAT1": 1.4,
+        "CD8A": 0.87,
+        "CD68": 0.54,
+        "GAPDH": 9.15,
+        "EPCAM": 0.0,
+        "COL1A1": 9.19,
+        "ACTA2": 7.53
+      }
+    },
+    {
+      "id": "spot_19_17",
+      "x": 257.34,
+      "y": 286.89,
+      "cell_type": "Ductal Ductal Cells (Malignant)",
+      "expressions": {
+        "NFE2L2": 6.92,
+        "PHGDH": 8.04,
+        "PSAT1": 8.04,
+        "CD8A": 0.84,
+        "CD68": 1.34,
+        "GAPDH": 8.96,
+        "EPCAM": 8.59,
+        "COL1A1": 0.0,
+        "ACTA2": 1.43
+      }
+    },
+    {
+      "id": "spot_19_18",
+      "x": 270.67,
+      "y": 285.75,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 3.22,
+        "PHGDH": 2.44,
+        "PSAT1": 3.19,
+        "CD8A": 0.0,
+        "CD68": 0.04,
+        "GAPDH": 8.16,
+        "EPCAM": 0.29,
+        "COL1A1": 9.52,
+        "ACTA2": 7.36
+      }
+    },
+    {
+      "id": "spot_19_19",
+      "x": 287.18,
+      "y": 283.85,
+      "cell_type": "Cancer-Associated Fibroblasts (CAFs)",
+      "expressions": {
+        "NFE2L2": 2.92,
+        "PHGDH": 1.78,
+        "PSAT1": 1.85,
+        "CD8A": 1.84,
+        "CD68": 0.36,
+        "GAPDH": 8.35,
+        "EPCAM": 1.3,
+        "COL1A1": 9.65,
+        "ACTA2": 8.14
+      }
+    }
+  ]
+}
