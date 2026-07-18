@@ -12,6 +12,7 @@ import {
   HelpCircle, 
   Maximize2 
 } from "lucide-react";
+import getConfig from "next/config";
 import VolcanoPlot from "@/components/VolcanoPlot";
 import Heatmap from "@/components/Heatmap";
 import CorrelationPlot from "@/components/CorrelationPlot";
@@ -53,6 +54,8 @@ const STUDIES = [
 
 export default function Dashboard() {
   const [activeStudy, setActiveStudy] = useState<string>("GSE225767");
+  // Hard‑coded base path for static export
+  const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme">("de");
   
   // Data States
@@ -81,7 +84,7 @@ export default function Dashboard() {
     async function loadBulkData() {
       try {
         setIsLoading(true);
-        const res = await fetch("/data/GSE225767_DEG_results_with_names.csv");
+        const res = await fetch(`${basePath}/data/GSE225767_DEG_results_with_names.csv`);
         if (!res.ok) throw new Error("Failed to fetch DEG results CSV.");
         const text = await res.text();
         
@@ -108,7 +111,7 @@ export default function Dashboard() {
         setBulkData(parsed);
 
         // Load normalized expression values for co-expression plots
-        const exprRes = await fetch("/data/GSE225767_expression_data.json");
+        const exprRes = await fetch(`${basePath}/data/GSE225767_expression_data.json`);
         if (!exprRes.ok) throw new Error("Failed to fetch expression JSON dataset.");
         const exprData = await exprRes.json();
         setExpressionData(exprData);
@@ -131,14 +134,14 @@ export default function Dashboard() {
     }
 
     loadBulkData();
-  }, []);
+  }, [basePath]);
 
   // Lazy load spatial and snRNA-seq data when selected
   useEffect(() => {
     async function loadSpatialData() {
       if (spatialData) return; // Already loaded
       try {
-        const res = await fetch("/data/pdac_spatial_mock.json");
+        const res = await fetch(`${basePath}/data/pdac_spatial_mock.json`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSpatialData(data);
@@ -150,7 +153,7 @@ export default function Dashboard() {
     async function loadSnData() {
       if (snData) return; // Already loaded
       try {
-        const res = await fetch("/data/pdac_snrnaseq_mock.json");
+        const res = await fetch(`${basePath}/data/pdac_snrnaseq_mock.json`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setSnData(data);
