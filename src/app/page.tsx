@@ -12,7 +12,6 @@ import {
   HelpCircle, 
   Maximize2 
 } from "lucide-react";
-import getConfig from "next/config";
 import VolcanoPlot from "@/components/VolcanoPlot";
 import Heatmap from "@/components/Heatmap";
 import CorrelationPlot from "@/components/CorrelationPlot";
