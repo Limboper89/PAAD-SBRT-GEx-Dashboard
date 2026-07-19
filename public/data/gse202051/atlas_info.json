@@ -1,0 +1,19 @@
+{
+  "full_atlas": {
+    "nuclei": 224988,
+    "genes": 22164,
+    "patients": 43,
+    "untreated_nuclei": 108964,
+    "treated_nuclei": 116024
+  },
+  "visualization_subset": {
+    "nuclei": 20000,
+    "patients": 43,
+    "seed": 42,
+    "strategy": "Patient x Broad Cell Type stratification"
+  },
+  "x_matrix_identity": "Log-normalized expression (log1p scale; confirmed fractional, float32, max < 10)",
+  "gene_filter": "22,164 genes present in the processed integrated atlas.",
+  "citation": "Hwang et al., Nature Genetics (2022). DOI:10.1038/s41588-022-01134-8",
+  "geo": "GSE202051"
+}

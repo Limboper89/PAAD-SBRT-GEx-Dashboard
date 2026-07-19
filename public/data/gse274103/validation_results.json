@@ -1,0 +1,62 @@
+{
+  "integrity_checks": {
+    "PDAC-p1": {
+      "passed": true,
+      "mismatches_pos": 0,
+      "mismatches_raw": 0,
+      "max_err": 0.0008319495531607934,
+      "mse": 1.3430685777938955e-07
+    },
+    "PDAC-p2": {
+      "passed": true,
+      "mismatches_pos": 0,
+      "mismatches_raw": 0,
+      "max_err": 0.0009262945862209548,
+      "mse": 9.476107612784593e-08
+    },
+    "PDAC-p3": {
+      "passed": true,
+      "mismatches_pos": 0,
+      "mismatches_raw": 0,
+      "max_err": 0.0009134640475783051,
+      "mse": 1.1876740629985028e-07
+    },
+    "PDAC-p4": {
+      "passed": true,
+      "mismatches_pos": 0,
+      "mismatches_raw": 0,
+      "max_err": 0.0007229294638047001,
+      "mse": 7.129979289321953e-08
+    },
+    "PDAC-p5": {
+      "passed": true,
+      "mismatches_pos": 0,
+      "mismatches_raw": 0,
+      "max_err": 0.0007827784929057557,
+      "mse": 8.873456996034206e-08
+    }
+  },
+  "exact_storage": {
+    "PDAC-p1": {
+      "num_files": 17966,
+      "size_bytes": 35683556
+    },
+    "PDAC-p2": {
+      "num_files": 17966,
+      "size_bytes": 57456032
+    },
+    "PDAC-p3": {
+      "num_files": 17966,
+      "size_bytes": 34967004
+    },
+    "PDAC-p4": {
+      "num_files": 17966,
+      "size_bytes": 51292212
+    },
+    "PDAC-p5": {
+      "num_files": 17966,
+      "size_bytes": 43788068
+    }
+  },
+  "zero_byte_count": 0
+}

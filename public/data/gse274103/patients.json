@@ -1,0 +1,72 @@
+[
+  {
+    "id": "PDAC-p1",
+    "gsm": "GSM8443449",
+    "disease": "Human PDAC",
+    "technology": "10x Genomics Visium Spatial Gene Expression",
+    "tissue": "Formalin-Fixed Paraffin-Embedded (FFPE)",
+    "treatment": "Treatment-na\u00efve",
+    "spots_count": 4987,
+    "genes_count": 17943,
+    "image_size": [
+      578,
+      600
+    ]
+  },
+  {
+    "id": "PDAC-p2",
+    "gsm": "GSM8443450",
+    "disease": "Human PDAC",
+    "technology": "10x Genomics Visium Spatial Gene Expression",
+    "tissue": "Formalin-Fixed Paraffin-Embedded (FFPE)",
+    "treatment": "Treatment-na\u00efve",
+    "spots_count": 4380,
+    "genes_count": 17943,
+    "image_size": [
+      578,
+      600
+    ]
+  },
+  {
+    "id": "PDAC-p3",
+    "gsm": "GSM8443451",
+    "disease": "Human PDAC",
+    "technology": "10x Genomics Visium Spatial Gene Expression",
+    "tissue": "Formalin-Fixed Paraffin-Embedded (FFPE)",
+    "treatment": "Treatment-na\u00efve",
+    "spots_count": 4134,
+    "genes_count": 17943,
+    "image_size": [
+      578,
+      600
+    ]
+  },
+  {
+    "id": "PDAC-p4",
+    "gsm": "GSM8443452",
+    "disease": "Human PDAC",
+    "technology": "10x Genomics Visium Spatial Gene Expression",
+    "tissue": "Formalin-Fixed Paraffin-Embedded (FFPE)",
+    "treatment": "Treatment-na\u00efve",
+    "spots_count": 4983,
+    "genes_count": 17943,
+    "image_size": [
+      578,
+      600
+    ]
+  },
+  {
+    "id": "PDAC-p5",
+    "gsm": "GSM8443453",
+    "disease": "Human PDAC",
+    "technology": "10x Genomics Visium Spatial Gene Expression",
+    "tissue": "Formalin-Fixed Paraffin-Embedded (FFPE)",
+    "treatment": "Treatment-na\u00efve",
+    "spots_count": 4952,
+    "genes_count": 17943,
+    "image_size": [
+      578,
+      600
+    ]
+  }
+]

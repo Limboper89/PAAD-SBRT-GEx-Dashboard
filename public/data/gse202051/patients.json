@@ -1,0 +1,217 @@
+{
+  "T1": {
+    "n_nuclei": 228,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T10": {
+    "n_nuclei": 213,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T11": {
+    "n_nuclei": 421,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T12": {
+    "n_nuclei": 365,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T13": {
+    "n_nuclei": 842,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T14": {
+    "n_nuclei": 738,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T15": {
+    "n_nuclei": 341,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTl"
+  },
+  "T16": {
+    "n_nuclei": 650,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTl"
+  },
+  "T17": {
+    "n_nuclei": 109,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTl"
+  },
+  "T18": {
+    "n_nuclei": 238,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTl"
+  },
+  "T19": {
+    "n_nuclei": 309,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTl"
+  },
+  "T2": {
+    "n_nuclei": 458,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T20": {
+    "n_nuclei": 502,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTn"
+  },
+  "T21": {
+    "n_nuclei": 165,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTln"
+  },
+  "T22": {
+    "n_nuclei": 438,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTx"
+  },
+  "T23": {
+    "n_nuclei": 599,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRTx"
+  },
+  "T24": {
+    "n_nuclei": 245,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "GART"
+  },
+  "T25": {
+    "n_nuclei": 260,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "RT"
+  },
+  "T3": {
+    "n_nuclei": 490,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T4": {
+    "n_nuclei": 454,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T5": {
+    "n_nuclei": 542,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T6": {
+    "n_nuclei": 664,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T7": {
+    "n_nuclei": 607,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T8": {
+    "n_nuclei": 142,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "T9": {
+    "n_nuclei": 291,
+    "treatment_group": "Neoadjuvant-treated",
+    "treatment_status": "CRT"
+  },
+  "U1": {
+    "n_nuclei": 548,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U10": {
+    "n_nuclei": 627,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U11": {
+    "n_nuclei": 554,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U12": {
+    "n_nuclei": 570,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U13": {
+    "n_nuclei": 462,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U14": {
+    "n_nuclei": 407,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U15": {
+    "n_nuclei": 622,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U16": {
+    "n_nuclei": 316,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U17": {
+    "n_nuclei": 447,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U18": {
+    "n_nuclei": 684,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U2": {
+    "n_nuclei": 673,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U3": {
+    "n_nuclei": 561,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U4": {
+    "n_nuclei": 241,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U5": {
+    "n_nuclei": 595,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U6": {
+    "n_nuclei": 625,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U7": {
+    "n_nuclei": 410,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U8": {
+    "n_nuclei": 559,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  },
+  "U9": {
+    "n_nuclei": 788,
+    "treatment_group": "Treatment-na\u00efve",
+    "treatment_status": "Untreated"
+  }
+}

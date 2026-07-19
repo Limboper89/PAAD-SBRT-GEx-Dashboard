@@ -40,6 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# large single-nucleus and spatial binary datasets
-/public/data/gse202051/
-/public/data/gse274103/
+# large single-nucleus and spatial binary folders containing 112,000 files
+/public/data/gse202051/genes_bin/
+/public/data/gse274103/*/genes_bin/

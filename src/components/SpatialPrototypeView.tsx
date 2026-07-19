@@ -95,7 +95,7 @@ export default function SpatialPrototypeView() {
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [masterIndex, setMasterIndex] = useState<{ [ensId: string]: MasterGene } | null>(null);
   const [searchableGenes, setSearchableGenes] = useState<MasterGene[]>([]);
-  const [patientGenesIndex, setPatientGenesIndex] = useState<{ [ensId: string]: { max: number; max_raw: number } } | null>(null);
+  const [patientGenesIndex, setPatientGenesIndex] = useState<{ [ensId: string]: { max: number; max_raw: number; c?: number; o?: number; l?: number } } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   
   // UI states
@@ -126,6 +126,7 @@ export default function SpatialPrototypeView() {
   
   // Base Path for Static Files (Next.js config basePath)
   const basePath = "/PAAD-SBRT-GEx-Dashboard"; 
+  const chunkCacheRef = React.useRef<Map<number, ArrayBuffer>>(new Map());
   
   // Load patients list and master index on mount
   useEffect(() => {
@@ -165,9 +166,11 @@ export default function SpatialPrototypeView() {
         setShowSuggestions(false);
         setSearchError(null);
         
+        chunkCacheRef.current.clear();
+        
         const [metaRes, indexRes] = await Promise.all([
           fetch(`${basePath}/data/gse274103/${selectedPatient}/metadata.json`),
-          fetch(`${basePath}/data/gse274103/${selectedPatient}/genes_index.json`)
+          fetch(`${basePath}/data/gse274103/${selectedPatient}/genes_index_chunked.json`)
         ]);
         
         if (!metaRes.ok || !indexRes.ok) {
@@ -236,10 +239,25 @@ export default function SpatialPrototypeView() {
     setShowSuggestions(false);
     
     try {
-      const res = await fetch(`${basePath}/data/gse274103/${selectedPatient}/genes_bin/${gene.e}.bin`);
-      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-      
-      const buffer = await res.arrayBuffer();
+      const indexInfo = patientGenesIndex?.[gene.e];
+      if (!indexInfo || indexInfo.c === undefined || indexInfo.o === undefined || indexInfo.l === undefined) {
+        throw new Error("Gene location metadata missing in index.");
+      }
+
+      const chunkId = indexInfo.c;
+      const offset = indexInfo.o;
+      const length = indexInfo.l;
+
+      let chunkBuf = chunkCacheRef.current.get(chunkId);
+      if (!chunkBuf) {
+        const chunkFilename = `chunk_${chunkId.toString().padStart(3, "0")}.bin`;
+        const res = await fetch(`${basePath}/data/gse274103/${selectedPatient}/expression_chunks/${chunkFilename}`);
+        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+        chunkBuf = await res.arrayBuffer();
+        chunkCacheRef.current.set(chunkId, chunkBuf);
+      }
+
+      const buffer = chunkBuf.slice(offset, offset + length);
       const dv = new DataView(buffer);
       const n_nz = dv.getUint32(0, true);
       

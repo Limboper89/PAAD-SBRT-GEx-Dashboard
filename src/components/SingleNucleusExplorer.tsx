@@ -15,7 +15,7 @@ interface CellMetadata {
   level1: string; level2: string; level3: string;
   treatment: string; treatment_group: string; response: string;
 }
-interface GeneEntry { s: string; k: string; i: number; }
+interface GeneEntry { s: string; k: string; i: number; c?: number; o?: number; l?: number; }
 interface GeneIndex {
   n_genes: number; n_indexed: number; n_duplicates: number;
   n_unsafe: number; n_mt: number; n_rp: number;
@@ -133,6 +133,7 @@ export default function SingleNucleusExplorer() {
   const dragStart = useRef({ x: 0, y: 0 });
   const [hovered, setHovered] = useState<{ cell: CellMetadata; origIdx: number } | null>(null);
   const [tipPos, setTipPos]   = useState({ x: 0, y: 0 });
+  const chunkCacheRef = useRef<Map<number, ArrayBuffer>>(new Map());
 
   // Map for upper case symbol lookups
   const symbolMap = useMemo(() => {
@@ -154,7 +155,7 @@ export default function SingleNucleusExplorer() {
         const [metaR, infoR, geneR, patR] = await Promise.all([
           fetch(`${DATA}/metadata.json`),
           fetch(`${DATA}/atlas_info.json`),
-          fetch(`${DATA}/genes_index.json`),
+          fetch(`${DATA}/genes_index_chunked.json`),
           fetch(`${DATA}/patients.json`),
         ]);
         if (!metaR.ok) throw new Error("Failed to load cell metadata.");
@@ -200,9 +201,20 @@ export default function SingleNucleusExplorer() {
 
     setLoadingGene(true);
     try {
-      const res = await fetch(`${DATA}/genes_bin/${entry.k}.bin`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const buf    = await res.arrayBuffer();
+      const chunkId = entry.c ?? 0;
+      const offset = entry.o ?? 0;
+      const length = entry.l ?? 0;
+
+      let chunkBuf = chunkCacheRef.current.get(chunkId);
+      if (!chunkBuf) {
+        const chunkFilename = `chunk_${chunkId.toString().padStart(3, "0")}.bin`;
+        const res = await fetch(`${DATA}/expression_chunks/${chunkFilename}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        chunkBuf = await res.arrayBuffer();
+        chunkCacheRef.current.set(chunkId, chunkBuf);
+      }
+
+      const buf = chunkBuf.slice(offset, offset + length);
       const dv     = new DataView(buf);
       const n_nz   = dv.getUint32(0, true);
       const idxArr = new Uint16Array(buf, 4, n_nz);
