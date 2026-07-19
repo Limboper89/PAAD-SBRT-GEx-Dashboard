@@ -1,0 +1,748 @@
+"use client";
+
+import React, {
+  useEffect, useState, useMemo, useRef, useCallback, useReducer
+} from "react";
+import Link from "next/link";
+import {
+  Search, Info, AlertTriangle, ArrowLeft, ChevronDown,
+  TrendingUp, Cpu, X, MemoryStick
+} from "lucide-react";
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+interface CellMetadata {
+  id: string; x: number; y: number;
+  pid: string; broad_celltype: string;
+  level1: string; level2: string; level3: string;
+  treatment: string; treatment_group: string; response: string;
+}
+interface GeneEntry { s: string; k: string; i: number; }
+interface GeneIndex {
+  n_genes: number; n_indexed: number; n_duplicates: number;
+  n_unsafe: number; n_mt: number; n_rp: number;
+  format: string; precision_note: string;
+  genes: GeneEntry[];
+}
+interface PatientInfo {
+  n_nuclei: number; treatment_group: string; treatment_status: string;
+}
+
+// ─── Float16 decoder (IEEE 754) ─────────────────────────────────────────────
+function f16ToF32(h: number): number {
+  const s = (h & 0x8000) ? -1 : 1;
+  const e = (h >> 10) & 0x1F;
+  const m = h & 0x3FF;
+  if (e === 0) return s * Math.pow(2, -14) * (m / 1024);
+  if (e === 31) return m ? NaN : s * Infinity;
+  return s * Math.pow(2, e - 15) * (1 + m / 1024);
+}
+
+// ─── Color palettes ──────────────────────────────────────────────────────────
+const BROAD_COLORS: Record<string, string> = {
+  "Epithelial": "#f43f5e", "Fibroblast": "#3b82f6", "Immune": "#a855f7",
+  "Endothelial": "#eab308", "Endocrine": "#10b981", "Schwann": "#ec4899",
+  "unknown": "#64748b",
+};
+const LEVEL2_COLORS: Record<string, string> = {
+  "Malignant": "#f43f5e", "CAF": "#60a5fa", "Ductal": "#fb923c",
+  "Vascular": "#fbbf24", "Pericyte": "#a78bfa", "myCAF": "#38bdf8",
+  "Macrophage": "#c084fc", "Acinar": "#4ade80", "Ductal (atypical)": "#fdba74",
+  "Vascular smooth muscle": "#fde68a", "CD8+ T": "#818cf8", "ADM": "#f97316",
+  "Beta": "#34d399", "Alpha": "#6ee7b7", "CD4+ T": "#7c3aed",
+  "Schwann": "#f472b6", "Gamma": "#86efac", "Lymphatic": "#67e8f9",
+  "Hormone-negative neuroendocrine": "#a3e635", "B": "#e879f9",
+  "Dendritic": "#c026d3", "Natural killer": "#9333ea", "Treg": "#6366f1",
+  "Delta": "#2dd4bf", "Adipocyte": "#d4d4aa", "Plasma": "#f0abfc",
+  "Mast": "#fca5a5", "Neutrophil": "#fcd34d", "Epsilon": "#bbf7d0",
+  "Intra-pancreatic neurons": "#e2e8f0",
+};
+const TREATMENT_COLORS: Record<string, string> = {
+  "Treatment-naïve": "#14b8a6", "Neoadjuvant-treated": "#f97316",
+};
+
+// ─── Expression color (0→grey, nonzero→teal→amber→rose) ─────────────────────
+function exprColor(val: number, cap: number): string {
+  if (val <= 0 || cap <= 0) return "rgba(51,65,85,0.22)";
+  const r = Math.min(val / cap, 1.0);
+  let red, grn, blu;
+  if (r < 0.5) {
+    const f = r * 2;
+    red = Math.round(20 + (234 - 20) * f);
+    grn = Math.round(184 + (179 - 184) * f);
+    blu = Math.round(166 + (8 - 166) * f);
+  } else {
+    const f = (r - 0.5) * 2;
+    red = Math.round(234 + (244 - 234) * f);
+    grn = Math.round(179 + (63 - 179) * f);
+    blu = Math.round(8 + (94 - 8) * f);
+  }
+  return `rgba(${red},${grn},${blu},0.88)`;
+}
+
+// ─── Cache with max-size LRU ─────────────────────────────────────────────────
+const MAX_CACHE = 60; // genes
+const exprCache = new Map<string, Float32Array>();
+function cacheGet(key: string) { return exprCache.get(key); }
+function cacheSet(key: string, vec: Float32Array) {
+  if (exprCache.size >= MAX_CACHE) {
+    const oldest = exprCache.keys().next().value!;
+    exprCache.delete(oldest);
+  }
+  exprCache.set(key, vec);
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+export default function SnPrototypePage() {
+  const BASE = "/PAAD-SBRT-GEx-Dashboard";
+  const DATA = `${BASE}/data/gse202051`;
+
+  // Data
+  const [cells, setCells]         = useState<CellMetadata[]>([]);
+  const [patients, setPatients]   = useState<Record<string, PatientInfo>>({});
+  const [atlasInfo, setAtlasInfo] = useState<any>(null);
+  const [geneIndex, setGeneIndex] = useState<GeneIndex | null>(null);
+
+  // Symbol lookup: upper-case symbol → GeneEntry
+  const symbolMap = useMemo<Map<string, GeneEntry>>(() => {
+    if (!geneIndex) return new Map();
+    const m = new Map<string, GeneEntry>();
+    geneIndex.genes.forEach(g => m.set(g.s.toUpperCase(), g));
+    return m;
+  }, [geneIndex]);
+
+  // Gene symbol list for autocomplete (sorted)
+  const geneSymbols = useMemo<string[]>(() =>
+    geneIndex ? geneIndex.genes.map(g => g.s) : [],
+  [geneIndex]);
+
+  // Loading / error
+  const [loading, setLoading]         = useState(true);
+  const [errorMsg, setErrorMsg]       = useState<string | null>(null);
+  const [loadingGene, setLoadingGene] = useState(false);
+
+  // Expression state
+  const [exprVec, setExprVec]         = useState<Float32Array | null>(null);
+  const [activeGene, setActiveGene]   = useState<string | null>(null);
+  const [exprCap, setExprCap]         = useState(0);   // 99th percentile cap
+  const [exprActualMax, setExprActualMax] = useState(0);
+  const [capped, setCapped]           = useState(false);
+
+  // UI
+  type ColorMode = "broad" | "level2" | "expression" | "treatment";
+  const [colorMode, setColorMode] = useState<ColorMode>("broad");
+  const [selectedPid, setSelectedPid] = useState("ALL");
+  const [query, setQuery]         = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggest, setShowSuggest] = useState(false);
+
+  // Canvas / interaction
+  const canvasRef    = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dims, setDims] = useState({ w: 600, h: 450 });
+  const [zoom, setZoom] = useState(1.0);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const dragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState<{ cell: CellMetadata; origIdx: number } | null>(null);
+  const [tipPos, setTipPos]   = useState({ x: 0, y: 0 });
+
+  // ── Load metadata, atlas info, gene index, patients ──────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const [metaR, infoR, geneR, patR] = await Promise.all([
+          fetch(`${DATA}/metadata.json`),
+          fetch(`${DATA}/atlas_info.json`),
+          fetch(`${DATA}/genes_index.json`),
+          fetch(`${DATA}/patients.json`),
+        ]);
+        if (!metaR.ok) throw new Error("Failed to load atlas metadata.");
+        setCells(await metaR.json());
+        if (infoR.ok) setAtlasInfo(await infoR.json());
+        if (geneR.ok) setGeneIndex(await geneR.json());
+        if (patR.ok) setPatients(await patR.json());
+        setLoading(false);
+      } catch (e: any) {
+        setErrorMsg(e.message);
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // ── Autocomplete (case-insensitive prefix search) ─────────────────────
+  useEffect(() => {
+    const q = query.trim().toUpperCase();
+    if (!q || !geneIndex) { setSuggestions([]); return; }
+    // Exact match first, then prefix, then contains
+    const exact   = geneSymbols.filter(s => s.toUpperCase() === q);
+    const prefix  = geneSymbols.filter(s => s.toUpperCase().startsWith(q) && s.toUpperCase() !== q);
+    const contain = geneSymbols.filter(s => s.toUpperCase().includes(q) && !s.toUpperCase().startsWith(q));
+    setSuggestions([...exact, ...prefix, ...contain].slice(0, 12));
+    setShowSuggest(true);
+  }, [query, geneSymbols, geneIndex]);
+
+  // ── Load gene expression ─────────────────────────────────────────────
+  const handleGene = useCallback(async (symbol: string) => {
+    const upper = symbol.trim().toUpperCase();
+    const entry = symbolMap.get(upper);
+    if (!entry) {
+      alert(`Gene "${symbol}" not found in the processed GSE202051 atlas (22,164 genes).`);
+      return;
+    }
+    setQuery(""); setSuggestions([]); setShowSuggest(false);
+
+    // Cache hit
+    const cached = cacheGet(entry.k);
+    if (cached) {
+      applyExpression(entry.s, cached);
+      return;
+    }
+
+    setLoadingGene(true);
+    try {
+      const res = await fetch(`${DATA}/genes_bin/${entry.k}.bin`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const buf    = await res.arrayBuffer();
+      const dv     = new DataView(buf);
+      const n_nz   = dv.getUint32(0, true);
+      const idxArr = new Uint16Array(buf, 4, n_nz);
+      const valU16 = new Uint16Array(buf, 4 + n_nz * 2, n_nz);
+      const vec    = new Float32Array(20000);
+      for (let i = 0; i < n_nz; i++) vec[idxArr[i]] = f16ToF32(valU16[i]);
+      cacheSet(entry.k, vec);
+      applyExpression(entry.s, vec);
+    } catch (e: any) {
+      alert(`Failed to load expression for "${symbol}": ${e.message}`);
+    } finally {
+      setLoadingGene(false);
+    }
+  }, [symbolMap, DATA]);
+
+  function applyExpression(symbol: string, vec: Float32Array) {
+    // 99th percentile of nonzero values
+    const nonzero = Array.from(vec).filter(v => v > 0).sort((a, b) => a - b);
+    const actualMax = nonzero.length > 0 ? nonzero[nonzero.length - 1] : 0;
+    const p99idx  = Math.max(0, Math.ceil(nonzero.length * 0.99) - 1);
+    const p99      = nonzero.length > 0 ? nonzero[p99idx] : 0;
+    const useCap   = p99 < actualMax * 0.98; // only cap if p99 < 98% of max
+    setExprVec(vec);
+    setActiveGene(symbol);
+    setExprCap(useCap ? p99 : actualMax);
+    setExprActualMax(actualMax);
+    setCapped(useCap);
+    setColorMode("expression");
+  }
+
+  // ── Filtered active cells ─────────────────────────────────────────────
+  const { activeCells, activeOrigIdx } = useMemo(() => {
+    if (selectedPid === "ALL") {
+      return { activeCells: cells, activeOrigIdx: cells.map((_, i) => i) };
+    }
+    const filtered = cells.map((c, i) => ({ c, i })).filter(x => x.c.pid === selectedPid);
+    return { activeCells: filtered.map(x => x.c), activeOrigIdx: filtered.map(x => x.i) };
+  }, [cells, selectedPid]);
+
+  // ── UMAP bounds ───────────────────────────────────────────────────────
+  const bounds = useMemo(() => {
+    if (cells.length === 0) return { minX: -6, maxX: 6, minY: -6, maxY: 6 };
+    let mnX = Infinity, mxX = -Infinity, mnY = Infinity, mxY = -Infinity;
+    cells.forEach(c => {
+      if (c.x < mnX) mnX = c.x; if (c.x > mxX) mxX = c.x;
+      if (c.y < mnY) mnY = c.y; if (c.y > mxY) mxY = c.y;
+    });
+    return { minX: mnX - 0.5, maxX: mxX + 0.5, minY: mnY - 0.5, maxY: mxY + 0.5 };
+  }, [cells]);
+
+  // ── Canvas resize ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      setDims({ w: Math.max(width - 4, 200), h: Math.max(height - 4, 200) });
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Screen coordinate ─────────────────────────────────────────────────
+  const toScreen = useCallback((x: number, y: number) => {
+    const pad = 16;
+    const sx = pad + (x - bounds.minX) / (bounds.maxX - bounds.minX) * (dims.w - pad * 2);
+    const sy = dims.h - pad - (y - bounds.minY) / (bounds.maxY - bounds.minY) * (dims.h - pad * 2);
+    const cx = dims.w / 2, cy = dims.h / 2;
+    return { x: (sx - cx) * zoom + cx + panX, y: (sy - cy) * zoom + cy + panY };
+  }, [bounds, dims, zoom, panX, panY]);
+
+  // ── Cell color ────────────────────────────────────────────────────────
+  const getCellColor = useCallback((cell: CellMetadata, origIdx: number): string => {
+    if (colorMode === "broad")      return BROAD_COLORS[cell.broad_celltype] ?? "#64748b";
+    if (colorMode === "level2")     return LEVEL2_COLORS[cell.level2] ?? "#64748b";
+    if (colorMode === "treatment")  return TREATMENT_COLORS[cell.treatment_group] ?? "#64748b";
+    if (colorMode === "expression" && exprVec)
+      return exprColor(exprVec[origIdx] ?? 0, exprCap);
+    return "#64748b";
+  }, [colorMode, exprVec, exprCap]);
+
+  // ── Draw UMAP ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || activeCells.length === 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = dims.w * dpr;
+    canvas.height = dims.h * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, dims.w, dims.h);
+
+    const order = activeCells.map((_, i) => i);
+    if (colorMode === "expression" && exprVec) {
+      order.sort((a, b) => (exprVec[activeOrigIdx[a]] ?? 0) - (exprVec[activeOrigIdx[b]] ?? 0));
+    }
+
+    for (const i of order) {
+      const cell    = activeCells[i];
+      const origIdx = activeOrigIdx[i];
+      const pt      = toScreen(cell.x, cell.y);
+      if (pt.x < -10 || pt.x > dims.w + 10 || pt.y < -10 || pt.y > dims.h + 10) continue;
+      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0) : 0;
+      const r       = colorMode === "expression" && exprVal > 0 ? 3.6 : 2.8;
+      ctx.fillStyle = getCellColor(cell, origIdx);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (hovered) {
+      const pt = toScreen(hovered.cell.x, hovered.cell.y);
+      ctx.strokeStyle = "#14b8a6";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }, [activeCells, activeOrigIdx, dims, zoom, panX, panY, colorMode, exprVec, exprCap, hovered, toScreen, getCellColor]);
+
+  // ── Mouse ─────────────────────────────────────────────────────────────
+  const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    if (dragging.current) {
+      setPanX(ox => ox + (e.clientX - dragStart.current.x));
+      setPanY(oy => oy + (e.clientY - dragStart.current.y));
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    let best: typeof hovered = null, bestD = 12;
+    activeCells.forEach((cell, i) => {
+      const pt = toScreen(cell.x, cell.y);
+      const d  = Math.hypot(mx - pt.x, my - pt.y);
+      if (d < bestD) { bestD = d; best = { cell, origIdx: activeOrigIdx[i] }; }
+    });
+    setHovered(best);
+    if (best) setTipPos({ x: mx, y: my });
+  }, [activeCells, activeOrigIdx, toScreen]);
+
+  const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    setZoom(z => Math.max(0.25, Math.min(z * (e.deltaY < 0 ? 1.15 : 0.87), 30)));
+  }, []);
+
+  // ── Cell-type expression dot-plot data ───────────────────────────────
+  const dotData = useMemo(() => {
+    if (!activeGene || !exprVec || activeCells.length === 0) return [];
+    const groups: Record<string, number[]> = {};
+    activeCells.forEach((c, i) => {
+      const v = exprVec[activeOrigIdx[i]] ?? 0;
+      if (!groups[c.level2]) groups[c.level2] = [];
+      groups[c.level2].push(v);
+    });
+    return Object.entries(groups).map(([ct, vals]) => {
+      const exp = vals.filter(v => v > 0);
+      return {
+        cellType: ct,
+        total:    vals.length,
+        pct:      (exp.length / vals.length) * 100,
+        mean:     exp.length ? exp.reduce((a, b) => a + b, 0) / exp.length : 0,
+        tooSmall: vals.length < 10,
+      };
+    }).filter(r => r.pct > 0).sort((a, b) => b.mean - a.mean);
+  }, [activeCells, activeOrigIdx, exprVec, activeGene]);
+
+  // ── Legend ────────────────────────────────────────────────────────────
+  const legendEntries = useMemo((): [string, string][] => {
+    if (colorMode === "broad")     return Object.entries(BROAD_COLORS);
+    if (colorMode === "level2")    return Object.entries(LEVEL2_COLORS).slice(0, 18);
+    if (colorMode === "treatment") return Object.entries(TREATMENT_COLORS);
+    return [];
+  }, [colorMode]);
+
+  const selPatientInfo = selectedPid !== "ALL" ? patients[selectedPid] : null;
+
+  // ── JSX ───────────────────────────────────────────────────────────────
+  return (
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-300 p-4 gap-4">
+
+      {/* Back */}
+      <Link href="/" className="inline-flex items-center gap-1.5 text-[11px] text-teal-400 hover:text-teal-300 font-semibold">
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to Main Dashboard
+      </Link>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between md:items-start gap-3">
+        <div>
+          <h1 className="text-slate-100 font-bold text-xl flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-teal-400" />
+            PDAC Single-Nucleus Explorer — GSE202051
+          </h1>
+          <p className="text-xs text-slate-300 mt-1.5 font-medium">
+            Human PDAC single-nucleus transcriptomic atlas · 43 patients · 22,164 genes searchable
+          </p>
+          <p className="text-[10px] text-slate-500 mt-1">
+            GSE202051 · Hwang et al., Nature Genetics (2022)
+          </p>
+        </div>
+        {atlasInfo && (
+          <div className="flex flex-wrap gap-2 text-[10px]">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5">
+              <span className="text-slate-500">Full atlas</span>{" "}
+              <span className="text-slate-200 font-bold">{atlasInfo.full_atlas?.nuclei?.toLocaleString()}</span>
+              {" nuclei · "}
+              <span className="text-slate-200 font-bold">{atlasInfo.full_atlas?.patients} patients</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5">
+              <span className="text-slate-500">Viz subset</span>{" "}
+              <span className="text-teal-400 font-bold">{atlasInfo.visualization_subset?.nuclei?.toLocaleString()}</span>
+              {" nuclei · "}
+              <span className="text-teal-400 font-bold">43 patients</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center h-80 gap-3">
+          <div className="w-10 h-10 border-2 border-t-teal-500 border-slate-700 rounded-full animate-spin" />
+          <span className="text-xs text-teal-400 font-semibold uppercase tracking-wider">Loading atlas…</span>
+        </div>
+      ) : errorMsg ? (
+        <div className="flex-1 flex items-center justify-center h-80 gap-2 text-red-400">
+          <AlertTriangle className="w-8 h-8" /><p className="text-xs">{errorMsg}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 flex-1">
+
+          {/* ── UMAP Panel ── */}
+          <div className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3">
+
+            {/* Controls */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
+                {(["broad","level2","treatment","expression"] as ColorMode[]).map(m => (
+                  <button key={m}
+                    onClick={() => {
+                      if (m === "expression" && !activeGene) { alert("Search a gene first."); return; }
+                      setColorMode(m);
+                    }}
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${colorMode === m ? "bg-teal-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}>
+                    {m === "broad" ? "Broad Type" : m === "level2" ? "Subtype" : m === "expression" ? "Expression" : "Treatment"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Patient selector */}
+              <div className="relative">
+                <select value={selectedPid} onChange={e => setSelectedPid(e.target.value)}
+                  className="appearance-none bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-2.5 py-1.5 pr-7 focus:outline-none focus:border-teal-500">
+                  <option value="ALL">All 43 Patients</option>
+                  {Object.keys(patients).sort().map(pid => (
+                    <option key={pid} value={pid}>
+                      {pid} ({patients[pid].treatment_group === "Treatment-naïve" ? "Naïve" : "NAT"} · {patients[pid].n_nuclei} cells)
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
+              </div>
+
+              {selPatientInfo && (
+                <div className="text-[10px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-slate-400">
+                  <span className="font-bold text-slate-200">{selectedPid}</span>
+                  {" · "}{selPatientInfo.n_nuclei} nuclei · 
+                  <span className={selPatientInfo.treatment_group === "Treatment-naïve" ? "text-teal-400" : "text-orange-400"}>
+                    {" "}{selPatientInfo.treatment_status}
+                  </span>
+                </div>
+              )}
+
+              <button onClick={() => { setZoom(1); setPanX(0); setPanY(0); }}
+                className="ml-auto text-[10px] px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white transition-all">
+                Reset
+              </button>
+            </div>
+
+            {/* Color scale bar for expression */}
+            {colorMode === "expression" && activeGene && (
+              <div className="flex items-center gap-3 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+                <span className="text-[10px] font-bold text-slate-300 font-mono">{activeGene}</span>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[9px] text-slate-500">0</span>
+                  <div className="flex-1 h-2 rounded bg-gradient-to-r from-teal-500 via-amber-500 to-rose-500 opacity-80" />
+                  <span className="text-[9px] text-slate-500">{exprCap.toFixed(2)}</span>
+                </div>
+                {capped && (
+                  <span className="text-[9px] text-amber-400 bg-amber-950/40 border border-amber-900/50 rounded px-1.5 py-0.5 shrink-0">
+                    Cap: 99th pct · max={exprActualMax.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {colorMode === "treatment" && (
+              <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5 text-[10px] text-slate-400">
+                <strong className="text-slate-300">Treatment groups are broad groupings only.</strong>{" "}
+                Treatment-naïve (18 patients, U##) vs Neoadjuvant-treated (25 patients, T##).
+                NAT regimens were heterogeneous (CRT, CRTl, CRTx, RT, GART). No statistical comparisons shown.
+              </div>
+            )}
+
+            {/* Canvas */}
+            <div ref={containerRef} className="flex-1 min-h-[420px] relative rounded-xl overflow-hidden bg-slate-950/50 border border-slate-800/50">
+              <canvas ref={canvasRef}
+                onMouseMove={onMouseMove}
+                onMouseDown={e => { dragging.current = true; dragStart.current = { x: e.clientX, y: e.clientY }; }}
+                onMouseUp={() => { dragging.current = false; }}
+                onMouseLeave={() => { dragging.current = false; setHovered(null); }}
+                onWheel={onWheel}
+                className="w-full h-full cursor-crosshair" />
+
+              {/* Tooltip */}
+              {hovered && (
+                <div className="absolute pointer-events-none bg-slate-950/95 border border-slate-700 rounded-xl p-3 shadow-2xl text-[10px] z-50 max-w-[240px]"
+                  style={{ left: Math.min(tipPos.x + 14, dims.w - 250), top: Math.max(tipPos.y - 88, 8) }}>
+                  <div className="font-bold text-teal-400 mb-1.5 pb-1 border-b border-slate-800 flex items-center gap-1.5 truncate">
+                    <span>{hovered.cell.pid}</span>
+                    <span className="text-slate-500">·</span>
+                    <span className="truncate">{hovered.cell.level2}</span>
+                  </div>
+                  <div className="text-slate-400"><span className="text-slate-500">Broad:</span> {hovered.cell.broad_celltype}</div>
+                  <div className="text-slate-400"><span className="text-slate-500">Level 1:</span> {hovered.cell.level1}</div>
+                  <div className="text-slate-400"><span className="text-slate-500">Treatment:</span> {hovered.cell.treatment}</div>
+                  <div className="text-slate-400"><span className="text-slate-500">Response:</span> {hovered.cell.response}</div>
+                  {colorMode === "expression" && activeGene && exprVec && (
+                    <div className="mt-1.5 pt-1.5 border-t border-slate-800 font-bold text-amber-400 font-mono">
+                      {activeGene}: {(exprVec[hovered.origIdx] ?? 0).toFixed(3)}
+                      <span className="text-slate-600 font-normal text-[8px] ml-1">(viz repr.)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Legend */}
+            {legendEntries.length > 0 && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {legendEntries.map(([label, color]) => (
+                  <div key={label} className="flex items-center gap-1 text-[9px] text-slate-400">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="truncate max-w-[110px]">{label}</span>
+                  </div>
+                ))}
+                {colorMode === "level2" && (
+                  <span className="text-[9px] text-slate-600 italic">+{Object.keys(LEVEL2_COLORS).length - 18} more subtypes</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Right Panel ── */}
+          <div className="flex flex-col gap-4">
+
+            {/* Gene search */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                Gene Expression Search
+                {geneIndex && (
+                  <span className="ml-1.5 text-teal-500 normal-case font-normal">
+                    ({geneIndex.n_genes.toLocaleString()} genes)
+                  </span>
+                )}
+              </label>
+
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                  {loadingGene
+                    ? <div className="w-3.5 h-3.5 border border-t-teal-500 border-slate-600 rounded-full animate-spin" />
+                    : <Search className="w-3.5 h-3.5" />}
+                </span>
+                <input type="text" value={query}
+                  onChange={e => { setQuery(e.target.value); setShowSuggest(true); }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && suggestions.length > 0) { handleGene(suggestions[0]); setQuery(""); }
+                    if (e.key === "Escape") { setShowSuggest(false); setQuery(""); }
+                  }}
+                  placeholder="Search any gene (e.g. KRAS, KRT19, GATA6)…"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-teal-500 transition-all"
+                />
+                {query && (
+                  <button onClick={() => { setQuery(""); setSuggestions([]); setShowSuggest(false); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Suggestions dropdown */}
+                {showSuggest && suggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl max-h-52 overflow-y-auto">
+                    {suggestions.map((g, idx) => (
+                      <button key={g} onClick={() => { handleGene(g); setQuery(""); setShowSuggest(false); }}
+                        className="w-full text-left px-4 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white transition-colors border-b border-slate-900 last:border-0">
+                        <span className="text-teal-400 font-bold">{g.slice(0, query.length)}</span>
+                        {g.slice(query.length)}
+                        {idx === 0 && <span className="ml-2 text-[8px] text-slate-600 uppercase">↵ Enter</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Not found notice */}
+                {query && suggestions.length === 0 && query.trim().length > 0 && (
+                  <div className="mt-1 text-[10px] text-amber-400 px-1">
+                    Gene not available in the processed GSE202051 atlas.
+                  </div>
+                )}
+              </div>
+
+              {/* Active gene info */}
+              {activeGene && (
+                <div className="mt-3 p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl flex justify-between items-center">
+                  <div>
+                    <div className="text-[9px] text-slate-500 uppercase font-bold">Active Gene</div>
+                    <div className="text-sm font-bold font-mono text-slate-100">{activeGene}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[9px] text-slate-500 uppercase font-bold">Cached</div>
+                    <div className="text-[10px] font-mono text-slate-400">{exprCache.size}/{MAX_CACHE}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Expression label + tooltip */}
+              <div className="mt-3 bg-slate-950/40 border border-slate-800/50 rounded-lg px-3 py-2 text-[9px] text-slate-500 leading-relaxed">
+                <strong className="text-slate-400">Processed expression (log-normalized, log1p scale)</strong>
+                <p className="mt-0.5">
+                  Values originate from the processed GSE202051 integrated atlas. Float16 visualization representation is used for interactive display. Source data are Float32. Not suitable for direct statistical analysis.
+                </p>
+              </div>
+            </div>
+
+            {/* Cell-type expression summary */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-1 flex flex-col">
+              <h4 className="text-slate-100 text-xs font-semibold flex items-center gap-2 mb-3">
+                <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                Cell-Type Expression Summary
+                {selectedPid !== "ALL" && (
+                  <span className="ml-auto text-[9px] text-teal-400 font-mono">{selectedPid}</span>
+                )}
+              </h4>
+
+              {activeGene ? (
+                <div className="flex flex-col gap-0 flex-1 overflow-y-auto max-h-[500px] pr-1">
+                  <div className="grid grid-cols-12 text-[9px] font-bold text-slate-600 uppercase border-b border-slate-800 pb-1 mb-2">
+                    <div className="col-span-5">Level 2 Subtype</div>
+                    <div className="col-span-2 text-center">N</div>
+                    <div className="col-span-2 text-center">Expr%</div>
+                    <div className="col-span-3 text-center">Mean</div>
+                  </div>
+                  {dotData.map(row => (
+                    <div key={row.cellType}
+                      className={`grid grid-cols-12 items-center py-1 text-[10px] border-b border-slate-900/40 last:border-0 ${row.tooSmall ? "opacity-50" : ""}`}>
+                      <div className="col-span-5 flex items-center gap-1.5 truncate">
+                        {row.tooSmall && <AlertTriangle className="w-2.5 h-2.5 text-amber-500 flex-shrink-0" />}
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: LEVEL2_COLORS[row.cellType] || "#64748b" }} />
+                        <span className="truncate text-slate-300" title={row.cellType}>{row.cellType}</span>
+                      </div>
+                      <div className="col-span-2 text-center text-slate-500 font-mono text-[9px]">{row.total}</div>
+                      <div className="col-span-2 flex justify-center items-center">
+                        <span className="rounded-full border border-slate-800/60 inline-block"
+                          style={{
+                            width:  `${Math.max(5, 3 + 12 * row.pct / 100)}px`,
+                            height: `${Math.max(5, 3 + 12 * row.pct / 100)}px`,
+                            backgroundColor: exprColor(row.mean, exprCap),
+                          }} title={`${row.pct.toFixed(1)}% expressing`} />
+                      </div>
+                      <div className="col-span-3 text-center font-mono font-bold text-slate-200 text-[10px]">
+                        {row.mean.toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  {dotData.some(r => r.tooSmall) && (
+                    <p className="text-[9px] text-amber-500/70 mt-2 italic px-1">
+                      ⚠ Interpret very small populations (N&lt;10) cautiously.
+                    </p>
+                  )}
+                  <div className="mt-3 pt-2 border-t border-slate-800 text-[9px] text-slate-600 flex justify-between items-center">
+                    <span>Dot size = % expressing · Color = mean (expressing only)</span>
+                    <div className="flex items-center gap-1.5">
+                      <span>Low</span>
+                      <div className="w-12 h-1.5 rounded bg-gradient-to-r from-teal-500 via-amber-500 to-rose-500" />
+                      <span>High</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center border border-dashed border-slate-800 rounded-xl text-center text-[11px] text-slate-600 min-h-[160px]">
+                  Search any gene to view cell-type expression breakdown
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Dataset Info ── */}
+      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+        <h4 className="text-slate-100 text-xs font-semibold flex items-center gap-2 mb-4 pb-2 border-b border-slate-800">
+          <Info className="w-3.5 h-3.5 text-blue-400" />
+          Dataset Information & Scientific Limitations
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-[11px] text-slate-400">
+          <div>
+            <strong className="text-slate-200 block mb-1">Citation</strong>
+            <p className="leading-relaxed">
+              Hwang et al., <em>Nature Genetics</em> (2022)<br/>
+              DOI: 10.1038/s41588-022-01134-8<br/>
+              <span className="text-slate-500 font-mono text-[9px]">GEO: GSE202051 · PMID: 35902743</span><br/>
+              <span className="text-slate-500 font-mono text-[9px]">Resource version: 1.0</span>
+            </p>
+          </div>
+          <div className="border-l border-slate-800 pl-5">
+            <strong className="text-slate-200 block mb-1">Full Source Atlas</strong>
+            <p className="leading-relaxed">
+              <strong className="text-slate-200">224,988 nuclei · 43 patients</strong><br/>
+              22,164 genes · log1p-normalized<br/>
+              <span className="text-slate-500">Statistical analyses require the full source dataset with patient-aware methods.</span>
+            </p>
+          </div>
+          <div className="border-l border-slate-800 pl-5">
+            <strong className="text-slate-200 block mb-1">Web Visualization Subset</strong>
+            <p className="leading-relaxed">
+              <strong className="text-teal-400">20,000 nuclei · 43 patients</strong><br/>
+              Stratified by patient × broad cell type (seed=42). Preserves patient and major cell-population representation. Float16 near-lossless visualization representation.
+            </p>
+          </div>
+          <div className="border-l border-slate-800 pl-5 text-amber-300/90">
+            <strong className="text-amber-200 block mb-1 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> Important Limitations
+            </strong>
+            <p className="leading-relaxed text-[10px]">
+              GSE202051 (snRNA-seq) and GSE225767 (bulk RNA-seq) are independent cohorts. Single-nucleus data serve as a reference atlas only — not cellular validation of bulk findings. The response column is a patient-level annotation replicated across all nuclei; it does not represent cell-level phenotypes.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { Search, Plus, X, Info } from "lucide-react";
+import { Info, X } from "lucide-react";
 import SearchableGeneSelect from "./SearchableGeneSelect";
 
 interface ExpressionData {
@@ -18,7 +18,12 @@ interface HeatmapProps {
   onAddGene: (geneName: string) => void;
   onRemoveGene: (geneName: string) => void;
   allGenes: string[];
+  isTcgaGtex?: boolean;
+  tcgaGtexExpressions?: ArrayBuffer | null;
+  tcgaGtexData?: any[]; // results list containing symbol and index
 }
+
+const MAX_HEATMAP_GENES = 50;
 
 export default function Heatmap({
   expressionData,
@@ -28,6 +33,9 @@ export default function Heatmap({
   onAddGene,
   onRemoveGene,
   allGenes,
+  isTcgaGtex = false,
+  tcgaGtexExpressions = null,
+  tcgaGtexData = [],
 }: HeatmapProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,7 +50,7 @@ export default function Heatmap({
     y: number;
   } | null>(null);
 
-  // Auto-resize canvas
+  // Auto-resize canvas height based on selected genes count
   useEffect(() => {
     if (!containerRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -50,7 +58,7 @@ export default function Heatmap({
         const { width } = entry.contentRect;
         setDimensions({
           width: Math.max(width - 32, 300),
-          height: selectedGenes.length * 24 + 60, // 24px per row + 60px header/footer padding
+          height: selectedGenes.length * 24 + 60, // 24px per row + 60px padding
         });
       }
     });
@@ -58,20 +66,80 @@ export default function Heatmap({
     return () => resizeObserver.disconnect();
   }, [selectedGenes]);
 
-  // Compute Z-Scores and sort columns (Pre first, then Post)
-  const heatmapData = useMemo(() => {
-    if (!expressionData || selectedGenes.length === 0) return null;
+  // Construct virtual expression data if in TCGA-GTEx mode
+  const resolvedExpressionData = useMemo(() => {
+    if (!isTcgaGtex) return expressionData;
+    if (!tcgaGtexExpressions || tcgaGtexData.length === 0 || selectedGenes.length === 0) return null;
 
-    const { samples, conditions, expressions } = expressionData;
+    const expressionsDict: { [gene: string]: number[] } = {};
+    
+    // We construct 349 sample details
+    // Indices:
+    // 0 to 177: TCGA Tumor (n=178)
+    // 178 to 344: GTEx Normal (n=167)
+    // 345 to 348: TCGA Solid Normal (n=4)
+    const samples = Array.from({ length: 349 }, (_, i) => {
+      if (i < 178) return `TCGA PAAD #${i + 1}`;
+      if (i < 345) return `GTEx Normal #${i - 177}`;
+      return `TCGA Solid Normal #${i - 344}`;
+    });
+
+    const conditions = Array.from({ length: 349 }, (_, i) => {
+      if (i < 178) return "Tumor";
+      if (i < 345) return "Normal";
+      return "Adjacent";
+    });
+
+    selectedGenes.forEach((geneSymbol) => {
+      const geneObj = tcgaGtexData.find((g) => g.symbol === geneSymbol);
+      if (geneObj && geneObj.index !== undefined) {
+        const offset = geneObj.index * 349 * 4;
+        // slice float32 from expressions ArrayBuffer
+        const floatArray = new Float32Array(tcgaGtexExpressions, offset, 349);
+        expressionsDict[geneSymbol] = Array.from(floatArray);
+      }
+    });
+
+    return {
+      samples,
+      conditions,
+      expressions: expressionsDict,
+    };
+  }, [isTcgaGtex, tcgaGtexExpressions, tcgaGtexData, selectedGenes, expressionData]);
+
+  // Compute Z-Scores and sort columns
+  // SBRT: sorted by condition: Pre first, then Post
+  // TCGA-GTEx: sorted by condition: GTEx Normal (Normal) first, then TCGA Tumor (Tumor), then TCGA Solid Normal (Adjacent)
+  const heatmapData = useMemo(() => {
+    if (!resolvedExpressionData || selectedGenes.length === 0) return null;
+
+    const { samples, conditions, expressions } = resolvedExpressionData;
     const numSamples = samples.length;
 
-    // Create indices sorted by condition: Pre first, then Post
-    const sampleIndices = Array.from({ length: numSamples }, (_, i) => i).sort(
-      (a, b) => conditions[a].localeCompare(conditions[b]) // Pre comes before Post alphabetically
-    );
+    // Create indices sorted by condition
+    let sampleIndices: number[] = [];
+    if (isTcgaGtex) {
+      // Order: GTEx Normal (Normal), then TCGA Tumor (Tumor), then TCGA Solid Normal (Adjacent)
+      sampleIndices = Array.from({ length: numSamples }, (_, i) => i).sort((a, b) => {
+        const condA = conditions[a];
+        const condB = conditions[b];
+        const rank = { Normal: 0, Tumor: 1, Adjacent: 2 };
+        return rank[condA as keyof typeof rank] - rank[condB as keyof typeof rank];
+      });
+    } else {
+      // Paired SBRT sorting (Pre alphabetically before Post)
+      sampleIndices = Array.from({ length: numSamples }, (_, i) => i).sort(
+        (a, b) => conditions[a].localeCompare(conditions[b])
+      );
+    }
 
     const sortedSamples = sampleIndices.map((i) => samples[i]);
     const sortedConditions = sampleIndices.map((i) => conditions[i]);
+    
+    // Cohort partitions counts
+    const gtexCount = sortedConditions.filter((c) => c === "Normal").length;
+    const tumorCount = sortedConditions.filter((c) => c === "Tumor").length;
+    const solidCount = sortedConditions.filter((c) => c === "Adjacent").length;
     const preCount = sortedConditions.filter((c) => c === "Pre").length;
 
     // Process each gene: calculate mean, sd, and z-scores
@@ -86,7 +154,6 @@ export default function Heatmap({
 
         const zScores = vals.map((v) => (v - mean) / sd);
 
-        // Sort values & zScores to match Pre-SBRT vs Post-SBRT columns
         const sortedVals = sampleIndices.map((i) => vals[i]);
         const sortedZ = sampleIndices.map((i) => zScores[i]);
 
@@ -102,9 +169,12 @@ export default function Heatmap({
       samples: sortedSamples,
       conditions: sortedConditions,
       preCount,
+      gtexCount,
+      tumorCount,
+      solidCount,
       rows: geneRows,
     };
-  }, [expressionData, selectedGenes]);
+  }, [resolvedExpressionData, selectedGenes, isTcgaGtex]);
 
   const rowHeight = 24;
   const labelWidth = 90;
@@ -127,30 +197,88 @@ export default function Heatmap({
     const matrixWidth = dimensions.width - labelWidth - 20; // 20px padding right
     const cellWidth = matrixWidth / heatmapData.samples.length;
 
-    // 1. Draw Columns Banners (Pre vs Post)
-    const dividerX = labelWidth + heatmapData.preCount * cellWidth;
+    // 1. Draw Column Cohort Banner Headers
+    if (isTcgaGtex) {
+      // Three sections: GTEx Normal, TCGA Tumor, TCGA Solid Normal
+      const normalX = labelWidth;
+      const normalW = heatmapData.gtexCount * cellWidth;
+      
+      const tumorX = normalX + normalW;
+      const tumorW = heatmapData.tumorCount * cellWidth;
 
-    // Pre-SBRT Header
-    ctx.fillStyle = "rgba(100, 116, 139, 0.15)";
-    ctx.fillRect(labelWidth, 5, heatmapData.preCount * cellWidth - 2, 20);
-    ctx.fillStyle = "#94a3b8"; // Slate-400
-    ctx.font = "bold 10px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(
-      `Pre-SBRT (N=${heatmapData.preCount})`,
-      labelWidth + (heatmapData.preCount * cellWidth) / 2,
-      18
-    );
+      const solidX = tumorX + tumorW;
+      const solidW = heatmapData.solidCount * cellWidth;
 
-    // Post-SBRT Header
-    ctx.fillStyle = "rgba(20, 184, 166, 0.1)";
-    ctx.fillRect(dividerX + 1, 5, matrixWidth - heatmapData.preCount * cellWidth - 2, 20);
-    ctx.fillStyle = "#14b8a6"; // Teal-500
-    ctx.fillText(
-      `Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`,
-      dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2,
-      18
-    );
+      // GTEx normal pancreas header
+      if (normalW > 0) {
+        ctx.fillStyle = "rgba(69, 117, 180, 0.15)";
+        ctx.fillRect(normalX, 5, normalW - 1, 20);
+        ctx.fillStyle = "#4575b4";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`GTEx Normal (n=${heatmapData.gtexCount})`, normalX + normalW / 2, 18);
+      }
+
+      // TCGA tumor header
+      if (tumorW > 0) {
+        ctx.fillStyle = "rgba(215, 48, 39, 0.15)";
+        ctx.fillRect(tumorX, 5, tumorW - 1, 20);
+        ctx.fillStyle = "#d73027";
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`TCGA Tumor (n=${heatmapData.tumorCount})`, tumorX + tumorW / 2, 18);
+      }
+
+      // TCGA solid normal adjacent header (diagnostic reference)
+      if (solidW > 0) {
+        ctx.fillStyle = "rgba(254, 224, 144, 0.15)";
+        ctx.fillRect(solidX, 5, solidW - 1, 20);
+        ctx.fillStyle = "#cca000"; // Darker yellow/orange
+        ctx.font = "bold 9px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`Adjacent Norm (n=${heatmapData.solidCount})`, solidX + solidW / 2, 18);
+      }
+
+      // Draw vertical dividers between cohorts
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      if (normalW > 0) {
+        ctx.moveTo(tumorX, headerHeight);
+        ctx.lineTo(tumorX, headerHeight + heatmapData.rows.length * rowHeight);
+      }
+      if (solidW > 0) {
+        ctx.moveTo(solidX, headerHeight);
+        ctx.lineTo(solidX, headerHeight + heatmapData.rows.length * rowHeight);
+      }
+      ctx.stroke();
+
+    } else {
+      // Paired SBRT Mode: two banners (Pre vs Post)
+      const dividerX = labelWidth + heatmapData.preCount * cellWidth;
+
+      // Pre-SBRT Banner
+      ctx.fillStyle = "rgba(100, 116, 139, 0.15)";
+      ctx.fillRect(labelWidth, 5, heatmapData.preCount * cellWidth - 2, 20);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`Pre-SBRT (N=${heatmapData.preCount})`, labelWidth + (heatmapData.preCount * cellWidth) / 2, 18);
+
+      // Post-SBRT Banner
+      ctx.fillStyle = "rgba(20, 184, 166, 0.1)";
+      ctx.fillRect(dividerX + 1, 5, matrixWidth - heatmapData.preCount * cellWidth - 2, 20);
+      ctx.fillStyle = "#14b8a6";
+      ctx.fillText(`Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`, dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2, 18);
+
+      // Divider line
+      ctx.strokeStyle = "#0f172a";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dividerX, headerHeight);
+      ctx.lineTo(dividerX, headerHeight + heatmapData.rows.length * rowHeight);
+      ctx.stroke();
+    }
 
     // 2. Draw Rows & Cells
     heatmapData.rows.forEach((row, rIdx) => {
@@ -158,57 +286,49 @@ export default function Heatmap({
 
       // Draw Row Label (Gene Symbol)
       const isActive = row.gene === activeGene;
-      ctx.fillStyle = isActive ? "#f59e0b" : "#cbd5e1"; // Amber if active, slate-300 otherwise
+      ctx.fillStyle = isActive ? "#f59e0b" : "#cbd5e1";
       ctx.font = isActive ? "bold 11px sans-serif" : "11px sans-serif";
       ctx.textAlign = "left";
       ctx.fillText(row.gene, 10, y + 15);
 
-      // Draw horizontal hover/selection row background
+      // Selection row highlight outline
       if (isActive) {
         ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
         ctx.lineWidth = 1;
         ctx.strokeRect(2, y, dimensions.width - 4, rowHeight);
       }
 
-      // Draw Heatmap Cells
+      // Draw Cells
       row.zScores.forEach((z, cIdx) => {
         const x = labelWidth + cIdx * cellWidth;
 
         // Color mapper: Z-score from blue (-2.0) to white (0.0) to red (+2.0)
         let color = "";
         const maxZ = 2.0;
-        const normalized = Math.min(Math.max(z / maxZ, -1), 1); // Clamp to [-1, 1]
+        const normalized = Math.min(Math.max(z / maxZ, -1), 1);
 
         if (normalized > 0) {
           // White to Red
           const r = 255;
-          const g = Math.round(255 - normalized * 187); // 255 -> 68 (Tailwind red-500)
-          const b = Math.round(255 - normalized * 187); // 255 -> 68
+          const g = Math.round(255 - normalized * 187); // 255 -> 68 (red-500)
+          const b = Math.round(255 - normalized * 187);
           color = `rgb(${r}, ${g}, ${b})`;
         } else {
           // White to Blue
           const abs = Math.abs(normalized);
-          const r = Math.round(255 - abs * 196); // 255 -> 59 (Tailwind blue-500)
-          const g = Math.round(255 - abs * 125); // 255 -> 130
+          const r = Math.round(255 - abs * 196); // 255 -> 59 (blue-500)
+          const g = Math.round(255 - abs * 125);
           const b = 255;
           color = `rgb(${r}, ${g}, ${b})`;
         }
 
         ctx.fillStyle = color;
-        // Keep a tiny gap between cells
-        ctx.fillRect(x, y + 2, cellWidth - 0.5, rowHeight - 2);
+        // Draw cell block (leave a tiny vertical gap)
+        ctx.fillRect(x, y + 2, cellWidth - 0.2, rowHeight - 2);
       });
     });
 
-    // 3. Vertical Divider Line
-    ctx.strokeStyle = "#0f172a"; // Slate-950 background color
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(dividerX, headerHeight);
-    ctx.lineTo(dividerX, headerHeight + heatmapData.rows.length * rowHeight);
-    ctx.stroke();
-
-  }, [dimensions, heatmapData, activeGene]);
+  }, [dimensions, heatmapData, activeGene, isTcgaGtex]);
 
   // Handle Cell Hover Detection
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -256,7 +376,6 @@ export default function Heatmap({
     }
   };
 
-  // Click on a row selects the gene
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas || !heatmapData) return;
@@ -285,7 +404,7 @@ export default function Heatmap({
             </span>
           </h3>
           <p className="text-xs text-slate-400">
-            Row-normalized expressions across Pre vs. Post treatment samples
+            Row-normalized expressions (relative Z-scores) across selected genes (Max {MAX_HEATMAP_GENES})
           </p>
         </div>
 
@@ -296,6 +415,10 @@ export default function Heatmap({
             value={null}
             onChange={(val) => {
               if (val && !selectedGenes.includes(val)) {
+                if (selectedGenes.length >= MAX_HEATMAP_GENES) {
+                  alert(`Maximum limit of ${MAX_HEATMAP_GENES} genes in heatmap reached to ensure rendering performance.`);
+                  return;
+                }
                 onAddGene(val);
               }
             }}
@@ -306,8 +429,13 @@ export default function Heatmap({
 
       {/* Main Heatmap Area */}
       {selectedGenes.length === 0 ? (
-        <div className="flex-1 border border-dashed border-slate-800 rounded-lg flex items-center justify-center h-48 text-slate-500 text-xs">
+        <div className="flex-1 border border-dashed border-slate-800 rounded-lg flex items-center justify-center h-48 text-slate-500 text-xs font-mono">
           Select or add genes to display them in the Z-score heatmap matrix.
+        </div>
+      ) : isTcgaGtex && !tcgaGtexExpressions ? (
+        <div className="flex-1 border border-dashed border-slate-800 rounded-lg flex flex-col items-center justify-center h-48 text-slate-400 text-xs font-mono gap-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-500"></div>
+          <span>Loading expression data buffer (27.7 MB) for heatmap...</span>
         </div>
       ) : (
         <div className="flex-1 flex flex-col gap-4">
@@ -317,26 +445,29 @@ export default function Heatmap({
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               onClick={handleCanvasClick}
-              className="w-full cursor-pointer"
+              className="w-full cursor-pointer bg-slate-950/15"
               style={{ width: "100%", height: `${dimensions.height}px` }}
             />
 
             {/* Heatmap Cell Tooltip */}
             {hoveredCell && (
               <div
-                className="absolute bg-slate-950 border border-slate-700 text-slate-100 rounded-lg p-2.5 shadow-2xl text-[11px] z-50 pointer-events-none"
+                className="absolute bg-slate-950 border border-slate-700 text-slate-100 rounded-lg p-2.5 shadow-2xl text-[11px] z-50 pointer-events-none font-mono"
                 style={{
                   left: `${hoveredCell.x + 10}px`,
                   top: `${hoveredCell.y + 10}px`,
                   transform: "translate(0, -50%)",
                 }}
               >
-                <div className="font-bold text-amber-500 text-xs mb-1">{hoveredCell.gene}</div>
+                <div className="font-bold text-amber-400 text-xs mb-1">{hoveredCell.gene}</div>
                 <div>
-                  <span className="text-slate-400">Sample:</span> {hoveredCell.sample} ({hoveredCell.condition})
+                  <span className="text-slate-400">Sample:</span> {hoveredCell.sample}
                 </div>
                 <div>
-                  <span className="text-slate-400">log2 expression:</span> {hoveredCell.value.toFixed(3)}
+                  <span className="text-slate-400">Cohort:</span> {hoveredCell.condition}
+                </div>
+                <div>
+                  <span className="text-slate-400">Expression log₂(TPM + 0.001):</span> {hoveredCell.value.toFixed(3)}
                 </div>
                 <div className="border-t border-slate-800 pt-1 mt-1 font-semibold text-teal-400">
                   <span className="text-slate-400">Z-score:</span> {hoveredCell.zScore > 0 ? "+" : ""}
@@ -360,14 +491,14 @@ export default function Heatmap({
                 <button
                   type="button"
                   onClick={() => onSelectGene(gene)}
-                  className="hover:underline text-left truncate max-w-[80px]"
+                  className="hover:underline text-left truncate max-w-[80px] font-mono"
                 >
                   {gene}
                 </button>
                 <button
                   type="button"
                   onClick={() => onRemoveGene(gene)}
-                  className="hover:bg-slate-800 rounded p-0.5 transition-colors text-slate-500 hover:text-red-400"
+                  className="hover:bg-slate-850 rounded p-0.5 transition-colors text-slate-500 hover:text-red-400"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
@@ -378,7 +509,7 @@ export default function Heatmap({
       )}
 
       {/* Heatmap Legend */}
-      <div className="border-t border-slate-800/80 pt-3 mt-3 flex justify-between items-center text-[10px] text-slate-400">
+      <div className="border-t border-slate-800/80 pt-3 mt-3 flex justify-between items-center text-[10px] text-slate-400 font-mono">
         <div className="flex items-center gap-1">
           <Info className="w-3.5 h-3.5 text-slate-500" />
           <span>Click row to select active gene.</span>

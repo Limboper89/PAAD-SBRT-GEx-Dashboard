@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Grab } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 interface GeneData {
   gene_name: string;
@@ -9,24 +9,40 @@ interface GeneData {
   log2FC: number;
   p_value: number;
   adj_p_value?: number;
+  // TCGA-GTEx optional properties
+  id?: string;
+  symbol?: string;
+  biotype?: string;
+  pval?: number;
+  qval?: number;
+  voom_log2FC?: number;
+  voom_qval?: number;
+  robust_deg?: boolean;
 }
 
 interface VolcanoPlotProps {
   data: GeneData[];
   selectedGene: string | null;
   onSelectGene: (geneName: string) => void;
+  isTcgaGtex?: boolean;
 }
 
 export default function VolcanoPlot({
   data,
   selectedGene,
   onSelectGene,
+  isTcgaGtex = false,
 }: VolcanoPlotProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const plotWrapperRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 450 });
   const [hoveredGene, setHoveredGene] = useState<GeneData | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  // UI Control states
+  const [highlightRobust, setHighlightRobust] = useState<boolean>(true);
+  const [fcThreshold, setFcThreshold] = useState<number>(1.0);
 
   // Zoom & Pan States
   const [zoom, setZoom] = useState<number>(1.0);
@@ -37,28 +53,36 @@ export default function VolcanoPlot({
 
   // Handle Resize
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!plotWrapperRef.current) return;
     const resizeObserver = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         setDimensions({
           width: Math.max(width, 300),
-          height: Math.max(height, 300),
+          height: Math.max(height, 200),
         });
       }
     });
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(plotWrapperRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Compute plot statistics & coordinates
+  // Compute plot statistics & coordinates based on study type
   const points = useMemo(() => {
-    return data.map((d) => ({
-      gene: d,
-      x: d.log2FC,
-      y: -Math.log10(d.p_value || 1e-10),
-    }));
-  }, [data]);
+    return data.map((d) => {
+      // In TCGA-GTEx, X is Wilcoxon log2FC, Y is -log10(Wilcoxon FDR/q-value)
+      const xVal = d.log2FC;
+      const yVal = isTcgaGtex
+        ? -Math.log10(d.qval || 1)
+        : -Math.log10(d.p_value || 1e-10);
+
+      return {
+        gene: d,
+        x: xVal,
+        y: yVal,
+      };
+    });
+  }, [data, isTcgaGtex]);
 
   const bounds = useMemo(() => {
     if (points.length === 0) return { minX: -5, maxX: 5, minY: 0, maxY: 10 };
@@ -130,15 +154,13 @@ export default function VolcanoPlot({
 
     ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
-    // 1. Draw Fixed Axes Ticks & Labels (We draw them outside the clipped region)
-    // Ticks & Grid lines mapping
+    // 1. Draw Fixed Axes Ticks & Labels
     const xStep = Math.ceil((bounds.maxX - bounds.minX) / 10);
     const startX = Math.floor(bounds.minX);
 
     // Render X-axis tick labels
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const screenPt = getScreenCoords(x, 0);
-      // Only draw tick label if it's within the plot width bounds
       if (screenPt.x >= padding.left && screenPt.x <= dimensions.width - padding.right) {
         ctx.fillStyle = "#94a3b8"; // Slate 400
         ctx.font = "10px sans-serif";
@@ -155,10 +177,9 @@ export default function VolcanoPlot({
     }
 
     // Render Y-axis tick labels
-    const yStep = Math.ceil((bounds.maxY - bounds.minY) / 10);
+    const yStep = Math.ceil((bounds.maxY - bounds.minY) / 10) || 1;
     for (let y = 0; y <= bounds.maxY; y += yStep) {
       const screenPt = getScreenCoords(0, y);
-      // Only draw tick label if it's within the plot height bounds
       if (screenPt.y >= padding.top && screenPt.y <= dimensions.height - padding.bottom) {
         ctx.fillStyle = "#94a3b8";
         ctx.font = "10px sans-serif";
@@ -176,7 +197,6 @@ export default function VolcanoPlot({
 
     // 2. Draw Clipped Content (Points, Grid lines, threshold lines)
     ctx.save();
-    // Clip drawing area to the inner plot boundaries
     ctx.beginPath();
     ctx.rect(
       padding.left,
@@ -187,7 +207,7 @@ export default function VolcanoPlot({
     ctx.clip();
 
     // Draw Grid lines
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.05)";
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.03)";
     ctx.lineWidth = 1;
 
     for (let x = startX; x <= bounds.maxX; x += xStep) {
@@ -215,36 +235,79 @@ export default function VolcanoPlot({
     ctx.lineTo(zeroPt.x, dimensions.height - padding.bottom);
     ctx.stroke();
 
-    // Significance thresholds line (p = 0.05)
-    const pThreshY = -Math.log10(0.05);
-    const pThreshPt = getScreenCoords(0, pThreshY);
+    // Significance threshold horizontal line (FDR or P-val < 0.05)
+    const thresholdY = -Math.log10(0.05);
+    const threshPt = getScreenCoords(0, thresholdY);
     ctx.strokeStyle = "rgba(239, 68, 68, 0.35)"; // Red dashed
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(padding.left, pThreshPt.y);
-    ctx.lineTo(dimensions.width - padding.right, pThreshPt.y);
+    ctx.moveTo(padding.left, threshPt.y);
+    ctx.lineTo(dimensions.width - padding.right, threshPt.y);
     ctx.stroke();
     ctx.setLineDash([]); // Reset dashed
 
-    ctx.fillStyle = "rgba(239, 68, 68, 0.6)";
+    ctx.fillStyle = "rgba(239, 68, 68, 0.7)";
     ctx.font = "9px sans-serif";
-    ctx.fillText("p = 0.05", padding.left + 5, pThreshPt.y - 4);
+    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", padding.left + 5, threshPt.y - 4);
+
+    // Fold change vertical threshold lines
+    if (fcThreshold > 0) {
+      const fcRightPt = getScreenCoords(fcThreshold, 0);
+      const fcLeftPt = getScreenCoords(-fcThreshold, 0);
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      
+      ctx.beginPath();
+      ctx.moveTo(fcRightPt.x, padding.top);
+      ctx.lineTo(fcRightPt.x, dimensions.height - padding.bottom);
+      ctx.moveTo(fcLeftPt.x, padding.top);
+      ctx.lineTo(fcLeftPt.x, dimensions.height - padding.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Sort points so selected/hovered/highlighted are drawn last (on top)
+    const sortedPoints = [...points].sort((a, b) => {
+      const aSel = a.gene.gene_name === selectedGene ? 1 : 0;
+      const bSel = b.gene.gene_name === selectedGene ? 1 : 0;
+      if (aSel !== bSel) return aSel - bSel;
+
+      const aRob = a.gene.robust_deg ? 1 : 0;
+      const bRob = b.gene.robust_deg ? 1 : 0;
+      return aRob - bRob;
+    });
 
     // Draw all points
-    points.forEach((p) => {
+    sortedPoints.forEach((p) => {
       const scr = getScreenCoords(p.x, p.y);
-      let color = "rgba(148, 163, 184, 0.3)"; // Gray default
-      let size = 3.5;
+      let color = "rgba(148, 163, 184, 0.15)"; // Soft gray default for non-DEGs
+      let size = 2.5;
 
-      if (p.gene.p_value < 0.05) {
-        if (p.gene.log2FC > 1) {
-          color = "rgba(239, 68, 68, 0.65)"; // Upregulated: Red
-          size = 4.5;
-        } else if (p.gene.log2FC < -1) {
-          color = "rgba(59, 130, 246, 0.65)"; // Downregulated: Blue
-          size = 4.5;
+      const isSig = isTcgaGtex 
+        ? (p.gene.qval !== undefined && p.gene.qval < 0.05)
+        : p.gene.p_value < 0.05;
+
+      const passesFC = Math.abs(p.x) >= fcThreshold;
+
+      if (isSig && passesFC) {
+        if (isTcgaGtex) {
+          if (highlightRobust && p.gene.robust_deg) {
+            color = p.x > 0 ? "rgba(239, 68, 68, 0.8)" : "rgba(59, 130, 246, 0.8)"; // Bright red/blue for robust
+            size = 4.0;
+          } else {
+            color = p.x > 0 ? "rgba(248, 113, 113, 0.35)" : "rgba(96, 165, 250, 0.35)"; // Softer red/blue for Wilcoxon-only or non-robust
+            size = 3.2;
+          }
+        } else {
+          color = p.x > 0 ? "rgba(239, 68, 68, 0.65)" : "rgba(59, 130, 246, 0.65)";
+          size = 4.0;
         }
+      } else if (isSig) {
+        // Significant but doesn't pass fold change
+        color = "rgba(148, 163, 184, 0.3)";
+        size = 2.8;
       }
 
       ctx.beginPath();
@@ -259,13 +322,13 @@ export default function VolcanoPlot({
       if (p) {
         const scr = getScreenCoords(p.x, p.y);
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 8, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 7, 0, 2 * Math.PI);
         ctx.strokeStyle = "#14b8a6"; // Teal highlight ring
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 5, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 4, 0, 2 * Math.PI);
         ctx.fillStyle = "#14b8a6";
         ctx.fill();
       }
@@ -277,26 +340,26 @@ export default function VolcanoPlot({
       if (p) {
         const scr = getScreenCoords(p.x, p.y);
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 9, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 8, 0, 2 * Math.PI);
         ctx.strokeStyle = "#f59e0b"; // Amber highlight ring
         ctx.lineWidth = 2.0;
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 6, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 5, 0, 2 * Math.PI);
         ctx.fillStyle = "#f59e0b";
         ctx.fill();
 
         ctx.fillStyle = "#f59e0b";
         ctx.font = "bold 11px sans-serif";
-        ctx.fillText(p.gene.gene_name, scr.x + 12, scr.y + 4);
+        ctx.fillText(p.gene.gene_name, scr.x + 10, scr.y + 4);
       }
     }
 
     ctx.restore(); // Restore clipping region
 
-    // 3. Draw Axis Lines (Drawn fixed, so they don't move with zoom)
-    ctx.strokeStyle = "#475569"; // Slate 600
+    // 3. Draw Axis Lines
+    ctx.strokeStyle = "#475569";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padding.left, dimensions.height - padding.bottom);
@@ -306,11 +369,11 @@ export default function VolcanoPlot({
     ctx.stroke();
 
     // Axis titles
-    ctx.fillStyle = "#cbd5e1"; // Slate 300
+    ctx.fillStyle = "#cbd5e1";
     ctx.font = "bold 11px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
-      "log2 Fold Change",
+      isTcgaGtex ? "Wilcoxon log2 Fold Change (Effect Size)" : "log2 Fold Change",
       padding.left + (dimensions.width - padding.left - padding.right) / 2,
       dimensions.height - 12
     );
@@ -318,10 +381,10 @@ export default function VolcanoPlot({
     ctx.save();
     ctx.translate(15, padding.top + (dimensions.height - padding.top - padding.bottom) / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText("-log10(p-value)", 0, 0);
+    ctx.fillText(isTcgaGtex ? "-log10(FDR / q-value)" : "-log10(p-value)", 0, 0);
     ctx.restore();
 
-  }, [dimensions, bounds, points, selectedGene, hoveredGene, zoom, offsetX, offsetY]);
+  }, [dimensions, bounds, points, selectedGene, hoveredGene, zoom, offsetX, offsetY, isTcgaGtex, highlightRobust, fcThreshold]);
 
   // Handle Dragging / Pan
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -341,7 +404,6 @@ export default function VolcanoPlot({
       dragStart.current = { x: e.clientX, y: e.clientY };
       setHoveredGene(null);
     } else {
-      // Hover detection using current zoom/offset mapping
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -391,53 +453,93 @@ export default function VolcanoPlot({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl select-none"
+      className="relative w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl select-none flex flex-col"
     >
-      <div className="flex flex-row justify-between items-center mb-2">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-2">
         <div>
           <h3 className="text-slate-200 font-semibold text-lg">DEG Volcano Plot</h3>
-          <p className="text-[10px] text-slate-400">Scroll to zoom • Drag to pan</p>
+          <p className="text-[10px] text-slate-400">Scroll to zoom • Drag to pan • Click dot to select</p>
         </div>
 
-        {/* Toolbar Controls */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
-          <button
-            onClick={handleZoomIn}
-            className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
-            title="Reset Zoom"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
+        {/* Configurations Toolbar */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-1.5 rounded-lg border border-slate-800 text-xxs font-mono">
+          {isTcgaGtex && (
+            <label className="flex items-center gap-1.5 text-slate-300 mr-2 cursor-pointer border-r border-slate-800 pr-2">
+              <input
+                type="checkbox"
+                checked={highlightRobust}
+                onChange={(e) => setHighlightRobust(e.target.checked)}
+                className="rounded accent-teal-500 bg-slate-900 border-slate-800 cursor-pointer"
+              />
+              <span>Highlight Robust DEGs</span>
+            </label>
+          )}
+
+          {/* Configurable effect-size threshold */}
+          <div className="flex items-center gap-1 text-slate-300 mr-2 border-r border-slate-800 pr-2">
+            <span>|log2FC| &ge;</span>
+            <select
+              value={fcThreshold}
+              onChange={(e) => setFcThreshold(Number(e.target.value))}
+              className="bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-xxs focus:outline-none focus:border-teal-500 text-teal-400"
+            >
+              <option value={0}>0.0 (All)</option>
+              <option value={0.5}>0.5</option>
+              <option value={1.0}>1.0</option>
+              <option value={1.5}>1.5</option>
+              <option value={2.0}>2.0</option>
+              <option value={3.0}>3.0</option>
+            </select>
+          </div>
+
+          {/* Zoom Buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleZoomIn}
+              className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleResetZoom}
+              className="p-1 text-slate-400 hover:text-teal-400 hover:bg-slate-900 rounded transition-colors"
+              title="Reset Zoom"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        onClick={handleMouseClick}
-        className={`w-full h-[calc(100%-2.5rem)] rounded-lg bg-slate-950/20 ${
-          isDragging ? "cursor-grabbing" : "cursor-grab"
-        }`}
-        style={{ width: "100%", height: "calc(100% - 2.5rem)" }}
-      />
+      <div ref={plotWrapperRef} className="flex-1 w-full relative min-h-[220px]">
+        <canvas
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+          onClick={handleMouseClick}
+          className={`w-full h-full rounded-lg bg-slate-950/20 absolute left-0 top-0 ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          style={{ width: "100%", height: "100%" }}
+        />
+      </div>
+
+      {isTcgaGtex && (
+        <div className="mt-2 bg-slate-950/70 border border-slate-800 rounded px-2.5 py-1 text-[9px] text-slate-400 leading-relaxed font-mono flex-shrink-0">
+          * Wilcoxon log2FC was calculated as the difference of cohort means: {"\\(\\text{mean}(\\text{log}_2(\\text{TPM}+0.001)_{\\text{tumor}}) - \\text{mean}(\\text{log}_2(\\text{TPM}+0.001)_{\\text{normal}})\\)"}.
+        </div>
+      )}
 
       {hoveredGene && (
         <div
@@ -450,18 +552,43 @@ export default function VolcanoPlot({
         >
           <div className="font-bold text-teal-400 text-sm mb-1">{hoveredGene.gene_name}</div>
           <div>
-            <span className="text-slate-400">log2FC:</span> {hoveredGene.log2FC.toFixed(4)}
+            <span className="text-slate-400">Wilcoxon log2FC:</span> {hoveredGene.log2FC.toFixed(4)}
           </div>
-          <div>
-            <span className="text-slate-400">p-value:</span> {hoveredGene.p_value.toExponential(4)}
-          </div>
-          {hoveredGene.adj_p_value !== undefined && hoveredGene.adj_p_value !== null && (
-            <div>
-              <span className="text-slate-400">Adj. p-val:</span>{" "}
-              {typeof hoveredGene.adj_p_value === "number"
-                ? hoveredGene.adj_p_value.toExponential(4)
-                : hoveredGene.adj_p_value}
-            </div>
+          {isTcgaGtex ? (
+            <>
+              <div>
+                <span className="text-slate-400">Wilcoxon p-val:</span> {hoveredGene.pval?.toExponential(4)}
+              </div>
+              <div>
+                <span className="text-slate-400">Wilcoxon FDR:</span> {hoveredGene.qval?.toExponential(4)}
+              </div>
+              {hoveredGene.voom_log2FC !== undefined && (
+                <div className="border-t border-slate-850 pt-1 mt-1 text-[11px]">
+                  <span className="text-slate-400">limma-voom log2FC:</span> {hoveredGene.voom_log2FC.toFixed(4)}
+                </div>
+              )}
+              {hoveredGene.voom_qval !== undefined && (
+                <div>
+                  <span className="text-slate-400">limma-voom FDR:</span> {hoveredGene.voom_qval.toExponential(4)}
+                </div>
+              )}
+              {hoveredGene.robust_deg !== undefined && (
+                <div className={`mt-1 font-semibold text-[10px] ${hoveredGene.robust_deg ? "text-amber-400" : "text-slate-500"}`}>
+                  Cross-method robust: {hoveredGene.robust_deg ? "Yes" : "No"}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <span className="text-slate-400">p-value:</span> {hoveredGene.p_value.toExponential(4)}
+              </div>
+              {hoveredGene.adj_p_value !== undefined && (
+                <div>
+                  <span className="text-slate-400">Adj. p-val:</span> {hoveredGene.adj_p_value.toExponential(4)}
+                </div>
+              )}
+            </>
           )}
           <div className="text-[10px] text-teal-500 font-semibold mt-1">Click to select</div>
         </div>

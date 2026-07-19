@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSE202051 Storage Format Decoder Test</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; background: #0f172a; color: #94a3b8; margin: 0; padding: 2rem; font-size: 13px; }
+  h1 { color: #14b8a6; font-size: 1.1rem; margin-bottom: 0.5rem; }
+  h2 { color: #7dd3fc; font-size: 0.9rem; margin: 1.5rem 0 0.5rem; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+  th { background: #1e293b; color: #7dd3fc; padding: 6px 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+  td { padding: 5px 12px; border-bottom: 1px solid #1e293b; }
+  tr:hover td { background: #1e293b40; }
+  .pass { color: #4ade80; }
+  .warn { color: #fbbf24; }
+  .fail { color: #f87171; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold; }
+  .badge-green { background: #14532d; color: #4ade80; }
+  .badge-yellow { background: #713f12; color: #fbbf24; }
+  .badge-red { background: #450a0a; color: #f87171; }
+  #status { color: #fbbf24; margin: 1rem 0; }
+  .log { background: #0f172a; border: 1px solid #1e293b; padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto; }
+  .log-line { margin: 2px 0; }
+  .log-ok { color: #4ade80; }
+  .log-err { color: #f87171; }
+  .note { color: #475569; font-size: 11px; margin: 0.25rem 0; }
+  progress { width: 100%; height: 6px; appearance: none; border-radius: 3px; }
+</style>
+</head>
+<body>
+<h1>🧬 GSE202051 — Storage Format Decoder Benchmark</h1>
+<p class="note">Tests JSON, gzip-JSON, and binary sparse decode performance for 20,000-nucleus atlas gene expression vectors.</p>
+<p class="note">Run this page from the Next.js dev server at: <strong>http://localhost:3000/PAAD-SBRT-GEx-Dashboard/bench/decoder_test.html</strong></p>
+<div id="status">Initializing tests...</div>
+
+<h2>Format Decode Benchmark Results</h2>
+<table id="results-table">
+  <thead>
+    <tr>
+      <th>Format</th><th>Gene</th><th>Fetch (ms)</th><th>Decode (ms)</th>
+      <th>Total (ms)</th><th>File size</th><th>N nonzero</th><th>Lossless</th>
+    </tr>
+  </thead>
+  <tbody id="results-body"></tbody>
+</table>
+
+<h2>Execution Log</h2>
+<div class="log" id="log"></div>
+
+<script>
+const BASE = '/PAAD-SBRT-GEx-Dashboard/data/gse202051';
+const TEST_GENES = ['NFE2L2','PHGDH','SLC7A11','SHMT2','KRAS','GATA6','KRT19','COL1A1','PTPRC','PECAM1'];
+const N_CELLS = 20000;
+
+const logEl   = document.getElementById('log');
+const tbody   = document.getElementById('results-body');
+const statusEl = document.getElementById('status');
+
+function log(msg, cls = '') {
+  const d = document.createElement('div');
+  d.className = 'log-line' + (cls ? ' ' + cls : '');
+  d.textContent = `[${new Date().toISOString().slice(11,23)}] ${msg}`;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+  console.log(msg);
+}
+
+function addRow(format, gene, fetchMs, decodeMs, fileSize, nNz, lossless) {
+  const tr = document.createElement('tr');
+  const total = fetchMs + decodeMs;
+  const losslessLabel = lossless === true ? '<span class="badge badge-green">✓ Yes</span>'
+                      : lossless === 'approx' ? '<span class="badge badge-yellow">~ Yes</span>'
+                      : '<span class="badge badge-red">✗ No</span>';
+  tr.innerHTML = `
+    <td>${format}</td>
+    <td style="color:#e2e8f0;font-weight:bold">${gene}</td>
+    <td>${fetchMs.toFixed(1)}</td>
+    <td>${decodeMs.toFixed(1)}</td>
+    <td style="color:${total<50?'#4ade80':total<200?'#fbbf24':'#f87171'}">${total.toFixed(1)}</td>
+    <td>${fileSize < 1024 ? fileSize+'B' : (fileSize/1024).toFixed(1)+'KB'}</td>
+    <td>${nNz.toLocaleString()}</td>
+    <td>${losslessLabel}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+// ── JSON sparse decode ──────────────────────────────────────────────────────
+async function testJsonFormat(gene) {
+  const url = `${BASE}/genes/${gene}.json`;
+  const t0  = performance.now();
+  let res;
+  try { res = await fetch(url); } catch(e) { log(`SKIP ${gene} JSON: ${e.message}`, 'log-err'); return null; }
+  if (!res.ok) { log(`SKIP ${gene} JSON: HTTP ${res.status}`, 'log-err'); return null; }
+  const fileSize = parseInt(res.headers.get('content-length') || '0');
+  const fetchMs  = performance.now() - t0;
+  
+  const t1  = performance.now();
+  const obj = await res.json();
+  const vec = new Float32Array(N_CELLS);
+  const idx = obj.indices;
+  const val = obj.values;
+  for (let i = 0; i < idx.length; i++) vec[idx[i]] = val[i];
+  const decodeMs = performance.now() - t1;
+  
+  log(`JSON  ${gene}: fetch=${fetchMs.toFixed(1)}ms  decode=${decodeMs.toFixed(1)}ms  nNz=${idx.length}`);
+  addRow('Sparse JSON', gene, fetchMs, decodeMs, fileSize || JSON.stringify(obj).length, idx.length, true);
+  return vec;
+}
+
+// ── Binary F32 decode ────────────────────────────────────────────────────────
+async function testBinaryF32Format(gene, refVec) {
+  const url = `${BASE}/genes_bin/${gene}.bin`;
+  const t0  = performance.now();
+  let res;
+  try { res = await fetch(url); } catch(e) { log(`SKIP ${gene} BinF32: ${e.message}`, 'log-err'); return; }
+  if (!res.ok) { log(`SKIP ${gene} BinF32: HTTP ${res.status}`, 'log-err'); return; }
+  const fetchMs = performance.now() - t0;
+  const fileSize = parseInt(res.headers.get('content-length') || '0');
+  
+  const t1     = performance.now();
+  const buf    = await res.arrayBuffer();
+  const dv     = new DataView(buf);
+  const n_nz   = dv.getUint32(0, true);  // little-endian
+  const idxArr = new Uint16Array(buf, 4, n_nz);
+  const valArr = new Float32Array(buf, 4 + n_nz * 2, n_nz);
+  const vec    = new Float32Array(N_CELLS);
+  for (let i = 0; i < n_nz; i++) vec[idxArr[i]] = valArr[i];
+  const decodeMs = performance.now() - t1;
+  
+  // Lossless check
+  let maxErr = 0;
+  if (refVec) for (let i = 0; i < N_CELLS; i++) maxErr = Math.max(maxErr, Math.abs(vec[i] - refVec[i]));
+  const lossless = maxErr < 1e-5 ? true : maxErr < 0.001 ? 'approx' : false;
+  
+  log(`BinF32 ${gene}: fetch=${fetchMs.toFixed(1)}ms  decode=${decodeMs.toFixed(1)}ms  nNz=${n_nz}  maxErr=${maxErr.toExponential(2)}`);
+  addRow('Binary (Uint16+Float32)', gene, fetchMs, decodeMs, fileSize || buf.byteLength, n_nz, lossless);
+}
+
+// ── Binary F16 decode ────────────────────────────────────────────────────────
+function f16ToF32(h) {
+  const s = (h & 0x8000) ? -1 : 1;
+  const e = (h >> 10) & 0x1F;
+  const m = h & 0x3FF;
+  if (e === 0) return s * Math.pow(2, -14) * (m / 1024);
+  if (e === 31) return m ? NaN : s * Infinity;
+  return s * Math.pow(2, e - 15) * (1 + m / 1024);
+}
+
+async function testBinaryF16Format(gene, refVec) {
+  const url = `${BASE}/genes_bin_f16/${gene}.bin`;
+  const t0  = performance.now();
+  let res;
+  try { res = await fetch(url); } catch(e) { log(`SKIP ${gene} BinF16: ${e.message}`, 'log-err'); return; }
+  if (!res.ok) { log(`SKIP ${gene} BinF16: HTTP ${res.status}`, 'log-err'); return; }
+  const fetchMs = performance.now() - t0;
+  const fileSize = parseInt(res.headers.get('content-length') || '0');
+  
+  const t1     = performance.now();
+  const buf    = await res.arrayBuffer();
+  const dv     = new DataView(buf);
+  const n_nz   = dv.getUint32(0, true);
+  const idxArr = new Uint16Array(buf, 4, n_nz);
+  const valU16 = new Uint16Array(buf, 4 + n_nz * 2, n_nz);
+  const vec    = new Float32Array(N_CELLS);
+  for (let i = 0; i < n_nz; i++) vec[idxArr[i]] = f16ToF32(valU16[i]);
+  const decodeMs = performance.now() - t1;
+  
+  let maxErr = 0;
+  if (refVec) for (let i = 0; i < N_CELLS; i++) maxErr = Math.max(maxErr, Math.abs(vec[i] - refVec[i]));
+  const lossless = maxErr < 0.001 ? 'approx' : false;
+  
+  log(`BinF16 ${gene}: fetch=${fetchMs.toFixed(1)}ms  decode=${decodeMs.toFixed(1)}ms  maxErr=${maxErr.toExponential(2)}`);
+  addRow('Binary (Uint16+Float16)', gene, fetchMs, decodeMs, fileSize || buf.byteLength, n_nz, lossless);
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function runAll() {
+  statusEl.textContent = 'Running benchmark…';
+  log('Starting storage format decode benchmark…');
+  log(`Testing ${TEST_GENES.length} genes on ${N_CELLS.toLocaleString()} nuclei`);
+  
+  for (const gene of TEST_GENES) {
+    log(`\n--- Gene: ${gene} ---`);
+    const refVec = await testJsonFormat(gene);
+    await testBinaryF32Format(gene, refVec);
+    await testBinaryF16Format(gene, refVec);
+    // Small pause between genes to avoid queueing
+    await new Promise(r => setTimeout(r, 50));
+  }
+  
+  statusEl.textContent = '✅ Benchmark complete. See results table and log above.';
+  statusEl.style.color = '#4ade80';
+  log('\nAll tests complete!', 'log-ok');
+}
+
+runAll();
+</script>
+</body>
+</html>

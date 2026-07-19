@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# large single-nucleus and spatial binary datasets
+/public/data/gse202051/
+/public/data/gse274103/
