@@ -274,6 +274,26 @@ export default function Dashboard() {
     return activeBulkData.find(d => d.gene_name === selectedGene) || null;
   }, [selectedGene, activeBulkData]);
 
+  const sbrtCalculatedLog2FC = useMemo(() => {
+    if (activeStudy === "TCGA_GTEX" || !expressionData || !selectedGene) return null;
+    const { conditions, expressions } = expressionData;
+    const exprVals = expressions[selectedGene];
+    if (!exprVals || exprVals.length === 0) return null;
+    const preVals = exprVals.filter((_, idx) => conditions[idx] === "Pre");
+    const postVals = exprVals.filter((_, idx) => conditions[idx] === "Post");
+    if (preVals.length === 0 || postVals.length === 0) return null;
+    const meanPre = preVals.reduce((a, b) => a + b, 0) / preVals.length;
+    const meanPost = postVals.reduce((a, b) => a + b, 0) / postVals.length;
+    return meanPost - meanPre;
+  }, [activeStudy, expressionData, selectedGene]);
+
+  const activeLog2FC = useMemo(() => {
+    if (activeStudy !== "TCGA_GTEX" && sbrtCalculatedLog2FC !== null) {
+      return sbrtCalculatedLog2FC;
+    }
+    return activeGeneData?.log2FC ?? 0;
+  }, [activeStudy, sbrtCalculatedLog2FC, activeGeneData]);
+
   // Slice individual gene TPMs from the binary buffer for boxplot visualization
   const tcgaGtexExpressionForSelectedGene = useMemo(() => {
     if (activeStudy !== "TCGA_GTEX" || !tcgaGtexExpressions || tcgaGtexData.length === 0 || !selectedGene) {
@@ -479,8 +499,8 @@ export default function Dashboard() {
                 <span className="text-slate-500 block">
                   {activeStudy === "TCGA_GTEX" ? "Wilcoxon log2FC" : "log2 Fold Change"}
                 </span>
-                <span className={`font-mono font-bold text-sm ${activeGeneData.log2FC > 0 ? "text-red-400" : "text-blue-400"}`}>
-                  {activeGeneData.log2FC > 0 ? "+" : ""}{activeGeneData.log2FC.toFixed(4)}
+                <span className={`font-mono font-bold text-sm ${activeLog2FC > 0 ? "text-red-400" : "text-blue-400"}`}>
+                  {activeLog2FC > 0 ? "+" : ""}{activeLog2FC.toFixed(4)}
                 </span>
               </div>
               <div>
