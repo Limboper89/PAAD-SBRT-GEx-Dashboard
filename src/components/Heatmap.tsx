@@ -127,10 +127,13 @@ export default function Heatmap({
         return rank[condA as keyof typeof rank] - rank[condB as keyof typeof rank];
       });
     } else {
-      // Paired SBRT sorting (Pre alphabetically before Post)
-      sampleIndices = Array.from({ length: numSamples }, (_, i) => i).sort(
-        (a, b) => conditions[a].localeCompare(conditions[b])
-      );
+      // Paired SBRT sorting (Pre first, then Post)
+      sampleIndices = Array.from({ length: numSamples }, (_, i) => i).sort((a, b) => {
+        const condA = conditions[a];
+        const condB = conditions[b];
+        const rank = { Pre: 0, Post: 1 };
+        return (rank[condA as keyof typeof rank] ?? 0) - (rank[condB as keyof typeof rank] ?? 0);
+      });
     }
 
     const sortedSamples = sampleIndices.map((i) => samples[i]);

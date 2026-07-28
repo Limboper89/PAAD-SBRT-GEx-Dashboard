@@ -70,8 +70,7 @@ export default function ExpressionComparison({
         const meanPre = preVals.length > 0 ? preVals.reduce((a, b) => a + b, 0) / preVals.length : 0;
         const meanPost = postVals.length > 0 ? postVals.reduce((a, b) => a + b, 0) / postVals.length : 0;
 
-        const degGene = degData.find((d) => d.gene_name === geneName);
-        const log2FC = degGene ? degGene.log2FC : meanPost - meanPre;
+        const log2FC = meanPost - meanPre;
 
         return {
           gene_name: geneName,
