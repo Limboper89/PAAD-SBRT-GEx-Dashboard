@@ -2,6 +2,8 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Search, Layers, Info, Sliders, HelpCircle, User } from "lucide-react";
+import ExportButton from "./ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface Spot {
   id: string;
@@ -448,7 +450,53 @@ export default function SpatialPrototypeView() {
         <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between items-center shadow-lg relative min-h-[500px]" ref={containerRef}>
           <div className="w-full flex items-center justify-between mb-3 text-xs text-slate-400 border-b border-slate-800/60 pb-2 font-mono">
             <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-rose-500" /> Interactive Spatial View (10x Visium)</span>
-            <span className="text-slate-500">Status: <strong className="text-amber-500">PENDING VISUAL VERIFICATION</strong></span>
+            <div className="flex items-center gap-3">
+              <span className="text-slate-500">Sample: <strong className="text-teal-400">{selectedPatient}</strong></span>
+              <ExportButton
+                label="Export Spatial"
+                disabled={!metadata}
+                onExportCSV={() => {
+                  if (!metadata) return;
+                  exportToCSV({
+                    filename: `GSE274103_${selectedPatient}_SpotMetadata_${activeGene || "All"}.csv`,
+                    metadata: {
+                      dataset: "GSE274103 Spatial Transcriptomics",
+                      module: "Spatial Spot Explorer",
+                      selectedGene: activeGene || "None",
+                      filters: `Patient Sample: ${selectedPatient}, Total Spots: ${metadata.spots.length}`,
+                    },
+                    headers: ["Spot ID", "Patient ID", "Row", "Col", "Pixel X", "Pixel Y", activeGene ? `${activeGene} Expression (log1p Float16)` : "Gene Expression"],
+                    rows: metadata.spots.map((spot, idx) => [
+                      spot.id,
+                      selectedPatient,
+                      spot.r,
+                      spot.c,
+                      spot.x,
+                      spot.y,
+                      exprVec ? Number((exprVec[idx] || 0).toFixed(4)) : 0,
+                    ]),
+                  });
+                }}
+                onExportPNG={() => {
+                  if (!canvasRef.current) return;
+                  exportCanvasToPNG({
+                    canvas: canvasRef.current,
+                    filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.png`,
+                    title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
+                    subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
+                  });
+                }}
+                onExportSVG={() => {
+                  if (!canvasRef.current) return;
+                  exportCanvasToSVG({
+                    canvas: canvasRef.current,
+                    filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.svg`,
+                    title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
+                    subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
+                  });
+                }}
+              />
+            </div>
           </div>
 
           {loading ? (

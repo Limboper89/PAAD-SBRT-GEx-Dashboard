@@ -2,6 +2,8 @@
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import ExportButton from "@/components/ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
 
 interface GeneData {
   gene_name: string;
@@ -515,6 +517,27 @@ export default function VolcanoPlot({
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
+            <div className="w-px h-4 bg-slate-800 my-auto mx-0.5" />
+            <ExportButton
+              onExportPNG={() => {
+                if (!canvasRef.current) return;
+                exportCanvasToPNG({
+                  canvas: canvasRef.current,
+                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.png`,
+                  title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Volcano Plot`,
+                  subtitle: `Target: ${selectedGene || "None"} | fcThreshold: ${fcThreshold}`,
+                });
+              }}
+              onExportSVG={() => {
+                if (!canvasRef.current) return;
+                exportCanvasToSVG({
+                  canvas: canvasRef.current,
+                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.svg`,
+                  title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Volcano Plot`,
+                  subtitle: `Target: ${selectedGene || "None"} | fcThreshold: ${fcThreshold}`,
+                });
+              }}
+            />
           </div>
         </div>
       </div>

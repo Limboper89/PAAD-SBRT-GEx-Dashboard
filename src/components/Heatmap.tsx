@@ -3,6 +3,8 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { Info, X } from "lucide-react";
 import SearchableGeneSelect from "./SearchableGeneSelect";
+import ExportButton from "./ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface ExpressionData {
   samples: string[];
@@ -411,21 +413,61 @@ export default function Heatmap({
           </p>
         </div>
 
-        {/* Dynamic Search Box to Add Genes */}
-        <div className="w-full sm:w-48">
-          <SearchableGeneSelect
-            options={allGenes}
-            value={null}
-            onChange={(val) => {
-              if (val && !selectedGenes.includes(val)) {
-                if (selectedGenes.length >= MAX_HEATMAP_GENES) {
-                  alert(`Maximum limit of ${MAX_HEATMAP_GENES} genes in heatmap reached to ensure rendering performance.`);
-                  return;
+        {/* Controls: Add Gene & Export */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="w-full sm:w-44">
+            <SearchableGeneSelect
+              options={allGenes}
+              value={null}
+              onChange={(val) => {
+                if (val && !selectedGenes.includes(val)) {
+                  if (selectedGenes.length >= MAX_HEATMAP_GENES) {
+                    alert(`Maximum limit of ${MAX_HEATMAP_GENES} genes in heatmap reached to ensure rendering performance.`);
+                    return;
+                  }
+                  onAddGene(val);
                 }
-                onAddGene(val);
-              }
+              }}
+              placeholder="Add gene..."
+            />
+          </div>
+          <ExportButton
+            disabled={!heatmapData || heatmapData.rows.length === 0}
+            onExportCSV={() => {
+              if (!heatmapData || heatmapData.rows.length === 0) return;
+              exportToCSV({
+                filename: `Heatmap_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_ZScores.csv`,
+                metadata: {
+                  dataset: isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767 Bulk RNA-seq",
+                  module: "Z-score Heatmap Matrix",
+                  selectedGene: activeGene || "N/A",
+                  filters: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
+                },
+                headers: ["Gene", ...heatmapData.samples],
+                rows: heatmapData.rows.map((r) => [
+                  r.gene,
+                  ...r.zScores.map((z) => (z !== null && z !== undefined ? Number(z.toFixed(4)) : "")),
+                ]),
+              });
             }}
-            placeholder="Add gene..."
+            onExportPNG={() => {
+              if (!canvasRef.current) return;
+              exportCanvasToPNG({
+                canvas: canvasRef.current,
+                filename: `Heatmap_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}.png`,
+                title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Z-score Heatmap`,
+                subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.slice(0, 10).join(", ")}${selectedGenes.length > 10 ? "..." : ""}`,
+              });
+            }}
+            onExportSVG={() => {
+              if (!canvasRef.current) return;
+              exportCanvasToSVG({
+                canvas: canvasRef.current,
+                filename: `Heatmap_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}.svg`,
+                title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Z-score Heatmap`,
+                subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.slice(0, 10).join(", ")}${selectedGenes.length > 10 ? "..." : ""}`,
+              });
+            }}
           />
         </div>
       </div>

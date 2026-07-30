@@ -16,6 +16,8 @@ import {
 } from "recharts";
 import SearchableGeneSelect from "./SearchableGeneSelect";
 import { X, Info, AlertTriangle } from "lucide-react";
+import ExportButton from "./ExportButton";
+import { exportToCSV, exportSvgElement } from "@/utils/exportUtils";
 
 interface DegGene {
   gene_name: string;
@@ -52,6 +54,8 @@ export default function ExpressionComparison({
   selectedGeneSymbol = null,
 }: ExpressionComparisonProps) {
   const [showSolidNormal, setShowSolidNormal] = useState<boolean>(true);
+  const sbrtChartRef = React.useRef<HTMLDivElement>(null);
+  const tcgaChartRef = React.useRef<HTMLDivElement>(null);
 
   // 1. SBRT Mode Data Processing
   const SbrtData = useMemo(() => {
@@ -220,16 +224,55 @@ export default function ExpressionComparison({
               Actual mean expression levels (log2-normalized counts) before and after SBRT
             </p>
           </div>
-          <div className="w-full sm:w-48">
-            <SearchableGeneSelect
-              options={allGenes}
-              value={null}
-              onChange={(val) => {
-                if (val && !selectedGenes.includes(val)) {
-                  onAddGene(val);
-                }
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="w-full sm:w-44">
+              <SearchableGeneSelect
+                options={allGenes}
+                value={null}
+                onChange={(val) => {
+                  if (val && !selectedGenes.includes(val)) {
+                    onAddGene(val);
+                  }
+                }}
+                placeholder="Add gene..."
+              />
+            </div>
+            <ExportButton
+              disabled={SbrtData.length === 0}
+              onExportCSV={() => {
+                if (SbrtData.length === 0) return;
+                exportToCSV({
+                  filename: `ExpressionComparison_SBRT.csv`,
+                  metadata: {
+                    dataset: "GSE225767 Bulk RNA-seq",
+                    module: "Pre-SBRT vs Post-SBRT Expression Comparison",
+                    selectedGene: selectedGenes.join(", "),
+                    filters: `Total Genes Compared: ${SbrtData.length}`,
+                  },
+                  headers: ["Gene Symbol", "Pre-SBRT Mean", "Post-SBRT Mean", "log2FC"],
+                  rows: SbrtData.map((d: any) => [d.gene_name, d["Pre-SBRT"], d["Post-SBRT"], d.log2FC]),
+                });
               }}
-              placeholder="Add gene..."
+              onExportPNG={() => {
+                const svgEl = sbrtChartRef.current?.querySelector("svg");
+                if (!svgEl) return;
+                exportSvgElement({
+                  svgElement: svgEl as SVGSVGElement,
+                  filename: `ExpressionComparison_SBRT.png`,
+                  format: "png",
+                  title: "Pre-SBRT vs Post-SBRT Expression Comparison",
+                });
+              }}
+              onExportSVG={() => {
+                const svgEl = sbrtChartRef.current?.querySelector("svg");
+                if (!svgEl) return;
+                exportSvgElement({
+                  svgElement: svgEl as SVGSVGElement,
+                  filename: `ExpressionComparison_SBRT.svg`,
+                  format: "svg",
+                  title: "Pre-SBRT vs Post-SBRT Expression Comparison",
+                });
+              }}
             />
           </div>
         </div>
@@ -240,7 +283,7 @@ export default function ExpressionComparison({
           </div>
         ) : (
           <div className="flex-1 flex flex-col gap-4">
-            <div className="flex-1 w-full h-[250px] min-h-[250px]">
+            <div ref={sbrtChartRef} className="flex-1 w-full h-[250px] min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={SbrtData} margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.05)" />
@@ -324,16 +367,56 @@ export default function ExpressionComparison({
           </p>
         </div>
 
-        {/* Diagnostic Checkbox option for Solid Normal */}
-        <label className="flex items-center gap-2 text-xxs font-mono text-slate-300 bg-slate-950 p-1.5 rounded border border-slate-800 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showSolidNormal}
-            onChange={(e) => setShowSolidNormal(e.target.checked)}
-            className="rounded accent-teal-500 bg-slate-900 border-slate-800 cursor-pointer"
+        <div className="flex items-center gap-2">
+          {/* Diagnostic Checkbox option for Solid Normal */}
+          <label className="flex items-center gap-2 text-xxs font-mono text-slate-300 bg-slate-950 p-1.5 rounded border border-slate-800 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showSolidNormal}
+              onChange={(e) => setShowSolidNormal(e.target.checked)}
+              className="rounded accent-teal-500 bg-slate-900 border-slate-800 cursor-pointer"
+            />
+            <span>Show TCGA Solid Normal (n=4)</span>
+          </label>
+
+          <ExportButton
+            disabled={!points || points.length === 0}
+            onExportCSV={() => {
+              if (!points || points.length === 0) return;
+              exportToCSV({
+                filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.csv`,
+                metadata: {
+                  dataset: "TCGA-PAAD vs GTEx Pancreas",
+                  module: "Tumor vs Normal Expression Boxplot / Strip Plot",
+                  selectedGene: selectedGeneSymbol || "N/A",
+                  filters: `Total Samples: ${points.length}`,
+                },
+                headers: ["Sample ID", "Cohort", "Expression log2(TPM+0.001)"],
+                rows: points.map((p) => [p.sample, p.cohortName, p.y]),
+              });
+            }}
+            onExportPNG={() => {
+              const svgEl = tcgaChartRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              exportSvgElement({
+                svgElement: svgEl as SVGSVGElement,
+                filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.png`,
+                format: "png",
+                title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
+              });
+            }}
+            onExportSVG={() => {
+              const svgEl = tcgaChartRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              exportSvgElement({
+                svgElement: svgEl as SVGSVGElement,
+                filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.svg`,
+                format: "svg",
+                title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
+              });
+            }}
           />
-          <span>Show TCGA Solid Normal (n=4)</span>
-        </label>
+        </div>
       </div>
 
       {!tcgaGtexExpressionForSelectedGene || !selectedGeneSymbol ? (
@@ -343,7 +426,7 @@ export default function ExpressionComparison({
       ) : (
         <div className="flex-1 flex flex-col gap-3">
           {/* Main Scatter Plot */}
-          <div className="flex-1 w-full h-[230px] min-h-[230px]">
+          <div ref={tcgaChartRef} className="flex-1 w-full h-[230px] min-h-[230px]">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 15, right: 20, bottom: 20, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.03)" />

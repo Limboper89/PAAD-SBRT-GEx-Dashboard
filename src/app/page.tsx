@@ -21,6 +21,7 @@ import SearchableGeneSelect from "@/components/SearchableGeneSelect";
 import AboutView from "@/components/AboutView";
 import SingleNucleusExplorer from "@/components/SingleNucleusExplorer";
 import SpatialTranscriptomicsView from "@/components/SpatialPrototypeView";
+import SummaryCard from "@/components/SummaryCard";
 
 interface GeneData {
   gene_name: string;
@@ -351,6 +352,114 @@ export default function Dashboard() {
     }
   }, [activeBulkData, activeStudy]);
 
+  // Active module key for context-aware summary statistics
+  const activeModuleKey = useMemo<"bulk" | "spatial" | "singleNucleus">(() => {
+    if (activeTab === "sn" || activeStudy === "GSE202051") return "singleNucleus";
+    if (activeTab === "tme" || activeStudy === "GSE274103" || activeStudy === "PDAC_Spatial") return "spatial";
+    return "bulk";
+  }, [activeTab, activeStudy]);
+
+  // Context-aware summary cards configuration for active module
+  const summaryCards = useMemo(() => {
+    if (activeModuleKey === "singleNucleus") {
+      return [
+        {
+          title: "Searchable Genes",
+          value: "22,164",
+          icon: Database,
+          valueColorClass: "text-slate-200",
+          iconClass: "text-indigo-500/50",
+        },
+        {
+          title: "Atlas Nuclei",
+          value: "224,988",
+          icon: Activity,
+          valueColorClass: "text-teal-400",
+          iconClass: "text-teal-500/50",
+        },
+        {
+          title: "Visualization Subset",
+          value: "20,000",
+          icon: Layers,
+          valueColorClass: "text-amber-400",
+          iconClass: "text-amber-500/50",
+        },
+        {
+          title: "Patients",
+          value: "43",
+          icon: Cpu,
+          valueColorClass: "text-indigo-400",
+          iconClass: "text-indigo-500/50",
+        },
+      ];
+    }
+
+    if (activeModuleKey === "spatial") {
+      return [
+        {
+          title: "Searchable Genes",
+          value: "17,943",
+          icon: Database,
+          valueColorClass: "text-slate-200",
+          iconClass: "text-indigo-500/50",
+        },
+        {
+          title: "Spatial Spots",
+          value: "23,436",
+          icon: Activity,
+          valueColorClass: "text-teal-400",
+          iconClass: "text-teal-500/50",
+        },
+        {
+          title: "Tissue Sections",
+          value: "5 Sections",
+          icon: Layers,
+          valueColorClass: "text-amber-400",
+          iconClass: "text-amber-500/50",
+        },
+        {
+          title: "Patients",
+          value: "5 Cases",
+          icon: Cpu,
+          valueColorClass: "text-indigo-400",
+          iconClass: "text-indigo-500/50",
+        },
+      ];
+    }
+
+    // Default: Bulk Transcriptomics
+    return [
+      {
+        title: "Total Genes",
+        value: stats.total.toLocaleString(),
+        icon: Database,
+        valueColorClass: "text-slate-200",
+        iconClass: "text-indigo-500/50",
+      },
+      {
+        title: "Upregulated (Sig)",
+        value: stats.up.toLocaleString(),
+        icon: TrendingUp,
+        valueColorClass: "text-red-400",
+        iconClass: "text-red-500/50",
+      },
+      {
+        title: "Downregulated (Sig)",
+        value: stats.down.toLocaleString(),
+        icon: TrendingUp,
+        valueColorClass: "text-blue-400",
+        iconClass: "text-blue-500/50 transform rotate-180",
+      },
+      {
+        title: activeStudy === "TCGA_GTEX" ? "Significant (FDR<0.05)" : "Significant (p<0.05)",
+        value: stats.sig.toLocaleString(),
+        icon: Settings,
+        valueColorClass: "text-teal-400",
+        iconClass: "text-teal-500/50 animate-pulse",
+      },
+    ];
+  }, [activeModuleKey, stats, activeStudy]);
+
   // Combined loading states
   const showPageLoader = isLoading || (activeStudy === "TCGA_GTEX" && isTcgaGtexDataLoading && tcgaGtexData.length === 0);
 
@@ -543,39 +652,16 @@ export default function Dashboard() {
 
         {/* Global Statistics Grid */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-xl shadow-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-400 uppercase font-semibold">Total Genes</span>
-              <div className="text-2xl font-bold font-mono text-slate-200 mt-1">{stats.total.toLocaleString()}</div>
-            </div>
-            <Database className="w-8 h-8 text-indigo-500/50" />
-          </div>
-          
-          <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-xl shadow-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-400 uppercase font-semibold">Upregulated (Sig)</span>
-              <div className="text-2xl font-bold font-mono text-red-400 mt-1">{stats.up.toLocaleString()}</div>
-            </div>
-            <TrendingUp className="w-8 h-8 text-red-500/50" />
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-xl shadow-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-400 uppercase font-semibold">Downregulated (Sig)</span>
-              <div className="text-2xl font-bold font-mono text-blue-400 mt-1">{stats.down.toLocaleString()}</div>
-            </div>
-            <TrendingUp className="w-8 h-8 text-blue-500/50 transform rotate-180" />
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800/80 p-4 rounded-xl shadow-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-400 uppercase font-semibold">
-                {activeStudy === "TCGA_GTEX" ? "Significant (FDR<0.05)" : "Significant (p<0.05)"}
-              </span>
-              <div className="text-2xl font-bold font-mono text-teal-400 mt-1">{stats.sig.toLocaleString()}</div>
-            </div>
-            <Settings className="w-8 h-8 text-teal-500/50 animate-pulse" />
-          </div>
+          {summaryCards.map((card, idx) => (
+            <SummaryCard
+              key={`${activeModuleKey}-${idx}-${card.title}`}
+              title={card.title}
+              value={card.value}
+              icon={card.icon}
+              valueColorClass={card.valueColorClass}
+              iconClass={card.iconClass}
+            />
+          ))}
         </section>
 
         {/* Tab Controllers */}

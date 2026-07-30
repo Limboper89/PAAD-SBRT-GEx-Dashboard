@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -13,6 +13,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import { Info, AlertTriangle } from "lucide-react";
+import ExportButton from "@/components/ExportButton";
+import { exportToCSV, exportSvgElement } from "@/utils/exportUtils";
 
 interface CorrelationPlotProps {
   gene1Name: string;
@@ -73,6 +75,7 @@ export default function CorrelationPlot({
   isTcgaGtex = false,
 }: CorrelationPlotProps) {
   const [selectedCohort, setSelectedCohort] = useState<"tumor" | "gtex" | "all">("tumor");
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Filter sample expressions based on active cohort (for TCGA-GTEx)
   // Indices:
@@ -251,41 +254,84 @@ export default function CorrelationPlot({
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col h-full w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 mb-3">
+      {/* Top Header Row: Title & Action Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800/80">
         <div>
-          <h3 className="text-slate-200 font-semibold text-lg">Gene-Gene Co-Expression</h3>
-          <p className="text-xs text-slate-400">
+          <h3 className="text-slate-200 font-semibold text-base">Gene-Gene Co-Expression</h3>
+          <p className="text-xs text-slate-400 mt-0.5">
             {isTcgaGtex ? filteredExpressionData?.cohortName : `Expression levels across SBRT samples (N = ${samples.length})`}
           </p>
         </div>
 
-        {/* Cohort Selector (TCGA-GTEx only) */}
-        {isTcgaGtex && (
-          <div className="flex items-center gap-1.5 text-xxs font-mono text-slate-400">
-            <span>Cohort:</span>
-            <select
-              value={selectedCohort}
-              onChange={(e) => setSelectedCohort(e.target.value as any)}
-              className="bg-slate-950 border border-slate-800 rounded px-2 py-1 focus:outline-none focus:border-teal-500 text-slate-200 cursor-pointer"
-            >
-              <option value="tumor">TCGA Tumor (Default)</option>
-              <option value="gtex">GTEx Normal</option>
-              <option value="all">Pooled Cohorts</option>
-            </select>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Cohort Selector (TCGA-GTEx only) */}
+          {isTcgaGtex && (
+            <div className="flex items-center gap-1.5 text-xxs font-mono text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+              <span className="text-slate-400">Cohort:</span>
+              <select
+                value={selectedCohort}
+                onChange={(e) => setSelectedCohort(e.target.value as any)}
+                className="bg-transparent border-0 text-slate-200 focus:outline-none cursor-pointer font-semibold"
+              >
+                <option value="tumor" className="bg-slate-950">TCGA Tumor (Default)</option>
+                <option value="gtex" className="bg-slate-950">GTEx Normal</option>
+                <option value="all" className="bg-slate-950">Pooled Cohorts</option>
+              </select>
+            </div>
+          )}
 
-        <div className="text-right flex flex-col font-mono text-xxs">
-          <span className="text-xs font-bold text-teal-400">
-            Pearson r = {r}
+          <ExportButton
+            onExportCSV={() => {
+              if (!points || points.length === 0) return;
+              exportToCSV({
+                filename: `Correlation_${gene1Name}_vs_${gene2Name}.csv`,
+                metadata: {
+                  dataset: isTcgaGtex ? `TCGA-PAAD / GTEx (${selectedCohort})` : "GSE225767 Bulk RNA-seq",
+                  module: "Gene-Gene Co-Expression Correlation",
+                  selectedGene: `${gene1Name} vs ${gene2Name}`,
+                  filters: `Pearson r: ${r}, Spearman rho: ${rho}, m: ${m}, b: ${b}, Total Points: ${points.length}`,
+                },
+                headers: ["Sample", `${gene1Name} Expression`, `${gene2Name} Expression`],
+                rows: points.map((p) => [p.sample, p.x, p.y]),
+              });
+            }}
+            onExportPNG={() => {
+              const svgEl = chartContainerRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              exportSvgElement({
+                svgElement: svgEl as SVGSVGElement,
+                filename: `Correlation_${gene1Name}_vs_${gene2Name}.png`,
+                format: "png",
+                title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
+              });
+            }}
+            onExportSVG={() => {
+              const svgEl = chartContainerRef.current?.querySelector("svg");
+              if (!svgEl) return;
+              exportSvgElement({
+                svgElement: svgEl as SVGSVGElement,
+                filename: `Correlation_${gene1Name}_vs_${gene2Name}.svg`,
+                format: "svg",
+                title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
+              });
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Summary Statistics Sub-Bar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 text-xxs font-mono bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-850 mb-3">
+        <div className="flex items-center gap-4">
+          <span className="text-teal-400 font-bold">
+            Pearson r = <span className="text-slate-100">{r}</span>
           </span>
-          <span className="text-slate-400">
-            Spearman &rho; = {rho}
-          </span>
-          <span className="text-slate-500 mt-0.5">
-            y = {m}x + {b >= 0 ? `+${b.toFixed(2)}` : b.toFixed(2)}
+          <span className="text-slate-300">
+            Spearman &rho; = <span className="text-slate-100">{rho}</span>
           </span>
         </div>
+        <span className="text-slate-400">
+          Linear fit: <span className="text-slate-200">y = {m}x {b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`}</span>
+        </span>
       </div>
 
       {/* Warning message for pooled exploratory mode */}
@@ -298,7 +344,7 @@ export default function CorrelationPlot({
         </div>
       )}
 
-      <div className="flex-1 w-full h-[280px] min-h-[280px]">
+      <div ref={chartContainerRef} className="flex-1 w-full h-[280px] min-h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart margin={{ top: 10, right: 10, bottom: 20, left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.03)" />

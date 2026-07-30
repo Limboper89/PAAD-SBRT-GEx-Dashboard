@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import ExportButton from "@/components/ExportButton";
+import { exportToCSV } from "@/utils/exportUtils";
 
 interface GeneData {
   gene_name: string;
@@ -147,6 +149,51 @@ export default function GeneTable({
 
   const totalPages = Math.max(1, Math.ceil(processedData.length / pageSize));
 
+  // Export CSV Handler
+  const handleExportCSV = () => {
+    if (processedData.length === 0) return;
+    const isTcga = isTcgaGtex;
+    const datasetName = isTcga ? "TCGA-PAAD vs GTEx Pancreas" : "GSE225767 Bulk RNA-seq";
+    
+    const headers = isTcga
+      ? ["Gene Symbol", "ID", "Biotype", "Wilcoxon log2FC", "Wilcoxon FDR", "voom log2FC", "voom FDR", "Concordant DEG"]
+      : ["Gene Name", "Gene Index", "log2 Fold Change", "p-value", "Adjusted p-value"];
+
+    const rows = processedData.map((d) => {
+      if (isTcga) {
+        return [
+          d.gene_name,
+          d.id || "",
+          d.biotype || "",
+          d.log2FC,
+          d.qval !== undefined ? d.qval : d.p_value,
+          d.voom_log2FC !== undefined ? d.voom_log2FC : "",
+          d.voom_qval !== undefined ? d.voom_qval : "",
+          d.robust_deg ? "Yes" : "No",
+        ];
+      }
+      return [
+        d.gene_name,
+        d.gene_index ?? "",
+        d.log2FC,
+        d.p_value,
+        d.adj_p_value ?? "",
+      ];
+    });
+
+    exportToCSV({
+      filename: `${isTcga ? "TCGA_GTEX" : "GSE225767"}_DifferentialExpression.csv`,
+      metadata: {
+        dataset: datasetName,
+        module: "Bulk RNA-seq Differential Expression",
+        selectedGene: selectedGene || "N/A",
+        filters: `Search: "${search || "None"}", Sort: ${sortField} (${sortDirection}), Total Filtered: ${processedData.length}`,
+      },
+      headers,
+      rows,
+    });
+  };
+
   // Render sort indicators
   const renderSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
@@ -198,20 +245,28 @@ export default function GeneTable({
             />
           </div>
 
-          {/* Page Size Selector */}
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span>Show</span>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 focus:outline-none focus:border-teal-500 text-slate-300"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>entries</span>
+          {/* Page Size Selector & Export Button */}
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 focus:outline-none focus:border-teal-500 text-slate-300"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>entries</span>
+            </div>
+
+            <ExportButton
+              label="Export CSV"
+              onExportCSV={handleExportCSV}
+              disabled={processedData.length === 0}
+            />
           </div>
         </div>
       </div>

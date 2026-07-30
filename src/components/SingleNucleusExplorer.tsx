@@ -5,8 +5,10 @@ import React, {
 } from "react";
 import {
   Search, Info, AlertTriangle, ChevronDown,
-  TrendingUp, Cpu, X, HelpCircle, Layers, Users
+  TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download
 } from "lucide-react";
+import ExportButton from "./ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface CellMetadata {
@@ -392,6 +394,121 @@ export default function SingleNucleusExplorer() {
     }).filter(r => r.pct > 0).sort((a, b) => b.meanAll - a.meanAll); // Primary sorting: Mean across ALL nuclei
   }, [activeCells, activeOrigIdx, exprVec, activeGene]);
 
+  // CSV Download handler for Cell-Type Expression Summary
+  const handleDownloadCSV = useCallback(() => {
+    if (!activeGene || dotData.length === 0) return;
+
+    const now = new Date();
+    const dateStr = now.toLocaleString();
+
+    // Determine treatment text for metadata
+    const treatmentText = selectedPid !== "ALL" && patients[selectedPid]
+      ? patients[selectedPid].treatment_status
+      : "ALL";
+
+    // Build Metadata Header lines
+    const metaLines = [
+      `Dataset: GSE202051`,
+      `Gene: ${activeGene}`,
+      `Patient Filter: ${selectedPid}`,
+      `Cell Type Filter: ${selectedBroadInspect}`,
+      `Treatment Filter: ${treatmentText}`,
+      `Export Date: ${dateStr}`,
+      ``,
+    ];
+
+    const headerRow = ["Subtype (Level 2)", "N", "Expr %", "Mean (All)", "Mean (Pos)"];
+    
+    const dataRows = dotData.map((row) => [
+      `"${row.cellType.replace(/"/g, '""')}"`,
+      row.total,
+      row.pct.toFixed(2),
+      row.meanAll.toFixed(4),
+      row.meanPos.toFixed(4),
+    ]);
+
+    const csvContent = [
+      ...metaLines,
+      headerRow.join(","),
+      ...dataRows.map((r) => r.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `GSE202051_${activeGene}_CellTypeSummary.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [activeGene, dotData, selectedPid, selectedBroadInspect, patients]);
+
+  // Filtered Cell Metadata export callback
+  const handleExportCellMetadata = useCallback(() => {
+    if (!activeCells || activeCells.length === 0) return;
+    const headers = [
+      "Cell Barcode",
+      "Patient ID",
+      "Broad Cell Type",
+      "Subtype (Level 2)",
+      "Treatment Status",
+      "UMAP1",
+      "UMAP2",
+      activeGene ? `${activeGene} Expression (log1p Float16)` : "Gene Expression",
+    ];
+
+    const rows = activeCells.map((c, i) => {
+      const origIdx = activeOrigIdx[i];
+      const exprVal = exprVec && origIdx !== undefined ? f16ToF32(exprVec[origIdx]) : 0;
+      return [
+        c.id,
+        c.pid,
+        c.broad_celltype,
+        c.level2,
+        c.treatment,
+        c.x.toFixed(4),
+        c.y.toFixed(4),
+        exprVal.toFixed(4),
+      ];
+    });
+
+    exportToCSV({
+      filename: `GSE202051_FilteredCells_${activeGene || "All"}.csv`,
+      metadata: {
+        dataset: "GSE202051 Single-Nucleus Atlas",
+        module: "Single-Nucleus Cell Metadata Explorer",
+        selectedGene: activeGene || "None",
+        filters: `Patient: ${selectedPid}, Lineage: ${selectedBroadInspect}, Total Cells: ${activeCells.length}`,
+      },
+      headers,
+      rows,
+    });
+  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedBroadInspect]);
+
+  // Filtered Expression Matrix export callback
+  const handleExportExpressionMatrix = useCallback(() => {
+    if (!activeCells || activeCells.length === 0 || !activeGene || !exprVec) return;
+    const headers = ["Cell Barcode", "Patient ID", "Cell Type", activeGene];
+    const rows = activeCells.map((c, i) => {
+      const origIdx = activeOrigIdx[i];
+      const exprVal = origIdx !== undefined ? f16ToF32(exprVec[origIdx]) : 0;
+      return [c.id, c.pid, c.level2, exprVal.toFixed(4)];
+    });
+
+    exportToCSV({
+      filename: `GSE202051_ExpressionMatrix_${activeGene}.csv`,
+      metadata: {
+        dataset: "GSE202051 Single-Nucleus Atlas",
+        module: "Filtered Single-Nucleus Expression Matrix",
+        selectedGene: activeGene,
+        filters: `Patient: ${selectedPid}, Lineage: ${selectedBroadInspect}, Total Cells: ${activeCells.length}`,
+      },
+      headers,
+      rows,
+    });
+  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedBroadInspect]);
+
   const legendEntries = useMemo((): [string, string][] => {
     if (colorMode === "broad")     return Object.entries(BROAD_COLORS);
     if (colorMode === "level2")    return Object.entries(LEVEL2_COLORS).slice(0, 18);
@@ -500,6 +617,28 @@ export default function SingleNucleusExplorer() {
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
               </div>
+
+              <ExportButton
+                label="Export UMAP"
+                onExportPNG={() => {
+                  if (!canvasRef.current) return;
+                  exportCanvasToPNG({
+                    canvas: canvasRef.current,
+                    filename: `UMAP_GSE202051_${activeGene || colorMode}.png`,
+                    title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
+                    subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
+                  });
+                }}
+                onExportSVG={() => {
+                  if (!canvasRef.current) return;
+                  exportCanvasToSVG({
+                    canvas: canvasRef.current,
+                    filename: `UMAP_GSE202051_${activeGene || colorMode}.svg`,
+                    title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
+                    subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
+                  });
+                }}
+              />
 
               {selPatientInfo && (
                 <div className="text-[10px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-400 flex items-center gap-1">
@@ -668,13 +807,23 @@ export default function SingleNucleusExplorer() {
 
             {/* Summaries Panel - Primary and Secondary Metrics corrected */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex-1 flex flex-col">
-              <h3 className="text-slate-100 text-xs font-semibold flex items-center gap-2 mb-3">
-                <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-                Cell-Type Expression Summary
-                {selectedPid !== "ALL" && (
-                  <span className="ml-auto text-[9px] bg-slate-950 px-2 py-0.5 border border-slate-800 rounded text-teal-400 font-mono">{selectedPid}</span>
-                )}
-              </h3>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="text-slate-100 text-xs font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                  Cell-Type Expression Summary
+                  {selectedPid !== "ALL" && (
+                    <span className="text-[9px] bg-slate-950 px-2 py-0.5 border border-slate-800 rounded text-teal-400 font-mono">{selectedPid}</span>
+                  )}
+                </h3>
+
+                <ExportButton
+                  disabled={!activeGene || dotData.length === 0}
+                  disabledTooltip="Select a gene before exporting."
+                  onExportCSV={handleDownloadCSV}
+                  onExportCellMetadata={handleExportCellMetadata}
+                  onExportExpressionMatrix={handleExportExpressionMatrix}
+                />
+              </div>
 
               {activeGene ? (
                 <div className="flex flex-col gap-0 flex-1 overflow-y-auto max-h-[460px] pr-1">
