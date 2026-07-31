@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Info, AlertTriangle } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportToCSV, exportSvgElement } from "@/utils/exportUtils";
+import { exportToCSV, exportSvgElement, exportComponentToPNG, exportComponentToSVG } from "@/utils/exportUtils";
 
 interface CorrelationPlotProps {
   gene1Name: string;
@@ -263,15 +263,15 @@ export default function CorrelationPlot({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Cohort Selector (TCGA-GTEx only) */}
           {isTcgaGtex && (
-            <div className="flex items-center gap-1.5 text-xxs font-mono text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1 text-[10px] font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
               <span className="text-slate-400">Cohort:</span>
               <select
                 value={selectedCohort}
                 onChange={(e) => setSelectedCohort(e.target.value as any)}
-                className="bg-transparent border-0 text-slate-200 focus:outline-none cursor-pointer font-semibold"
+                className="bg-transparent border-0 text-slate-200 focus:outline-none cursor-pointer font-semibold text-[10px]"
               >
                 <option value="tumor" className="bg-slate-950">TCGA Tumor (Default)</option>
                 <option value="gtex" className="bg-slate-950">GTEx Normal</option>
@@ -295,24 +295,22 @@ export default function CorrelationPlot({
                 rows: points.map((p) => [p.sample, p.x, p.y]),
               });
             }}
-            onExportPNG={() => {
-              const svgEl = chartContainerRef.current?.querySelector("svg");
-              if (!svgEl) return;
-              exportSvgElement({
-                svgElement: svgEl as SVGSVGElement,
+            onExportPNG={async () => {
+              if (!chartContainerRef.current) return;
+              await exportComponentToPNG({
+                element: chartContainerRef.current,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.png`,
-                format: "png",
                 title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
+                subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
               });
             }}
-            onExportSVG={() => {
-              const svgEl = chartContainerRef.current?.querySelector("svg");
-              if (!svgEl) return;
-              exportSvgElement({
-                svgElement: svgEl as SVGSVGElement,
+            onExportSVG={async () => {
+              if (!chartContainerRef.current) return;
+              await exportComponentToSVG({
+                element: chartContainerRef.current,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.svg`,
-                format: "svg",
                 title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
+                subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
               });
             }}
           />
@@ -320,8 +318,8 @@ export default function CorrelationPlot({
       </div>
 
       {/* Summary Statistics Sub-Bar */}
-      <div className="flex items-center justify-between flex-wrap gap-2 text-xxs font-mono bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-850 mb-3">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-mono bg-slate-950/60 px-2.5 py-1 rounded-md border border-slate-850 mb-2.5">
+        <div className="flex items-center gap-3">
           <span className="text-teal-400 font-bold">
             Pearson r = <span className="text-slate-100">{r}</span>
           </span>
@@ -330,7 +328,7 @@ export default function CorrelationPlot({
           </span>
         </div>
         <span className="text-slate-400">
-          Linear fit: <span className="text-slate-200">y = {m}x {b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`}</span>
+          Fit: <span className="text-slate-200">y = {m}x {b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`}</span>
         </span>
       </div>
 

@@ -208,72 +208,299 @@ export function exportCanvasToSVG({
 /**
  * Export SVG DOM element to high-res PNG or standalone SVG file.
  */
+import { toPng, toSvg } from "html-to-image";
+
+/**
+ * Export any React / HTML / Recharts container element to high-res publication PNG (3000px min width)
+ * with publication header banner using html-to-image.
+ */
+export async function exportComponentToPNG({
+  element,
+  filename,
+  title = "PDAC BioPortal Figure",
+  subtitle,
+}: {
+  element: HTMLElement;
+  filename: string;
+  title?: string;
+  subtitle?: string;
+}) {
+  if (!element) return;
+
+  // 1. Wait for any pending frames/renders to finish
+  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
+
+  // Filter out tooltip popups from export capture
+  const filter = (node: HTMLElement) => {
+    if (!node.classList) return true;
+    if (
+      node.classList.contains("recharts-tooltip-wrapper") ||
+      node.classList.contains("recharts-default-tooltip") ||
+      node.classList.contains("recharts-tooltip-cursor")
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const origWidth = element.clientWidth || element.getBoundingClientRect().width || 1000;
+  const origHeight = element.clientHeight || element.getBoundingClientRect().height || 500;
+
+  // Enforce 3000px minimum publication target width
+  const targetWidth = Math.max(3000, origWidth * 3);
+  const scale = targetWidth / origWidth;
+
+  // Render DOM element directly to PNG data URL at high pixel ratio
+  const chartDataUrl = await toPng(element, {
+    quality: 0.98,
+    pixelRatio: scale,
+    backgroundColor: "#020617", // Slate 950
+    filter: filter as any,
+  });
+
+  // Calculate publication header dimensions
+  const fontBrandSize = Math.round(13 * scale);
+  const fontTitleSize = Math.round(20 * scale);
+  const fontSubtitleSize = Math.round(12 * scale);
+
+  const padLeft = Math.round(24 * scale);
+  const padTop = Math.round(20 * scale);
+
+  const line1Y = padTop + fontBrandSize;
+  const line2Y = line1Y + Math.round(10 * scale) + fontTitleSize;
+  const line3Y = subtitle ? line2Y + Math.round(8 * scale) + fontSubtitleSize : line2Y;
+
+  const headerHeight = Math.round(line3Y + Math.round(20 * scale));
+  const targetPlotHeight = Math.round(origHeight * scale);
+  const targetHeight = targetPlotHeight + headerHeight;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  // Backgrounds
+  ctx.fillStyle = "#020617";
+  ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(0, 0, targetWidth, headerHeight);
+
+  ctx.strokeStyle = "#1e293b";
+  ctx.lineWidth = Math.max(2, Math.round(1.5 * scale));
+  ctx.beginPath();
+  ctx.moveTo(0, headerHeight);
+  ctx.lineTo(targetWidth, headerHeight);
+  ctx.stroke();
+
+  // Banner text
+  ctx.fillStyle = "#38bdf8";
+  ctx.font = `bold ${fontBrandSize}px sans-serif`;
+  ctx.fillText("PDAC BIOPORTAL — PUBLICATION FIGURE", padLeft, line1Y);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = `bold ${fontTitleSize}px sans-serif`;
+  ctx.fillText(title, padLeft, line2Y);
+
+  if (subtitle) {
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = `${fontSubtitleSize}px monospace`;
+    ctx.fillText(subtitle, padLeft, line3Y);
+  }
+
+  // Draw chart PNG below header banner
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, headerHeight, targetWidth, targetPlotHeight);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const pngUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(pngUrl);
+    }, "image/png");
+  };
+  img.src = chartDataUrl;
+}
+
+/**
+ * Export any React / HTML / Recharts container element to standalone vector SVG file
+ * using html-to-image toSvg.
+ */
+export async function exportComponentToSVG({
+  element,
+  filename,
+  title = "PDAC BioPortal Figure",
+  subtitle,
+}: {
+  element: HTMLElement;
+  filename: string;
+  title?: string;
+  subtitle?: string;
+}) {
+  if (!element) return;
+
+  // 1. Wait for render frames to settle
+  await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
+
+  // Filter out tooltip popups from SVG capture
+  const filter = (node: HTMLElement) => {
+    if (!node.classList) return true;
+    if (
+      node.classList.contains("recharts-tooltip-wrapper") ||
+      node.classList.contains("recharts-default-tooltip") ||
+      node.classList.contains("recharts-tooltip-cursor")
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  // Capture element to SVG Data URI
+  const svgDataUrl = await toSvg(element, {
+    backgroundColor: "#020617", // Slate 950
+    filter: filter as any,
+  });
+
+  const link = document.createElement("a");
+  link.href = svgDataUrl;
+  link.download = filename.endsWith(".svg") ? filename : `${filename}.svg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * SVG exporter wrapper
+ */
 export function exportSvgElement({
   svgElement,
   filename,
   format = "svg",
   title = "PDAC BioPortal Figure",
+  subtitle,
 }: {
   svgElement: SVGSVGElement;
   filename: string;
   format: "svg" | "png";
   title?: string;
+  subtitle?: string;
 }) {
+  const parent = svgElement.parentElement;
+  if (parent) {
+    if (format === "png") {
+      exportComponentToPNG({
+        element: parent,
+        filename,
+        title,
+        subtitle,
+      });
+    } else {
+      exportComponentToSVG({
+        element: parent,
+        filename,
+        title,
+        subtitle,
+      });
+    }
+    return;
+  }
+
   const serializer = new XMLSerializer();
   let svgString = serializer.serializeToString(svgElement);
 
   if (!svgString.includes('xmlns="http://www.w3.org/2000/svg"')) {
-    svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    svgString = svgString.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
   }
 
-  if (format === "svg") {
-    const blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + svgString], {
-      type: "image/svg+xml;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename.endsWith(".svg") ? filename : `${filename}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } else {
-    // Render to PNG
-    const width = svgElement.clientWidth || 1000;
-    const height = svgElement.clientHeight || 700;
-    const scale = Math.max(2, 3000 / width);
+  const blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + svgString], {
+    type: "image/svg+xml;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename.endsWith(".svg") ? filename : `${filename}.svg`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
-    const canvas = document.createElement("canvas");
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+/**
+ * Recursively inline computed CSS presentation styles onto SVG element attributes.
+ * ONLY applies to leaf SVG shape nodes (rect, path, circle, text, line) and PRESERVES existing attributes.
+ */
+function inlineComputedStyles(sourceEl: Element, targetEl: Element) {
+  const sourceNodes = [sourceEl, ...Array.from(sourceEl.querySelectorAll("*"))];
+  const targetNodes = [targetEl, ...Array.from(targetEl.querySelectorAll("*"))];
 
-    const img = new Image();
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
+  const presentationProps = [
+    "stroke-width",
+    "stroke-dasharray",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "opacity",
+    "fill-opacity",
+    "stroke-opacity",
+    "font-family",
+    "font-size",
+    "font-weight",
+    "text-anchor",
+    "dominant-baseline",
+  ];
 
-    img.onload = () => {
-      ctx.fillStyle = "#020617";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
+  const len = Math.min(sourceNodes.length, targetNodes.length);
+  for (let i = 0; i < len; i++) {
+    const sNode = sourceNodes[i];
+    const tNode = targetNodes[i];
+    if (!sNode || !tNode) continue;
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const pngUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = pngUrl;
-        link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(pngUrl);
-      }, "image/png");
-    };
+    try {
+      // Skip root SVG node to prevent polluting root attributes
+      if (i === 0) continue;
 
-    img.src = url;
+      const tagName = sNode.tagName.toLowerCase();
+      const computed = window.getComputedStyle(sNode);
+
+      // ONLY apply styles to SVG shape and text elements, NEVER on container <g> nodes
+      if (["rect", "path", "circle", "ellipse", "polygon", "text", "line"].includes(tagName)) {
+        // 1. Preserve existing SVG fill attribute if already explicitly defined (e.g. fill="#14b8a6" or fill="#64748b")
+        const existingFill = sNode.getAttribute("fill");
+        if (!existingFill || existingFill === "none") {
+          const fillVal = computed ? computed.getPropertyValue("fill") : "";
+          if (fillVal && fillVal !== "none" && fillVal !== "rgb(0, 0, 0)" && fillVal !== "#000000") {
+            tNode.setAttribute("fill", fillVal);
+          }
+        }
+
+        // 2. Preserve existing SVG stroke attribute
+        const existingStroke = sNode.getAttribute("stroke");
+        if (!existingStroke || existingStroke === "none") {
+          const strokeVal = computed ? computed.getPropertyValue("stroke") : "";
+          if (strokeVal && strokeVal !== "none") {
+            tNode.setAttribute("stroke", strokeVal);
+          }
+        }
+
+        // 3. Apply other presentation properties if computed
+        if (computed) {
+          for (const prop of presentationProps) {
+            const val = computed.getPropertyValue(prop);
+            if (val && val !== "none" && val !== "normal" && val !== "auto" && !tNode.hasAttribute(prop)) {
+              tNode.setAttribute(prop, val);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore non-computable nodes
+    }
   }
 }
 

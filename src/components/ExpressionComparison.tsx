@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -13,11 +11,13 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
+  ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 import SearchableGeneSelect from "./SearchableGeneSelect";
-import { X, Info, AlertTriangle } from "lucide-react";
+import { X, Info, AlertTriangle, HelpCircle } from "lucide-react";
 import ExportButton from "./ExportButton";
-import { exportToCSV, exportSvgElement } from "@/utils/exportUtils";
+import { exportToCSV, exportSvgElement, exportComponentToPNG, exportComponentToSVG } from "@/utils/exportUtils";
 
 interface DegGene {
   gene_name: string;
@@ -54,6 +54,7 @@ export default function ExpressionComparison({
   selectedGeneSymbol = null,
 }: ExpressionComparisonProps) {
   const [showSolidNormal, setShowSolidNormal] = useState<boolean>(true);
+  const [showMean, setShowMean] = useState<boolean>(false);
   const sbrtChartRef = React.useRef<HTMLDivElement>(null);
   const tcgaChartRef = React.useRef<HTMLDivElement>(null);
 
@@ -86,10 +87,15 @@ export default function ExpressionComparison({
       .filter((d): d is NonNullable<typeof d> => d !== null);
   }, [selectedGenes, expressionData, degData, isTcgaGtex]);
 
-  // 2. TCGA-GTEx Mode Data Processing (Strip-Jitter plot)
+  // 2. TCGA-GTEx Mode Data Processing (Strip-Jitter plot & Boxplot representation)
   const tcgaGtexScatterData = useMemo(() => {
     if (!isTcgaGtex || !tcgaGtexExpressionForSelectedGene) {
-      return { points: [], stats: { gtexMean: 0, tumorMean: 0, solidMean: 0 } };
+      return {
+        points: [],
+        meanPoints: [],
+        boxStats: [],
+        stats: { gtexMean: 0, tumorMean: 0, solidMean: 0 },
+      };
     }
 
     const expr = tcgaGtexExpressionForSelectedGene;
@@ -111,7 +117,6 @@ export default function ExpressionComparison({
         points.push({
           cohortIdx: 0,
           cohortName: "GTEx Normal\n(n=167)",
-          // Add random jitter to x coordinate within [ -0.15, +0.15 ]
           x: 0 + (Math.random() - 0.5) * 0.3,
           y: Number(expr[i].toFixed(4)),
           cohortId: "gtex",
@@ -143,7 +148,7 @@ export default function ExpressionComparison({
           points.push({
             cohortIdx: 2,
             cohortName: "TCGA Solid Normal\n(n=4)",
-            x: 2 + (Math.random() - 0.5) * 0.1, // less jitter since there are only 4
+            x: 2 + (Math.random() - 0.5) * 0.1,
             y: Number(expr[i].toFixed(4)),
             cohortId: "solid_normal",
             sample: `TCGA Solid Normal #${i - 344}`,
@@ -152,14 +157,66 @@ export default function ExpressionComparison({
       }
     }
 
-    // Compute cohort summary stats (means)
-    const stats = {
-      gtexMean: gtexVals.length ? gtexVals.reduce((a, b) => a + b, 0) / gtexVals.length : 0,
-      tumorMean: tumorVals.length ? tumorVals.reduce((a, b) => a + b, 0) / tumorVals.length : 0,
-      solidMean: solidVals.length ? solidVals.reduce((a, b) => a + b, 0) / solidVals.length : 0,
+    const calcBox = (vals: number[], xIdx: number, cohortName: string, color: string) => {
+      if (vals.length === 0) return null;
+      const sorted = [...vals].sort((a, b) => a - b);
+      const n = sorted.length;
+      const mean = vals.reduce((a, b) => a + b, 0) / n;
+
+      const getQuantile = (q: number) => {
+        const pos = (n - 1) * q;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (sorted[base + 1] !== undefined) {
+          return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+        }
+        return sorted[base];
+      };
+
+      const q1 = getQuantile(0.25);
+      const median = getQuantile(0.50);
+      const q3 = getQuantile(0.75);
+      const iqr = q3 - q1;
+      const validLower = sorted.filter((v) => v >= q1 - 1.5 * iqr);
+      const validUpper = sorted.filter((v) => v <= q3 + 1.5 * iqr);
+      const minW = validLower.length ? Math.min(...validLower) : q1;
+      const maxW = validUpper.length ? Math.max(...validUpper) : q3;
+
+      return {
+        x: xIdx,
+        cohortName,
+        color,
+        n,
+        mean: Number(mean.toFixed(4)),
+        median: Number(median.toFixed(4)),
+        q1: Number(q1.toFixed(4)),
+        q3: Number(q3.toFixed(4)),
+        minW: Number(minW.toFixed(4)),
+        maxW: Number(maxW.toFixed(4)),
+      };
     };
 
-    return { points, stats };
+    const gtexBox = calcBox(gtexVals, 0, "GTEx Normal", "#4575b4");
+    const tumorBox = calcBox(tumorVals, 1, "TCGA Tumor", "#d73027");
+    const solidBox = showSolidNormal ? calcBox(solidVals, 2, "TCGA Solid Normal", "#fee090") : null;
+
+    const boxStats = [gtexBox, tumorBox, solidBox].filter(Boolean) as any[];
+
+    const meanPoints = boxStats.map((b: any) => ({
+      x: b.x,
+      y: b.mean,
+      cohortName: b.cohortName,
+      n: b.n,
+      isMeanMarker: true,
+    }));
+
+    const stats = {
+      gtexMean: gtexBox ? gtexBox.mean : 0,
+      tumorMean: tumorBox ? tumorBox.mean : 0,
+      solidMean: solidBox ? solidBox.mean : 0,
+    };
+
+    return { points, meanPoints, boxStats, stats };
   }, [isTcgaGtex, tcgaGtexExpressionForSelectedGene, showSolidNormal]);
 
   // SBRT Custom Tooltip
@@ -192,10 +249,23 @@ export default function ExpressionComparison({
     return null;
   };
 
-  // TCGA-GTEx Jitter Scatter Tooltip
+  // TCGA-GTEx Jitter Scatter & Mean Diamond Tooltip
   const TcgaGtexTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+
+      if (data.isMeanMarker) {
+        return (
+          <div className="bg-slate-950 border border-amber-500/50 p-2.5 rounded-lg text-xs shadow-xl font-mono">
+            <div className="font-bold text-amber-400 mb-1">Mean Expression</div>
+            <div className="text-slate-200 mb-0.5">
+              Value: <span className="font-bold">{data.y.toFixed(3)}</span> log2(TPM + 0.001)
+            </div>
+            <div className="text-slate-400">n = {data.n}</div>
+          </div>
+        );
+      }
+
       return (
         <div className="bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-xs shadow-xl font-mono">
           <div className="font-bold text-teal-400 mb-1">{data.sample}</div>
@@ -211,6 +281,24 @@ export default function ExpressionComparison({
       );
     }
     return null;
+  };
+
+  // Custom Diamond Shape component for Arithmetic Mean
+  const MeanDiamondShape = (props: any) => {
+    const { cx, cy } = props;
+    if (cx === undefined || cy === undefined || isNaN(cx) || isNaN(cy)) return null;
+    const r = 4.5; // 9px diameter
+    const pointsStr = `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`;
+
+    return (
+      <polygon
+        points={pointsStr}
+        fill="#fbbf24"
+        stroke="#0f172a"
+        strokeWidth={1.5}
+        className="cursor-pointer transition-transform hover:scale-125"
+      />
+    );
   };
 
   // Render SBRT Mode Comparison
@@ -253,24 +341,22 @@ export default function ExpressionComparison({
                   rows: SbrtData.map((d: any) => [d.gene_name, d["Pre-SBRT"], d["Post-SBRT"], d.log2FC]),
                 });
               }}
-              onExportPNG={() => {
-                const svgEl = sbrtChartRef.current?.querySelector("svg");
-                if (!svgEl) return;
-                exportSvgElement({
-                  svgElement: svgEl as SVGSVGElement,
+              onExportPNG={async () => {
+                if (!sbrtChartRef.current) return;
+                await exportComponentToPNG({
+                  element: sbrtChartRef.current,
                   filename: `ExpressionComparison_SBRT.png`,
-                  format: "png",
                   title: "Pre-SBRT vs Post-SBRT Expression Comparison",
+                  subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
                 });
               }}
-              onExportSVG={() => {
-                const svgEl = sbrtChartRef.current?.querySelector("svg");
-                if (!svgEl) return;
-                exportSvgElement({
-                  svgElement: svgEl as SVGSVGElement,
+              onExportSVG={async () => {
+                if (!sbrtChartRef.current) return;
+                await exportComponentToSVG({
+                  element: sbrtChartRef.current,
                   filename: `ExpressionComparison_SBRT.svg`,
-                  format: "svg",
                   title: "Pre-SBRT vs Post-SBRT Expression Comparison",
+                  subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
                 });
               }}
             />
@@ -285,7 +371,7 @@ export default function ExpressionComparison({
           <div className="flex-1 flex flex-col gap-4">
             <div ref={sbrtChartRef} className="flex-1 w-full h-[250px] min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={SbrtData} margin={{ top: 10, right: 10, bottom: 10, left: -10 }}>
+                <BarChart data={SbrtData} margin={{ top: 10, right: 15, bottom: 15, left: 15 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.05)" />
                   <XAxis
                     dataKey="gene_name"
@@ -300,21 +386,22 @@ export default function ExpressionComparison({
                     axisLine={{ stroke: "#475569" }}
                     tick={{ fontSize: 10 }}
                     label={{
-                      value: "Log2 Expression Level",
+                      value: "Mean Expression level log₂(DESeq2 normalized counts)",
                       angle: -90,
                       position: "insideLeft",
-                      offset: 5,
+                      offset: 12,
                       fill: "#94a3b8",
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: "bold",
+                      style: { textAnchor: "middle" }
                     }}
                   />
-                  <Tooltip content={<SbrtTooltip />} />
+                  <Tooltip content={<SbrtTooltip />} cursor={{ fill: "rgba(255, 255, 255, 0.04)" }} />
                   <Legend
                     verticalAlign="top"
                     height={30}
-                    iconType="circle"
-                    iconSize={8}
+                    iconType="rect"
+                    iconSize={10}
                     wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
                   />
                   <Bar dataKey="Pre-SBRT" fill="#64748b" radius={[4, 4, 0, 0]} />
@@ -347,8 +434,8 @@ export default function ExpressionComparison({
     );
   }
 
-  // 3. Render TCGA-GTEx Mode Comparison (Tumor vs Normal Strip Plot)
-  const { points, stats } = tcgaGtexScatterData;
+  // 3. Render TCGA-GTEx Mode Comparison (Tumor vs Normal Boxplot / Strip Plot)
+  const { points, meanPoints, boxStats, stats } = tcgaGtexScatterData;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col h-full w-full">
@@ -367,9 +454,24 @@ export default function ExpressionComparison({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Optional Show Mean Toggle */}
+          <label className="flex items-center gap-1 text-[10px] font-mono text-slate-300 bg-slate-950 px-2 py-1 rounded border border-slate-800 cursor-pointer group relative">
+            <input
+              type="checkbox"
+              checked={showMean}
+              onChange={(e) => setShowMean(e.target.checked)}
+              className="rounded accent-amber-500 bg-slate-900 border-slate-800 cursor-pointer"
+            />
+            <span>Show Mean</span>
+            <HelpCircle className="w-2.5 h-2.5 text-slate-500 hover:text-slate-300 ml-0.5 cursor-help shrink-0" />
+            <span className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 bg-slate-950 border border-slate-800 text-slate-300 text-[9px] p-2 rounded shadow-2xl w-56 font-normal leading-normal opacity-0 group-hover:opacity-100 transition-opacity z-50">
+              Displays the arithmetic mean as a diamond marker. The boxplot continues to represent the median and interquartile range.
+            </span>
+          </label>
+
           {/* Diagnostic Checkbox option for Solid Normal */}
-          <label className="flex items-center gap-2 text-xxs font-mono text-slate-300 bg-slate-950 p-1.5 rounded border border-slate-800 cursor-pointer">
+          <label className="flex items-center gap-1 text-[10px] font-mono text-slate-300 bg-slate-950 px-2 py-1 rounded border border-slate-800 cursor-pointer">
             <input
               type="checkbox"
               checked={showSolidNormal}
@@ -395,24 +497,22 @@ export default function ExpressionComparison({
                 rows: points.map((p) => [p.sample, p.cohortName, p.y]),
               });
             }}
-            onExportPNG={() => {
-              const svgEl = tcgaChartRef.current?.querySelector("svg");
-              if (!svgEl) return;
-              exportSvgElement({
-                svgElement: svgEl as SVGSVGElement,
+            onExportPNG={async () => {
+              if (!tcgaChartRef.current) return;
+              await exportComponentToPNG({
+                element: tcgaChartRef.current,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.png`,
-                format: "png",
                 title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
+                subtitle: `PAAD Tumor vs Normal Expression`,
               });
             }}
-            onExportSVG={() => {
-              const svgEl = tcgaChartRef.current?.querySelector("svg");
-              if (!svgEl) return;
-              exportSvgElement({
-                svgElement: svgEl as SVGSVGElement,
+            onExportSVG={async () => {
+              if (!tcgaChartRef.current) return;
+              await exportComponentToSVG({
+                element: tcgaChartRef.current,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.svg`,
-                format: "svg",
                 title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
+                subtitle: `PAAD Tumor vs Normal Expression`,
               });
             }}
           />
@@ -425,8 +525,8 @@ export default function ExpressionComparison({
         </div>
       ) : (
         <div className="flex-1 flex flex-col gap-3">
-          {/* Main Scatter Plot */}
-          <div ref={tcgaChartRef} className="flex-1 w-full h-[230px] min-h-[230px]">
+          {/* Main Boxplot / Scatter Plot */}
+          <div ref={tcgaChartRef} className="flex-1 w-full h-[260px] min-h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 15, right: 20, bottom: 20, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.03)" />
@@ -468,6 +568,22 @@ export default function ExpressionComparison({
                 <ZAxis type="number" range={[45, 45]} />
                 <Tooltip content={<TcgaGtexTooltip />} />
 
+                {/* Boxplot Representation (IQR Boxes, Median Lines, Whiskers) */}
+                {boxStats.map((b: any) => (
+                  <React.Fragment key={`box-${b.cohortName}`}>
+                    {/* Whiskers */}
+                    <ReferenceLine segment={[{ x: b.x, y: b.minW }, { x: b.x, y: b.q1 }]} stroke={b.color} strokeWidth={1} strokeDasharray="2 2" />
+                    <ReferenceLine segment={[{ x: b.x, y: b.q3 }, { x: b.x, y: b.maxW }]} stroke={b.color} strokeWidth={1} strokeDasharray="2 2" />
+                    {/* Whisker Caps */}
+                    <ReferenceLine segment={[{ x: b.x - 0.1, y: b.minW }, { x: b.x + 0.1, y: b.minW }]} stroke={b.color} strokeWidth={1.5} />
+                    <ReferenceLine segment={[{ x: b.x - 0.1, y: b.maxW }, { x: b.x + 0.1, y: b.maxW }]} stroke={b.color} strokeWidth={1.5} />
+                    {/* IQR Box */}
+                    <ReferenceArea x1={b.x - 0.22} x2={b.x + 0.22} y1={b.q1} y2={b.q3} fill="rgba(255,255,255,0.04)" stroke={b.color} strokeWidth={1.2} />
+                    {/* Median Line */}
+                    <ReferenceLine segment={[{ x: b.x - 0.22, y: b.median }, { x: b.x + 0.22, y: b.median }]} stroke={b.color} strokeWidth={2.5} />
+                  </React.Fragment>
+                ))}
+
                 {/* GTEx normal samples */}
                 <Scatter
                   name="GTEx Normal"
@@ -496,6 +612,16 @@ export default function ExpressionComparison({
                     strokeWidth={1.5}
                     shape="square" // distinguished shape
                     z={90} // make them slightly larger for visibility
+                  />
+                )}
+
+                {/* Optional Arithmetic Mean Diamond Markers (When Show Mean is ON) */}
+                {showMean && (
+                  <Scatter
+                    name="Mean Expression"
+                    data={meanPoints}
+                    shape={<MeanDiamondShape />}
+                    z={100}
                   />
                 )}
               </ScatterChart>
