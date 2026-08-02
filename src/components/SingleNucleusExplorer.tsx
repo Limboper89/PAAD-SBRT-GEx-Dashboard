@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { useAIContext } from "@/components/ai/AIProvider";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface CellMetadata {
@@ -172,6 +173,23 @@ export default function SingleNucleusExplorer() {
       }
     })();
   }, [DATA]);
+
+  const { registerModuleContext } = useAIContext();
+
+  // Sync state to PDACopilot
+  useEffect(() => {
+    registerModuleContext({
+      module: "Single Nucleus",
+      gene: activeGene,
+      dataset: "GSE202051: PDAC Single-Nucleus Reference Atlas",
+      currentFigure: "Single-Nucleus UMAP Atlas",
+      singleNucleusStats: {
+        selectedCellType: selectedBroadInspect !== "ALL" ? selectedBroadInspect : "All Cell Types",
+        totalNuclei: "224,988",
+        markerGenes: activeGene ? [activeGene, "NFE2L2", "PHGDH", "S100P"] : ["NFE2L2", "PHGDH", "S100P"]
+      }
+    });
+  }, [activeGene, selectedBroadInspect, registerModuleContext]);
 
   // Autocomplete searches
   useEffect(() => {

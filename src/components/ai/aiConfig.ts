@@ -1,0 +1,65 @@
+// aiConfig.ts - Pluggable AI Provider Configuration for PDAC BioPortal
+
+export type AIProviderType = 'llama-proxy' | 'gemini' | 'openai' | 'groq' | 'ollama';
+
+export interface AIProviderConfig {
+  id: AIProviderType;
+  name: string;
+  endpoint: string;
+  model: string;
+  description: string;
+  isCustom?: boolean;
+}
+
+export const PORTAL_METADATA = {
+  appName: "PDAC BioPortal",
+  appVersion: "1.2.0",
+  targetJournal: "Computational and Structural Biotechnology Journal (CSBJ)",
+  datasetVersions: {
+    sbrtBulk: "GSE225767 (Radiotherapy Pre/Post Paired Bulk RNA-seq)",
+    tcgaGtex: "TCGA-PAAD vs GTEx Pancreas (349-sample Normal Reference Atlas)",
+    singleNucleus: "GSE202051 (224,988 Nuclei PDAC Single-Nucleus Atlas)",
+    spatial: "GSE274103 (Patient Tumor Visium Spatial Transcriptomics)"
+  }
+};
+
+export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
+  'llama-proxy': {
+    id: 'llama-proxy',
+    name: 'Llama (Groq Worker Proxy)',
+    endpoint: 'https://paad-groq-proxy.kumarprincebt.workers.dev/api/chat',
+    model: 'llama-3.3-70b-versatile',
+    description: 'Current low-latency default Llama endpoint hosted on Cloudflare Workers'
+  },
+  'gemini': {
+    id: 'gemini',
+    name: 'Google Gemini Pro',
+    endpoint: '/api/ai/gemini',
+    model: 'gemini-1.5-pro',
+    description: 'Future provider for high-context multimodal reasoning'
+  },
+  'openai': {
+    id: 'openai',
+    name: 'OpenAI GPT-4o',
+    endpoint: '/api/ai/openai',
+    model: 'gpt-4o',
+    description: 'Future provider option'
+  },
+  'groq': {
+    id: 'groq',
+    name: 'Groq Llama 3.3 Direct',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    model: 'llama-3.3-70b-versatile',
+    description: 'Direct Groq API endpoint'
+  },
+  'ollama': {
+    id: 'ollama',
+    name: 'Ollama Local LLM',
+    endpoint: 'http://localhost:11434/api/generate',
+    model: 'llama3:8b',
+    description: 'Self-hosted offline local LLM server'
+  }
+};
+
+// Current active AI provider setting (change this string to swap backends cleanly)
+export const CURRENT_AI_PROVIDER: AIProviderType = 'llama-proxy';

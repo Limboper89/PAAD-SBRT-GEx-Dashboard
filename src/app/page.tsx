@@ -22,6 +22,7 @@ import AboutView from "@/components/AboutView";
 import SingleNucleusExplorer from "@/components/SingleNucleusExplorer";
 import SpatialTranscriptomicsView from "@/components/SpatialPrototypeView";
 import SummaryCard from "@/components/SummaryCard";
+import { useAIContext } from "@/components/ai/AIProvider";
 
 interface GeneData {
   gene_name: string;
@@ -358,6 +359,62 @@ export default function Dashboard() {
     if (activeTab === "tme" || activeStudy === "GSE274103" || activeStudy === "PDAC_Spatial") return "spatial";
     return "bulk";
   }, [activeTab, activeStudy]);
+
+  const { registerModuleContext } = useAIContext();
+
+  // Sync state to PDACopilot context provider
+  useEffect(() => {
+    const studyObj = STUDIES.find(s => s.id === activeStudy);
+    const studyName = studyObj ? studyObj.name : activeStudy;
+    
+    let figureName = "Volcano Plot";
+    if (activeTab === "de") figureName = "Volcano Plot & Differential Table";
+    else if (activeTab === "correlation") figureName = "Correlation Scatter Plot & Heatmap";
+    else if (activeTab === "tme") figureName = "Spatial Transcriptomics Spot Map";
+    else if (activeTab === "sn") figureName = "Single-Nucleus UMAP Atlas";
+    else if (activeTab === "about") figureName = "Documentation & Methods";
+
+    const moduleLabel = activeStudy === "TCGA_GTEX" ? "TCGA-GTEx" : activeStudy === "GSE202051" ? "Single Nucleus" : activeStudy === "GSE274103" ? "Spatial" : "SBRT Bulk";
+    const currentHeatmapGenes = activeStudy === "TCGA_GTEX" ? tcgaGtexHeatmapGenes : heatmapGenes;
+
+    registerModuleContext({
+      module: moduleLabel,
+      gene: selectedGene,
+      dataset: studyName,
+      currentFigure: figureName,
+      heatmapGenes: currentHeatmapGenes,
+      filters: {
+        log2fcThreshold: 1.0,
+        pValueThreshold: 0.05
+      },
+      tcgaStats: activeStudy === "TCGA_GTEX" ? {
+        log2FC: activeGeneData?.log2FC,
+        pval: activeGeneData?.p_value,
+        qval: activeGeneData?.adj_p_value,
+        correlationGene1: tcgaGtexCorrelationGene1,
+        correlationGene2: tcgaGtexCorrelationGene2
+      } : undefined,
+      sbrtStats: activeStudy !== "TCGA_GTEX" ? {
+        log2FC: activeLog2FC ?? activeGeneData?.log2FC,
+        p_value: activeGeneData?.p_value,
+        adj_p_value: activeGeneData?.adj_p_value,
+        treatment: "SBRT Radiotherapy Pre vs Post"
+      } : undefined
+    });
+  }, [
+    activeStudy,
+    activeTab,
+    selectedGene,
+    activeGeneData,
+    activeLog2FC,
+    heatmapGenes,
+    tcgaGtexHeatmapGenes,
+    correlationGene1,
+    correlationGene2,
+    tcgaGtexCorrelationGene1,
+    tcgaGtexCorrelationGene2,
+    registerModuleContext
+  ]);
 
   // Context-aware summary cards configuration for active module
   const summaryCards = useMemo(() => {

@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from "react"
 import { Search, Layers, Info, Sliders, HelpCircle, User } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { useAIContext } from "@/components/ai/AIProvider";
 
 interface Spot {
   id: string;
@@ -126,6 +127,22 @@ export default function SpatialPrototypeView() {
     canvasY: number;
   } | null>(null);
   
+  const { registerModuleContext } = useAIContext();
+
+  // Sync state to PDACopilot
+  useEffect(() => {
+    registerModuleContext({
+      module: "Spatial",
+      gene: activeGene,
+      dataset: "GSE274103: Patient Tumor Spatial Transcriptomics",
+      currentFigure: "Spatial Spot Map",
+      spatialStats: {
+        sampleId: selectedPatient,
+        currentViewMode: viewMode === "he_only" ? "H&E Stain" : viewMode === "he_spots" ? "H&E + Visium Spots" : "Expression Heatmap"
+      }
+    });
+  }, [activeGene, selectedPatient, viewMode, registerModuleContext]);
+
   // Base Path for Static Files (Next.js config basePath)
   const basePath = "/PAAD-SBRT-GEx-Dashboard"; 
   const chunkCacheRef = React.useRef<Map<number, ArrayBuffer>>(new Map());

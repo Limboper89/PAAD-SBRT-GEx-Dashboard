@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AIProvider } from "@/components/ai/AIProvider";
+import { AIButton } from "@/components/ai/AIButton";
+import { AIChatPanel } from "@/components/ai/AIChatPanel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,8 +30,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans min-h-full bg-slate-950 text-slate-100 flex flex-col antialiased`}
       >
-        {children}
+        <AIProvider>
+          {children}
+          <AIButton />
+          <AIChatPanel />
+        </AIProvider>
       </body>
     </html>
   );
 }
+
