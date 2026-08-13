@@ -1,13 +1,14 @@
-// ChatMessage.tsx - Custom Markdown Renderer & Evidence Tag Renderer for PDACopilot
+// ChatMessage.tsx - Single Source of Truth Evidence & Confidence Renderer with Scientific AI-Draft Disclaimer Notice
 
 "use client";
 
 import React, { useState } from "react";
 import { ChatMessageItem } from "./AIProvider";
-import { Copy, Check, RefreshCw, Bot, User, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Copy, Check, RefreshCw, Bot, User, ShieldCheck, Terminal, AlertCircle, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
 
 export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; onRetry?: () => void }) {
   const [copied, setCopied] = useState<boolean>(false);
+  const [showDebugPlan, setShowDebugPlan] = useState<boolean>(false);
 
   const handleCopy = async () => {
     try {
@@ -19,7 +20,6 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
     }
   };
 
-  // Modern clean Markdown parser (supporting bold, code blocks, bullet points, headers, tables, callouts)
   const renderMarkdown = (text: string) => {
     let lines = text.split("\n");
     let htmlLines: React.ReactNode[] = [];
@@ -31,13 +31,11 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
       if (line.trim().startsWith("|") && line.trim().endsWith("|")) {
         inTable = true;
         const cols = line.split("|").slice(1, -1).map(c => c.trim());
-        // Ignore separator row like |---|---|
         if (!cols.every(c => /^:?-+:?$/.test(c))) {
           tableRows.push(cols);
         }
         return;
       } else if (inTable) {
-        // Flush table
         inTable = false;
         const header = tableRows[0];
         const body = tableRows.slice(1);
@@ -84,7 +82,7 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
         return;
       }
 
-      // Section tags like [Portal Observation]
+      // Section tags
       if (line.includes("[Portal Observation]") || line.includes("[Published Biological Knowledge]") || line.includes("[Hypothesis]")) {
         let tagColor = "text-indigo-400 border-indigo-900/60 bg-indigo-950/40";
         if (line.includes("[Portal Observation]")) tagColor = "text-cyan-400 border-cyan-900/60 bg-cyan-950/40";
@@ -123,7 +121,6 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
     return htmlLines;
   };
 
-  // Helper for inline bold, code backticks, and italic
   const parseInline = (text: string): React.ReactNode => {
     const parts = text.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
     return parts.map((part, idx) => {
@@ -145,6 +142,17 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
   };
 
   const isUser = message.role === "user";
+  const confidenceValue = message.confidence || message.evidence?.confidence || "High";
+  const provenanceItems = message.provenanceItems || [];
+
+  const intent = message.queryPlanDebug?.intent || "";
+  const isDraftAction = 
+    intent === "manuscript_text" || 
+    intent === "discussion_text" || 
+    intent === "presentation_summary" ||
+    message.content.toLowerCase().includes("draft manuscript") ||
+    message.content.toLowerCase().includes("draft discussion") ||
+    message.content.toLowerCase().includes("presentation summary");
 
   return (
     <div className={`flex gap-2.5 my-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -167,6 +175,15 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
             <span>{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             {!isUser && (
               <div className="flex items-center gap-1">
+                {message.queryPlanDebug && (
+                  <button
+                    onClick={() => setShowDebugPlan(!showDebugPlan)}
+                    className="text-slate-400 hover:text-cyan-400 p-0.5 rounded transition-colors flex items-center gap-0.5"
+                    title="Toggle Router Debug Info"
+                  >
+                    <Terminal className="w-3 h-3" />
+                  </button>
+                )}
                 <button
                   onClick={handleCopy}
                   className="hover:text-cyan-400 p-0.5 rounded transition-colors"
@@ -188,37 +205,57 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
           </div>
         </div>
 
-        <div className="space-y-1">{renderMarkdown(message.content)}</div>
+        {/* Scientific AI-Draft Disclaimer Notice for Draft/Presentation actions */}
+        {!isUser && isDraftAction && (
+          <div className="mb-2.5 px-2.5 py-1.5 rounded bg-amber-950/30 border border-amber-800/40 text-[10px] text-amber-300/90 flex items-center gap-1.5 leading-tight">
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>AI-assisted draft — independently verify numerical results, citations, biological interpretations, and scientific claims before use.</span>
+          </div>
+        )}
 
-        {/* Evidence Tags Badge Block for Assistant Messages */}
-        {!isUser && message.evidence && (
-          <div className="mt-3 pt-2 border-t border-slate-800/80 text-[10px] bg-slate-950/60 -mx-3 -mb-3 p-2.5 rounded-b-lg">
-            <div className="flex items-center gap-1.5 font-semibold text-cyan-400 mb-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+        {/* Debug Query Plan Drawer */}
+        {!isUser && showDebugPlan && message.queryPlanDebug && (
+          <div className="mb-2 p-2 rounded bg-slate-950 border border-cyan-900/60 font-mono text-[10px] text-cyan-300">
+            <div className="font-bold text-slate-300 border-b border-slate-800 pb-1 mb-1">🔍 Query Router Plan</div>
+            <div>Intent: <span className="text-amber-300">{message.queryPlanDebug.intent}</span></div>
+            <div>Target Datasets: <span className="text-cyan-400">{message.queryPlanDebug.targetDatasets.join(", ")}</span></div>
+            <div>Reasoning: <span className="text-slate-400">{message.queryPlanDebug.reasoning}</span></div>
+          </div>
+        )}
+
+        {/* Message Content */}
+        <div className="prose prose-invert max-w-none text-xs">
+          {renderMarkdown(message.content)}
+        </div>
+
+        {/* Evidence Used Trace */}
+        {!isUser && provenanceItems.length > 0 && (
+          <div className="mt-3 pt-2 border-t border-slate-800/80 text-[10px]">
+            <div className="flex items-center justify-between font-semibold text-slate-300 mb-1">
               <span>Evidence Used</span>
-              <span className="ml-auto text-slate-400 font-normal">
-                Confidence: <strong className="text-emerald-400">{message.evidence.confidence}</strong>
+              <span className={`px-1.5 py-0.2 rounded font-bold text-[9px] ${
+                confidenceValue === "High" ? "bg-emerald-950 text-emerald-400 border border-emerald-800" :
+                confidenceValue === "Moderate" ? "bg-amber-950 text-amber-400 border border-amber-800" :
+                "bg-rose-950 text-rose-400 border border-rose-800"
+              }`}>
+                Confidence: {confidenceValue}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-1 text-[10.5px]">
-              <div className="flex items-center gap-1">
-                {message.evidence.tcga ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <XCircle className="w-3 h-3 text-slate-500" />}
-                <span className={message.evidence.tcga ? "text-slate-200" : "text-slate-500"}>TCGA–GTEx</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {message.evidence.sbrt ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <XCircle className="w-3 h-3 text-slate-500" />}
-                <span className={message.evidence.sbrt ? "text-slate-200" : "text-slate-500"}>SBRT Bulk</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {message.evidence.singleNucleus ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <XCircle className="w-3 h-3 text-slate-500" />}
-                <span className={message.evidence.singleNucleus ? "text-slate-200" : "text-slate-500"}>Single Nucleus</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {message.evidence.spatial ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <XCircle className="w-3 h-3 text-slate-500" />}
-                <span className={message.evidence.spatial ? "text-slate-200" : "text-slate-500"}>
-                  Spatial {message.evidence.spatial ? "" : "(not queried)"}
-                </span>
-              </div>
+            <div className="space-y-0.5 text-slate-400">
+              {provenanceItems.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-1">
+                  {item.status === "success" ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : item.status === "failed" ? (
+                    <XCircle className="w-3 h-3 text-rose-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <MinusCircle className="w-3 h-3 text-slate-500 shrink-0 mt-0.5" />
+                  )}
+                  <span className={item.status === "success" ? "text-slate-300" : "text-slate-500"}>
+                    <strong className="text-slate-200">{item.datasetName}</strong> — {item.queryDetails || item.status}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}

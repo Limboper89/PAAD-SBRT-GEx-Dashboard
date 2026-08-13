@@ -1,50 +1,52 @@
-// AIProvider.tsx - Global React Context Provider for PDACopilot
+// AIProvider.tsx - Global Context & Intent-Driven Copilot Provider for PDAC BioPortal (v1.2 Conversation-Aware)
 
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { intentRouter, QueryPlan, QueryExecutionResult, ProvenanceItem } from "./IntentRouter";
+import { buildContextualPrompt, buildSystemPrompt, generateExportMetadata, EvidenceChecklist } from "./PromptBuilder";
 import { sendToAI } from "./AIClient";
-import { buildSystemPrompt, buildContextualPrompt, generateExportMetadata, EvidenceChecklist } from "./PromptBuilder";
 import { CURRENT_AI_PROVIDER, AI_PROVIDERS } from "./aiConfig";
 
 export interface ActiveModuleContext {
-  module: string;            // 'TCGA-GTEx' | 'SBRT Bulk' | 'Single Nucleus' | 'Spatial'
-  gene: string | null;
+  module: string;
   dataset: string;
-  currentFigure: string;
+  gene?: string | null;
   heatmapGenes: string[];
+  currentFigure: string;
   filters: {
     log2fcThreshold?: number;
     pValueThreshold?: number;
-    adjPValueThreshold?: number;
+    fdrThreshold?: number;
   };
   tcgaStats?: {
     log2FC?: number;
+    pVal?: number;
     pval?: number;
+    qVal?: number;
     qval?: number;
-    tumorMean?: number;
-    normalMean?: number;
     correlationGene1?: string | null;
     correlationGene2?: string | null;
   };
   sbrtStats?: {
+    prePostFC?: number;
     log2FC?: number;
+    pVal?: number;
     p_value?: number;
     adj_p_value?: number;
-    preMean?: number;
-    postMean?: number;
     treatment?: string;
   };
   singleNucleusStats?: {
-    selectedCellType?: string | null;
-    selectedCluster?: string | null;
+    cellType?: string;
+    selectedCellType?: string;
+    pctExpressed?: number;
     totalNuclei?: string;
     markerGenes?: string[];
-    umapCoordinates?: { x: number; y: number } | null;
   };
   spatialStats?: {
-    sampleId?: string | null;
-    coordinates?: { x: number; y: number } | null;
+    spotCluster?: string;
+    sampleId?: string;
+    maxExpr?: number;
     currentViewMode?: string;
   };
 }
@@ -55,51 +57,56 @@ export interface ChatMessageItem {
   content: string;
   timestamp: Date;
   evidence?: EvidenceChecklist;
+  provenanceText?: string;
+  provenanceItems?: ProvenanceItem[];
+  confidence?: "High" | "Moderate" | "Low";
+  queryPlanDebug?: QueryPlan;
   isError?: boolean;
 }
 
 interface AIContextType {
-  messages: ChatMessageItem[];
   isChatOpen: boolean;
   isTyping: boolean;
   activeContext: ActiveModuleContext;
+  messages: ChatMessageItem[];
   currentProviderName: string;
-  setChatOpen: (open: boolean) => void;
   toggleChatOpen: () => void;
+  setChatOpen: (open: boolean) => void;
   sendMessage: (text: string, taskType?: string) => Promise<void>;
-  clearChat: () => void;
-  retryLastMessage: () => Promise<void>;
-  downloadSummary: () => void;
   registerModuleContext: (partialContext: Partial<ActiveModuleContext>) => void;
+  clearChat: () => void;
+  downloadSummary: () => void;
+  retryLastMessage: () => Promise<void>;
 }
 
-const defaultContextState: ActiveModuleContext = {
+const defaultModuleContext: ActiveModuleContext = {
   module: "SBRT Bulk",
+  dataset: "GSE225767",
   gene: "NFE2L2",
-  dataset: "GSE225767: Ductal Adenocarcinoma Bulk RNA-seq",
-  currentFigure: "Volcano Plot",
-  heatmapGenes: ["NFE2L2", "PHGDH", "PSAT1", "CCDC9B", "CA12"],
-  filters: {
-    log2fcThreshold: 1.0,
-    pValueThreshold: 0.05
-  }
+  heatmapGenes: ["NFE2L2", "SLC1A5", "PHGDH", "PSPH", "SHMT2", "MTHFD1", "MTHFD2"],
+  currentFigure: "Volcano Plot (Pre vs Post SBRT)",
+  filters: { log2fcThreshold: 1.0, pValueThreshold: 0.05 }
 };
 
-const AIContext = createContext<AIContextType | undefined>(undefined);
+const AIContext = createContext<AIContextType | null>(null);
 
 export function AIProvider({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [isTyping, setIsTyping] = useState<boolean>(false);
-  const [activeContext, setActiveContext] = useState<ActiveModuleContext>(defaultContextState);
+  const [activeContext, setActiveContext] = useState<ActiveModuleContext>(defaultModuleContext);
+
+  const currentProviderName = useMemo(() => {
+    return AI_PROVIDERS[CURRENT_AI_PROVIDER]?.name || "Llama Groq Proxy";
+  }, []);
 
   const initialGreeting: ChatMessageItem = useMemo(() => ({
-    id: "init-1",
+    id: "init-welcome",
     role: "assistant",
-    content: `Welcome to **PDACopilot** — your context-aware transcriptomic copilot for pancreatic cancer research.
+    content: `Welcome to **PDACopilot** — your global dataset-aware transcriptomic copilot for pancreatic cancer research.
 
-I automatically monitor your active **gene**, **dataset**, **visualizations**, **cell types**, and **statistical filters** in real time.
+I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single-Nucleus Atlas (GSE202051)**, and **Spatial Visium (GSE274103)** datasets independently of whichever page you are currently viewing.
 
-*How can I assist your transcriptomic analysis today?*`,
+*How can I assist your transcriptomic research today?*`,
     timestamp: new Date(),
     evidence: {
       tcga: true,
@@ -107,28 +114,37 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
       singleNucleus: true,
       spatial: true,
       confidence: 'High'
-    }
+    },
+    provenanceItems: [
+      { datasetId: "tcga_gtex", datasetName: "TCGA-PAAD vs GTEx", status: "success", queryDetails: "Tumor vs normal reference" },
+      { datasetId: "gse225767", datasetName: "SBRT Bulk (GSE225767)", status: "success", queryDetails: "Radiotherapy pre vs post response" },
+      { datasetId: "gse202051", datasetName: "Single-Nucleus (GSE202051)", status: "success", queryDetails: "Cell-type lineage atlas" },
+      { datasetId: "gse274103", datasetName: "Spatial Visium (GSE274103)", status: "success", queryDetails: "Tumor section localization" }
+    ],
+    confidence: "High",
+    provenanceText: `**Global Datasets Available**
+- ✓ **TCGA-PAAD vs GTEx**: Tumor vs normal reference
+- ✓ **SBRT Bulk (GSE225767)**: Radiotherapy pre vs post response
+- ✓ **Single-Nucleus (GSE202051)**: Cell-type lineage atlas
+- ✓ **Spatial Visium (GSE274103)**: Tumor section localization`
   }), []);
 
   const [messages, setMessages] = useState<ChatMessageItem[]>([initialGreeting]);
 
   const registerModuleContext = useCallback((partialContext: Partial<ActiveModuleContext>) => {
-    setActiveContext(prev => {
-      // Merge shallow properties intelligently
-      return {
-        ...prev,
-        ...partialContext,
-        filters: {
-          ...prev.filters,
-          ...(partialContext.filters || {})
-        },
-        heatmapGenes: partialContext.heatmapGenes || prev.heatmapGenes,
-        tcgaStats: partialContext.tcgaStats ? { ...prev.tcgaStats, ...partialContext.tcgaStats } : prev.tcgaStats,
-        sbrtStats: partialContext.sbrtStats ? { ...prev.sbrtStats, ...partialContext.sbrtStats } : prev.sbrtStats,
-        singleNucleusStats: partialContext.singleNucleusStats ? { ...prev.singleNucleusStats, ...partialContext.singleNucleusStats } : prev.singleNucleusStats,
-        spatialStats: partialContext.spatialStats ? { ...prev.spatialStats, ...partialContext.spatialStats } : prev.spatialStats,
-      };
-    });
+    setActiveContext(prev => ({
+      ...prev,
+      ...partialContext,
+      filters: {
+        ...prev.filters,
+        ...(partialContext.filters || {})
+      },
+      heatmapGenes: partialContext.heatmapGenes || prev.heatmapGenes,
+      tcgaStats: partialContext.tcgaStats ? { ...prev.tcgaStats, ...partialContext.tcgaStats } : prev.tcgaStats,
+      sbrtStats: partialContext.sbrtStats ? { ...prev.sbrtStats, ...partialContext.sbrtStats } : prev.sbrtStats,
+      singleNucleusStats: partialContext.singleNucleusStats ? { ...prev.singleNucleusStats, ...partialContext.singleNucleusStats } : prev.singleNucleusStats,
+      spatialStats: partialContext.spatialStats ? { ...prev.spatialStats, ...partialContext.spatialStats } : prev.spatialStats,
+    }));
   }, []);
 
   const toggleChatOpen = useCallback(() => {
@@ -160,20 +176,33 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
       timestamp: new Date()
     };
 
+    // Find previous turn's query plan for conversation-aware dataset resolution
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant" && m.queryPlanDebug);
+    const previousPlan = lastAssistantMsg?.queryPlanDebug;
+
     setMessages(prev => [...prev, userMsg]);
     setIsChatOpen(true);
     setIsTyping(true);
 
     try {
-      const { prompt, evidence } = buildContextualPrompt(userText, activeContext, taskType);
+      // 1. IntentRouter parses intent & resolves dataset using conversation context
+      const plan = await intentRouter.parseIntent(userText, activeContext, previousPlan);
+
+      // 2. IntentRouter executes plan against QueryEngine across datasets
+      const executionResult: QueryExecutionResult = await intentRouter.executeRoute(plan);
+
+      // 3. Build contextual prompt with separated global & current page context
+      const { prompt, evidence, provenanceText } = buildContextualPrompt(userText, activeContext, executionResult);
       const systemPrompt = buildSystemPrompt();
 
+      // 4. Send query payload to AI backend API
       const response = await sendToAI({
         user_message: prompt,
         task: taskType,
         context: {
           system_prompt: systemPrompt,
-          active_module_snapshot: activeContext
+          query_plan: plan,
+          current_page_context: activeContext
         }
       });
 
@@ -183,6 +212,10 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
         content: response.reply,
         timestamp: new Date(),
         evidence,
+        provenanceText,
+        provenanceItems: executionResult.provenance,
+        confidence: executionResult.confidence,
+        queryPlanDebug: plan,
         isError: response.error
       };
 
@@ -194,7 +227,7 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
         {
           id: `error-${Date.now()}`,
           role: "assistant",
-          content: "⚠️ Sorry, PDACopilot encountered an internal error. Please try again.",
+          content: "⚠️ Sorry, PDACopilot encountered an internal error processing your query. Please try again.",
           timestamp: new Date(),
           isError: true
         }
@@ -202,7 +235,7 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
     } finally {
       setIsTyping(false);
     }
-  }, [activeContext]);
+  }, [activeContext, messages]);
 
   const retryLastMessage = useCallback(async () => {
     const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
@@ -212,8 +245,7 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
   }, [messages, sendMessage]);
 
   const downloadSummary = useCallback(() => {
-    const providerName = AI_PROVIDERS[CURRENT_AI_PROVIDER]?.name || "Llama Groq Proxy";
-    const header = generateExportMetadata(activeContext, providerName, "Context-Aware Research Summary");
+    const header = generateExportMetadata(activeContext, currentProviderName, "Context-Aware Research Summary");
 
     let textContent = header + "\n\n# PDACopilot Conversation Log\n\n";
 
@@ -221,52 +253,55 @@ I automatically monitor your active **gene**, **dataset**, **visualizations**, *
       const roleLabel = m.role === "user" ? "USER" : "PDACopilot";
       const timeStr = m.timestamp.toLocaleTimeString();
       textContent += `### [${timeStr}] ${roleLabel}:\n${m.content}\n\n`;
-      if (m.evidence) {
-        textContent += `*Evidence Used: TCGA (${m.evidence.tcga ? '✓' : '✗'}), SBRT (${m.evidence.sbrt ? '✓' : '✗'}), SN (${m.evidence.singleNucleus ? '✓' : '✗'}), Spatial (${m.evidence.spatial ? '✓' : '✗'}) | Confidence: ${m.evidence.confidence}*\n\n`;
+      if (m.provenanceText) {
+        textContent += `${m.provenanceText}\n\n`;
       }
-      textContent += "---\n\n";
     });
 
     const blob = new Blob([textContent], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const geneLabel = activeContext.gene || "gene";
-    a.download = `PDACopilot_Summary_${geneLabel}_${Date.now()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `PDAC_BioPortal_AI_Summary_${Date.now()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [activeContext, messages]);
+  }, [activeContext, currentProviderName, messages]);
 
-  const currentProviderName = AI_PROVIDERS[CURRENT_AI_PROVIDER]?.name || "Llama Proxy";
+  const value = useMemo(() => ({
+    isChatOpen,
+    isTyping,
+    activeContext,
+    messages,
+    currentProviderName,
+    toggleChatOpen,
+    setChatOpen,
+    sendMessage,
+    registerModuleContext,
+    clearChat,
+    downloadSummary,
+    retryLastMessage
+  }), [
+    isChatOpen,
+    isTyping,
+    activeContext,
+    messages,
+    currentProviderName,
+    toggleChatOpen,
+    setChatOpen,
+    sendMessage,
+    registerModuleContext,
+    clearChat,
+    downloadSummary,
+    retryLastMessage
+  ]);
 
-  return (
-    <AIContext.Provider
-      value={{
-        messages,
-        isChatOpen,
-        isTyping,
-        activeContext,
-        currentProviderName,
-        setChatOpen,
-        toggleChatOpen,
-        sendMessage,
-        clearChat,
-        retryLastMessage,
-        downloadSummary,
-        registerModuleContext
-      }}
-    >
-      {children}
-    </AIContext.Provider>
-  );
+  return <AIContext.Provider value={value}>{children}</AIContext.Provider>;
 }
 
 export function useAIContext(): AIContextType {
   const ctx = useContext(AIContext);
-  if (!ctx) {
-    throw new Error("useAIContext must be used within an <AIProvider>");
-  }
+  if (!ctx) throw new Error("useAIContext must be used within an AIProvider");
   return ctx;
 }

@@ -69,22 +69,22 @@ export function QuickActions() {
       handler: () => sendMessage(`Describe the spatial tissue localization and spot expression distribution of ${geneName} in the PDAC tumor section.`, "spatial_localization")
     },
     {
-      label: "Generate manuscript text",
+      label: "Draft manuscript section",
       icon: FileText,
       color: "text-cyan-300 border-cyan-800/60 bg-cyan-950/40 hover:bg-cyan-900/50",
-      handler: () => sendMessage(`Draft a formal scientific Results paragraph for ${geneName} in CSBJ manuscript format based on portal data.`, "manuscript_text")
+      handler: () => sendMessage(`Draft a formal scientific Results paragraph for ${geneName} based ONLY on portal evidence.`, "manuscript_text")
     },
     {
-      label: "Generate discussion",
+      label: "Draft discussion",
       icon: FileText,
       color: "text-blue-300 border-blue-800/60 bg-blue-950/40 hover:bg-blue-900/50",
-      handler: () => sendMessage(`Draft a formal scientific Discussion paragraph linking ${geneName} portal statistics to KRAS signaling and metabolic stress response.`, "discussion_text")
+      handler: () => sendMessage(`Draft a formal scientific Discussion section linking ${geneName} portal statistics to published biological knowledge and metabolic/stress response.`, "discussion_text")
     },
     {
       label: "Presentation summary",
       icon: Presentation,
       color: "text-amber-300 border-amber-800/60 bg-amber-950/40 hover:bg-amber-900/50",
-      handler: () => sendMessage(`Generate bullet points summarizing ${geneName} for a slide presentation or research seminar.`, "presentation_summary")
+      handler: () => sendMessage(`Generate bullet points summarizing ${geneName} key findings, quantitative evidence, biological interpretation, and limitations for a presentation.`, "presentation_summary")
     },
     {
       label: "Cross-module summary",
@@ -120,7 +120,7 @@ export function QuickActions() {
               <button
                 key={idx}
                 onClick={act.handler}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-[11px] font-medium text-left transition-all truncate ${act.color}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-left text-[11px] font-medium transition-all ${act.color}`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{act.label}</span>
