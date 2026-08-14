@@ -20,6 +20,7 @@ export interface DatasetDefinition {
     differentialExpression: boolean;
     singleNucleus: boolean;
     spatialExpression: boolean;
+    pathwayAnalysis?: boolean;
   };
   limitations: string[];
   queryFunctions: string[];
@@ -37,7 +38,8 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
       "tumor versus normal pancreas baseline expression",
       "PDAC differential expression",
       "diagnostic biomarker identification",
-      "tumor-overexpressed therapeutic targets"
+      "tumor-overexpressed therapeutic targets",
+      "pathway enrichment analysis"
     ],
     groups: [
       { id: "tumor", label: "TCGA-PAAD Primary Tumor", sampleCount: 178, description: "Primary Pancreatic Ductal Adenocarcinoma samples from TCGA" },
@@ -48,13 +50,15 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
       "gene_expression_comparison",
       "differential_expression",
       "volcano_analysis",
-      "gene_gene_correlation"
+      "gene_gene_correlation",
+      "pathway_enrichment"
     ],
     capabilities: {
       geneExpression: true,
       differentialExpression: true,
       singleNucleus: false,
-      spatialExpression: false
+      spatialExpression: false,
+      pathwayAnalysis: true
     },
     limitations: [
       "Unmatched cross-study comparison (TCGA vs GTEx batch effects adjusted via Wilcoxon non-parametric testing)",
@@ -62,7 +66,9 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
     ],
     queryFunctions: [
       "queryGeneExpression",
-      "queryDifferentialExpression"
+      "queryDifferentialExpression",
+      "queryPathwayEnrichment",
+      "queryPathwayGSEA"
     ],
     dataPath: "/PAAD-SBRT-GEx-Dashboard/data/tcga_gtex/tcga_gtex_DEG_results.json",
     pairedPrePost: false

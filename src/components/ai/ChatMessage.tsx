@@ -121,9 +121,36 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
     return htmlLines;
   };
 
+  const handleActionClick = (actionText: string) => {
+    const textUpper = actionText.toUpperCase();
+    if (textUpper.includes("OPEN_DEG") || textUpper.includes("VIEW DEG")) {
+      window.location.hash = "deg";
+    } else if (textUpper.includes("OPEN_GSEA") || textUpper.includes("OPEN_PATHWAYS") || textUpper.includes("RUN GSEA") || textUpper.includes("PATHWAY")) {
+      window.location.pathname = "/pathways";
+    } else if (textUpper.includes("OPEN_SPATIAL") || textUpper.includes("SPATIAL")) {
+      window.location.pathname = "/spatial-prototype";
+    } else if (textUpper.includes("OPEN_SINGLE_NUCLEUS") || textUpper.includes("SINGLE NUCLEUS")) {
+      window.location.pathname = "/sn-prototype";
+    } else {
+      window.location.hash = "expression";
+    }
+  };
+
   const parseInline = (text: string): React.ReactNode => {
-    const parts = text.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+    const parts = text.split(/(\[Action:.*?\]|\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
     return parts.map((part, idx) => {
+      if (part.startsWith("[Action:") && part.endsWith("]")) {
+        const actionLabel = part.slice(8, -1).trim();
+        return (
+          <button
+            key={idx}
+            onClick={() => handleActionClick(actionLabel)}
+            className="my-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 hover:text-white font-semibold text-[11px] transition-all shadow-sm cursor-pointer"
+          >
+            <span>🚀 {actionLabel}</span>
+          </button>
+        );
+      }
       if (part.startsWith("**") && part.endsWith("**")) {
         return <strong key={idx} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
       }
@@ -140,6 +167,7 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
       return part;
     });
   };
+
 
   const isUser = message.role === "user";
   const confidenceValue = message.confidence || message.evidence?.confidence || "High";

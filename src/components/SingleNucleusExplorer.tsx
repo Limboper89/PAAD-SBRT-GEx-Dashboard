@@ -5,8 +5,9 @@ import React, {
 } from "react";
 import {
   Search, Info, AlertTriangle, ChevronDown,
-  TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download
+  TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download, Bot
 } from "lucide-react";
+
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
@@ -536,6 +537,21 @@ export default function SingleNucleusExplorer() {
 
   const selPatientInfo = selectedPid !== "ALL" ? patients[selectedPid] : null;
 
+  let aiCtx: any = null;
+  try {
+    aiCtx = useAIContext();
+  } catch (e) {}
+
+  const handleAskCopilotSN = () => {
+    if (aiCtx) {
+      const q = activeGene
+        ? `Which cell populations express ${activeGene} in the single-nucleus PDAC dataset?`
+        : "What cell populations are represented in the single-nucleus PDAC dataset?";
+      aiCtx.sendMessage(q, "cell_type_lineage_expression");
+      aiCtx.setChatOpen(true);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 flex-1 w-full text-slate-300">
       
@@ -562,21 +578,33 @@ export default function SingleNucleusExplorer() {
             GSE202051 · Hwang et al., Nature Genetics (2022)
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 text-[10px] uppercase font-mono tracking-wider">
-          <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Source Atlas</span>{" "}
-            <span className="text-slate-200 font-bold">224,988 nuclei</span>
-          </div>
-          <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Viz Subset</span>{" "}
-            <span className="text-teal-400 font-bold">20,000 nuclei</span>
-          </div>
-          <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Patients</span>{" "}
-            <span className="text-slate-200 font-bold">43 cases</span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAskCopilotSN}
+            className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 px-3 py-1.5 rounded-lg border border-cyan-700/60 transition font-medium text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Ask PDACopilot about single-nucleus cell populations"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Ask PDACopilot</span>
+          </button>
+          <div className="flex flex-wrap gap-2 text-[10px] uppercase font-mono tracking-wider">
+            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+              <span className="text-slate-500">Source Atlas</span>{" "}
+              <span className="text-slate-200 font-bold">224,988 nuclei</span>
+            </div>
+            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+              <span className="text-slate-500">Viz Subset</span>{" "}
+              <span className="text-teal-400 font-bold">20,000 nuclei</span>
+            </div>
+            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
+              <span className="text-slate-500">Patients</span>{" "}
+              <span className="text-slate-200 font-bold">43 cases</span>
+            </div>
           </div>
         </div>
       </div>
+
 
       {/* Main Grid */}
       {loading ? (

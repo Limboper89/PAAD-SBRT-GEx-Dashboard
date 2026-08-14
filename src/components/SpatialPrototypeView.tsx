@@ -1,10 +1,9 @@
-"use client";
-
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Layers, Info, Sliders, HelpCircle, User } from "lucide-react";
+import { Search, Layers, Info, Sliders, HelpCircle, User, Bot } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
+
 
 interface Spot {
   id: string;
@@ -442,6 +441,21 @@ export default function SpatialPrototypeView() {
 
   const offset = getCanvasOffset();
 
+  let aiCtx: any = null;
+  try {
+    aiCtx = useAIContext();
+  } catch (e) {}
+
+  const handleAskCopilotSpatial = () => {
+    if (aiCtx) {
+      const q = activeGene
+        ? `Where is ${activeGene} expressed spatially in Visium section ${selectedPatient}?`
+        : `What spatial gene expression patterns are observed in section ${selectedPatient}?`;
+      aiCtx.sendMessage(q, "spatial_localization");
+      aiCtx.setChatOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Header */}
@@ -455,10 +469,22 @@ export default function SpatialPrototypeView() {
             Human PDAC spatial transcriptomic atlas · 5 treatment-naïve patients · 17,941 unique gene symbols searchable
           </p>
         </div>
-        <div className="text-xxs text-slate-500 font-mono bg-slate-900 border border-slate-800 px-2 py-1 rounded">
-          Resource version: 1.0
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleAskCopilotSpatial}
+            className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 px-3 py-1.5 rounded-lg border border-cyan-700/60 transition font-medium text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Ask PDACopilot about spatial localization"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Ask PDACopilot</span>
+          </button>
+          <div className="text-xxs text-slate-500 font-mono bg-slate-900 border border-slate-800 px-2 py-1 rounded">
+            Resource version: 1.0
+          </div>
         </div>
       </header>
+
 
       {/* Main Layout Grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden">

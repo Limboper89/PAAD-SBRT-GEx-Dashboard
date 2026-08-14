@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "createdAt": "2026-08-14",
+  "collections": [
+    {
+      "database": "Hallmark",
+      "provenance": {
+        "database": "MSigDB Hallmark",
+        "version": "v2024.1.Hs",
+        "species": "Homo sapiens",
+        "identifier": "HGNC gene_symbol",
+        "retrievalDate": "2026-08-14",
+        "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/",
+        "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        "redistributionStatus": "permitted"
+      },
+      "pathwayCount": 50,
+      "totalGenes": 7321,
+      "dataPath": "/PAAD-SBRT-GEx-Dashboard/data/pathways/hallmark.json"
+    },
+    {
+      "database": "Reactome",
+      "provenance": {
+        "database": "Reactome Pathways",
+        "version": "v88",
+        "species": "Homo sapiens",
+        "identifier": "HGNC gene_symbol",
+        "retrievalDate": "2026-08-14",
+        "sourceUrl": "https://reactome.org",
+        "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        "redistributionStatus": "permitted"
+      },
+      "pathwayCount": 1787,
+      "totalGenes": 80448,
+      "dataPath": "/PAAD-SBRT-GEx-Dashboard/data/pathways/reactome.json"
+    },
+    {
+      "database": "GO_BP",
+      "provenance": {
+        "database": "Gene Ontology Biological Process",
+        "version": "GO-2024-05",
+        "species": "Homo sapiens",
+        "identifier": "HGNC gene_symbol",
+        "retrievalDate": "2026-08-14",
+        "sourceUrl": "http://geneontology.org",
+        "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        "redistributionStatus": "permitted"
+      },
+      "pathwayCount": 5393,
+      "totalGenes": 163443,
+      "dataPath": "/PAAD-SBRT-GEx-Dashboard/data/pathways/go_bp.json"
+    }
+  ]
+}

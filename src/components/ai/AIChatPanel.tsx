@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useAIContext } from "./AIProvider";
+import { PORTAL_METADATA } from "./aiConfig";
 import { CurrentContextPanel } from "./CurrentContextPanel";
 import { ChatMessage } from "./ChatMessage";
 import { QuickActions } from "./QuickActions";
@@ -116,12 +117,14 @@ export function AIChatPanel() {
             <div className="flex items-center gap-1.5">
               <h2 className="text-sm font-bold text-slate-100 tracking-tight">PDACopilot</h2>
               <span className="text-[10px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800/60 px-1.5 py-0.5 rounded">
-                v1.2.0
+                v{PORTAL_METADATA.appVersion}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-mono">
-              Backend: <span className="text-slate-300">{currentProviderName}</span>
+            <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+              Backend: <span className="text-cyan-300 font-semibold">{currentProviderName}</span>
             </p>
+
+
           </div>
         </div>
 

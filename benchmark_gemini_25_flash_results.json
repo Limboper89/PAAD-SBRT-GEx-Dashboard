@@ -1,0 +1,467 @@
+{
+  "timestamp": "2026-08-13T08:48:31.432Z",
+  "hasApiKey": false,
+  "apiKeyProvided": "NO - GEMINI_API_KEY required in .env.local",
+  "controlledTraces": [
+    {
+      "id": 1,
+      "question": "Which transcriptomic datasets are available in PDAC BioPortal, and what biological question is each dataset designed to address",
+      "intent": "list_available_datasets",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Listed capability summary: tumor versus normal pancreas baseline expression\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Listed capability summary: radiotherapy (SBRT) pre vs post treatment response\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Listed capability summary: cell-type specific gene expression\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Listed capability summary: spatial gene expression in intact tumor sections\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 2,
+      "question": "What is the expression level of KRAS in PDAC tumor samples compared with normal pancreas?",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved KRAS log2FC=1.9882, FDR=2.0849e-48\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 3,
+      "question": "Which genes are significantly upregulated in TCGA-PAAD compared with normal pancreas, using the default differential-expression criteria",
+      "intent": "differential_expression_list",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Filtered 9447 DEGs (Wilcoxon FDR < 0.05, log2FC >= 1.5)\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 4,
+      "question": "Among the significantly upregulated genes, which ones are most strongly associated with pancreatic cancer biology",
+      "intent": "conversational_followup_analysis",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Query failed — Query failed: no valid gene symbol identified in question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 5,
+      "question": "How is TP53 expressed across the available PDAC transcriptomic datasets?",
+      "intent": "general_gene_query",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved TP53 Pre/Post log2FC=0.0100, p=0.9844\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 6,
+      "question": "Compare PHGDH, PSAT1, and PSPH expression in PDAC tumor versus normal pancreas.",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 7,
+      "question": "What biological processes would you expect to be associated with increased PHGDH expression in PDAC",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 8,
+      "question": "Is NRF2 expression associated with expression of serine-biosynthesis genes in PDAC?",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved NFE2L2 log2FC=2.1233, FDR=2.8911e-50\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 9,
+      "question": "What transcriptomic data are available for PDAC patients receiving SBRT, and what is the structure of the pre- and post-treatment cohorts?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 10,
+      "question": "Which genes change after SBRT in the available PDAC dataset?",
+      "intent": "list_available_datasets",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Listed capability summary: tumor versus normal pancreas baseline expression\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Listed capability summary: radiotherapy (SBRT) pre vs post treatment response\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Listed capability summary: cell-type specific gene expression\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Listed capability summary: spatial gene expression in intact tumor sections\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 11,
+      "question": "Can the SBRT dataset be used to determine whether individual patients changed their gene expression after treatment? Explain why or why not.",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Query failed — Query failed: no valid gene symbol identified in question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 12,
+      "question": "What cell populations can be investigated using the PDAC single-nucleus transcriptomic dataset",
+      "intent": "cell_type_lineage_expression",
+      "targetDatasets": [
+        "gse202051"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 13,
+      "question": "Which genes would you use to identify epithelial/tumor cells in the single-nucleus PDAC dataset?",
+      "intent": "cell_type_lineage_expression",
+      "targetDatasets": [
+        "gse202051"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 14,
+      "question": "What information does the spatial transcriptomics module provide that cannot be obtained from bulk RNA-seq alone?",
+      "intent": "spatial_localization",
+      "targetDatasets": [
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried NFE2L2 spatial distribution in Visium section PDAC-p1\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 15,
+      "question": "Where would you expect EPCAM and KRT19 expression to be localized in a pancreatic tumor, and what would their spatial distribution tell you?",
+      "intent": "spatial_localization",
+      "targetDatasets": [
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried EPCAM spatial distribution in Visium section PDAC-p1\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 16,
+      "question": "How could you integrate bulk RNA-seq, single-nucleus RNA-seq, and spatial transcriptomics to investigate tumor heterogeneity in PDAC",
+      "intent": "cross_module_synthesis",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved NFE2L2 log2FC=2.1233, FDR=2.8911e-50\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Queried NFE2L2 across 224,988 nuclei (Top lineage: Epithelial / Ductal Cells)\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried NFE2L2 spatial distribution in Visium section PDAC-p1\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 17,
+      "question": "I am interested in NRF2-driven metabolic adaptation after radiation. What genes and datasets in PDAC BioPortal should I examine?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 18,
+      "question": "Find the datasets needed to compare tumor versus normal pancreas and determine whether PHGDH, PSAT1, and PSPH are elevated in PDAC.",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 19,
+      "question": "Does PDAC BioPortal demonstrate that serine metabolism causes radiation resistance in pancreatic cancer?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 20,
+      "question": "Using the available PDAC BioPortal datasets, construct a hypothesis explaining how metabolic reprogramming, NRF2 signaling, and tumor heterogeneity could contribute to radiation resistance.",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    }
+  ],
+  "improvedTraces": [
+    {
+      "id": 1,
+      "question": "Which transcriptomic datasets are available in PDAC BioPortal, and what biological question is each dataset designed to address",
+      "intent": "list_available_datasets",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Listed capability summary: tumor versus normal pancreas baseline expression\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Listed capability summary: radiotherapy (SBRT) pre vs post treatment response\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Listed capability summary: cell-type specific gene expression\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Listed capability summary: spatial gene expression in intact tumor sections\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 2,
+      "question": "What is the expression level of KRAS in PDAC tumor samples compared with normal pancreas?",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved KRAS log2FC=1.9882, FDR=2.0849e-48\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 3,
+      "question": "Which genes are significantly upregulated in TCGA-PAAD compared with normal pancreas, using the default differential-expression criteria",
+      "intent": "differential_expression_list",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Filtered 9447 DEGs (Wilcoxon FDR < 0.05, log2FC >= 1.5)\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 4,
+      "question": "Among the significantly upregulated genes, which ones are most strongly associated with pancreatic cancer biology",
+      "intent": "conversational_followup_analysis",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Query failed — Query failed: no valid gene symbol identified in question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 5,
+      "question": "How is TP53 expressed across the available PDAC transcriptomic datasets?",
+      "intent": "general_gene_query",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved TP53 Pre/Post log2FC=0.0100, p=0.9844\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 6,
+      "question": "Compare PHGDH, PSAT1, and PSPH expression in PDAC tumor versus normal pancreas.",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 7,
+      "question": "What biological processes would you expect to be associated with increased PHGDH expression in PDAC",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 8,
+      "question": "Is NRF2 expression associated with expression of serine-biosynthesis genes in PDAC?",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved NFE2L2 log2FC=2.1233, FDR=2.8911e-50\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 9,
+      "question": "What transcriptomic data are available for PDAC patients receiving SBRT, and what is the structure of the pre- and post-treatment cohorts?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 10,
+      "question": "Which genes change after SBRT in the available PDAC dataset?",
+      "intent": "list_available_datasets",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Listed capability summary: tumor versus normal pancreas baseline expression\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Listed capability summary: radiotherapy (SBRT) pre vs post treatment response\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Listed capability summary: cell-type specific gene expression\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Listed capability summary: spatial gene expression in intact tumor sections\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 11,
+      "question": "Can the SBRT dataset be used to determine whether individual patients changed their gene expression after treatment? Explain why or why not.",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Query failed — Query failed: no valid gene symbol identified in question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 12,
+      "question": "What cell populations can be investigated using the PDAC single-nucleus transcriptomic dataset",
+      "intent": "cell_type_lineage_expression",
+      "targetDatasets": [
+        "gse202051"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 13,
+      "question": "Which genes would you use to identify epithelial/tumor cells in the single-nucleus PDAC dataset?",
+      "intent": "cell_type_lineage_expression",
+      "targetDatasets": [
+        "gse202051"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Low\n",
+      "confidence": "Low",
+      "mismatchDetected": false
+    },
+    {
+      "id": 14,
+      "question": "What information does the spatial transcriptomics module provide that cannot be obtained from bulk RNA-seq alone?",
+      "intent": "spatial_localization",
+      "targetDatasets": [
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried NFE2L2 spatial distribution in Visium section PDAC-p1\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 15,
+      "question": "Where would you expect EPCAM and KRT19 expression to be localized in a pancreatic tumor, and what would their spatial distribution tell you?",
+      "intent": "spatial_localization",
+      "targetDatasets": [
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried EPCAM spatial distribution in Visium section PDAC-p1\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 16,
+      "question": "How could you integrate bulk RNA-seq, single-nucleus RNA-seq, and spatial transcriptomics to investigate tumor heterogeneity in PDAC",
+      "intent": "cross_module_synthesis",
+      "targetDatasets": [
+        "tcga_gtex",
+        "gse225767",
+        "gse202051",
+        "gse274103"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved NFE2L2 log2FC=2.1233, FDR=2.8911e-50\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ✓ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Queried NFE2L2 across 224,988 nuclei (Top lineage: Epithelial / Ductal Cells)\n- ✓ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Queried NFE2L2 spatial distribution in Visium section PDAC-p1\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 17,
+      "question": "I am interested in NRF2-driven metabolic adaptation after radiation. What genes and datasets in PDAC BioPortal should I examine?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 18,
+      "question": "Find the datasets needed to compare tumor versus normal pancreas and determine whether PHGDH, PSAT1, and PSPH are elevated in PDAC.",
+      "intent": "tumor_vs_normal_comparison",
+      "targetDatasets": [
+        "tcga_gtex"
+      ],
+      "evidenceText": "**Evidence Used**\n- ✓ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Retrieved PHGDH log2FC=-0.6031, FDR=2.9223e-12\n- ○ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Not queried for this question\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: High\n",
+      "confidence": "High",
+      "mismatchDetected": false
+    },
+    {
+      "id": 19,
+      "question": "Does PDAC BioPortal demonstrate that serine metabolism causes radiation resistance in pancreatic cancer?",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    },
+    {
+      "id": 20,
+      "question": "Using the available PDAC BioPortal datasets, construct a hypothesis explaining how metabolic reprogramming, NRF2 signaling, and tumor heterogeneity could contribute to radiation resistance.",
+      "intent": "radiotherapy_treatment_response",
+      "targetDatasets": [
+        "gse225767"
+      ],
+      "evidenceText": "**Evidence Used**\n- ○ **TCGA-PAAD vs GTEx Pancreas Normal Reference**: Not queried for this question\n- ✓ **PDAC SBRT Radiotherapy Response Cohort (GSE225767)**: Retrieved NFE2L2 Pre/Post log2FC=0.2967, p=0.2267\n- ○ **PDAC Single-Nucleus Reference Atlas (GSE202051)**: Not queried for this question\n- ○ **Patient Tumor Visium Spatial Transcriptomics (GSE274103)**: Not queried for this question\n**Confidence**: Moderate\n",
+      "confidence": "Moderate",
+      "mismatchDetected": false
+    }
+  ]
+}

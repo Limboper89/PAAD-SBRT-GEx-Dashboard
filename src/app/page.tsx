@@ -10,7 +10,8 @@ import {
   Activity, 
   HelpCircle, 
   Cpu,
-  Info
+  Info,
+  GitFork
 } from "lucide-react";
 import VolcanoPlot from "@/components/VolcanoPlot";
 import Heatmap from "@/components/Heatmap";
@@ -22,7 +23,10 @@ import AboutView from "@/components/AboutView";
 import SingleNucleusExplorer from "@/components/SingleNucleusExplorer";
 import SpatialTranscriptomicsView from "@/components/SpatialPrototypeView";
 import SummaryCard from "@/components/SummaryCard";
+import PathwayExplorer from "@/components/pathways/PathwayExplorer";
 import { useAIContext } from "@/components/ai/AIProvider";
+import { RankedGene } from "@/utils/pathwayEngine";
+import { DegTransferMetadata } from "@/components/GeneTable";
 
 interface GeneData {
   gene_name: string;
@@ -63,7 +67,10 @@ export default function Dashboard() {
   const [activeStudy, setActiveStudy] = useState<string>("GSE225767");
   // Hard‑coded base path for static export
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
-  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "about">("de");
+  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "about" | "pathway">("de");
+  const [pathwayInputGenes, setPathwayInputGenes] = useState<string[] | undefined>(undefined);
+  const [pathwayInputRankedGenes, setPathwayInputRankedGenes] = useState<RankedGene[] | undefined>(undefined);
+  const [pathwayInputMetadata, setPathwayInputMetadata] = useState<DegTransferMetadata | undefined>(undefined);
   
   // Data States (SBRT)
   const [bulkData, setBulkData] = useState<GeneData[]>([]);
@@ -739,6 +746,18 @@ export default function Dashboard() {
             <Layers className="w-4 h-4" />
             Bulk Transcriptomics
           </button>
+
+          <button
+            onClick={() => setActiveTab("pathway")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === "pathway"
+                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <GitFork className="w-4 h-4 text-teal-400" />
+            Pathway Explorer
+          </button>
           
           <button
             onClick={() => { setActiveTab("sn"); setActiveStudy("GSE202051"); }}
@@ -821,7 +840,7 @@ export default function Dashboard() {
           )}
 
           {activeTab === "de" && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+            <div className="flex flex-col gap-6">
               <div className="h-[480px]">
                 <VolcanoPlot
                   data={activeBulkData}
@@ -830,12 +849,18 @@ export default function Dashboard() {
                   isTcgaGtex={activeStudy === "TCGA_GTEX"}
                 />
               </div>
-              <div className="flex">
+              <div className="w-full">
                 <GeneTable
                   data={activeBulkData}
                   selectedGene={selectedGene}
                   onSelectGene={handleSelectGene}
                   isTcgaGtex={activeStudy === "TCGA_GTEX"}
+                  onRunPathwayAnalysis={(genes, rankedGenes, metadata) => {
+                    setPathwayInputGenes(genes);
+                    setPathwayInputRankedGenes(rankedGenes);
+                    setPathwayInputMetadata(metadata);
+                    setActiveTab("pathway");
+                  }}
                 />
               </div>
             </div>
@@ -937,6 +962,19 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "pathway" && (
+            <div className="flex-1">
+              <PathwayExplorer
+                basePath={basePath}
+                initialDatasetId={activeStudy === "TCGA_GTEX" ? "tcga_gtex" : "gse225767"}
+                initialDegList={pathwayInputGenes}
+                initialRankedGenes={pathwayInputRankedGenes}
+                initialMetadata={pathwayInputMetadata}
+                onSelectGene={handleSelectGene}
+              />
             </div>
           )}
 

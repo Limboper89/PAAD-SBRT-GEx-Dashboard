@@ -1,6 +1,9 @@
 // QueryEngine.ts - Autonomous Data Query Executor with Universal Environment Loading, Strict Data Grounding, & Precise Statistical Terminology
 
 import { DATASET_REGISTRY, DatasetDefinition, getDatasetMetadata } from "./DatasetRegistry";
+import { PathwayEnrichmentResult } from "@/types/pathway";
+import { EvidenceObject } from "./ToolRegistry";
+import { runORA, runGSEA } from "@/utils/pathwayEngine";
 
 export interface VerifiedGeneMetrics {
   log2FC: number;
@@ -23,6 +26,7 @@ export interface VerifiedGeneMetrics {
 }
 
 export interface GeneQueryResult {
+  type: "gene";
   datasetId: string;
   datasetName: string;
   gene: string;
@@ -107,11 +111,12 @@ const dataCache: Map<string, any> = new Map();
 async function fetchCachedJson(url: string): Promise<any> {
   if (dataCache.has(url)) return dataCache.get(url);
 
-  if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+  if (typeof window === "undefined") {
     try {
-      const fs = require("fs");
-      const path = require("path");
-      const cleanPath = url.replace("/PAAD-SBRT-GEx-Dashboard", "");
+      const req = eval("require");
+      const fs = req("fs");
+      const path = req("path");
+      const cleanPath = url.replace(/^\/PAAD-SBRT-GEx-Dashboard/, "");
       const targetFile = path.join(process.cwd(), "public", cleanPath);
       if (fs.existsSync(targetFile)) {
         const json = JSON.parse(fs.readFileSync(targetFile, "utf-8"));
@@ -123,9 +128,18 @@ async function fetchCachedJson(url: string): Promise<any> {
     }
   }
 
-  const targetUrl = url.startsWith("http") ? url : (typeof window !== "undefined" ? url : `http://localhost:3000${url}`);
-  const res = await fetch(targetUrl);
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${targetUrl}`);
+  const cleanUrl = url.replace(/^\/PAAD-SBRT-GEx-Dashboard/, "");
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const json = await res.json();
+      dataCache.set(url, json);
+      return json;
+    }
+  } catch (e) {}
+
+  const res = await fetch(cleanUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${cleanUrl}`);
   const json = await res.json();
   dataCache.set(url, json);
   return json;
@@ -134,18 +148,12 @@ async function fetchCachedJson(url: string): Promise<any> {
 async function fetchCachedCsv(url: string): Promise<string> {
   if (dataCache.has(url)) return dataCache.get(url);
 
-  if (typeof window === "undefined" && process.env.NODE_ENV !== "production") {
+  if (typeof window === "undefined") {
     try {
-      const fs = require("fs");
-      const path = require("path");
-      const baseName = path.basename(url);
-      const rootFile = path.join(process.cwd(), baseName);
-      if (fs.existsSync(rootFile)) {
-        const text = fs.readFileSync(rootFile, "utf-8");
-        dataCache.set(url, text);
-        return text;
-      }
-      const cleanPath = url.replace("/PAAD-SBRT-GEx-Dashboard", "");
+      const req = eval("require");
+      const fs = req("fs");
+      const path = req("path");
+      const cleanPath = url.replace(/^\/PAAD-SBRT-GEx-Dashboard/, "");
       const targetFile = path.join(process.cwd(), "public", cleanPath);
       if (fs.existsSync(targetFile)) {
         const text = fs.readFileSync(targetFile, "utf-8");
@@ -157,9 +165,19 @@ async function fetchCachedCsv(url: string): Promise<string> {
     }
   }
 
-  const targetUrl = url.startsWith("http") ? url : (typeof window !== "undefined" ? url : `http://localhost:3000${url}`);
-  const res = await fetch(targetUrl);
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${targetUrl}`);
+
+  const cleanUrl = url.replace(/^\/PAAD-SBRT-GEx-Dashboard/, "");
+  try {
+    const res = await fetch(url);
+    if (res.ok) {
+      const text = await res.text();
+      dataCache.set(url, text);
+      return text;
+    }
+  } catch (e) {}
+
+  const res = await fetch(cleanUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${cleanUrl}`);
   const text = await res.text();
   dataCache.set(url, text);
   return text;
@@ -178,7 +196,8 @@ function formatStatNum(val: number | undefined): string {
 }
 
 export class QueryEngine {
-  private basePath = "/PAAD-SBRT-GEx-Dashboard";
+  private basePath = (typeof window !== "undefined" && window.location.pathname.startsWith("/PAAD-SBRT-GEx-Dashboard")) ? "/PAAD-SBRT-GEx-Dashboard" : "";
+
   private knownGeneSymbols: Set<string> = new Set();
   private isIndexLoaded: boolean = false;
 
@@ -350,6 +369,7 @@ export class QueryEngine {
 
     if (!dataset) {
       return {
+        type: "gene",
         datasetId,
         datasetName: datasetId,
         gene: geneSymbol,
@@ -374,6 +394,7 @@ export class QueryEngine {
 
           if (!validateNumeric(log2FC) || !validateNumeric(pval, [0, 1])) {
             return {
+              type: "gene",
               datasetId: "tcga_gtex",
               datasetName: dataset.name,
               gene: item.symbol || upperGene,
@@ -417,6 +438,7 @@ export class QueryEngine {
           };
 
           return {
+            type: "gene",
             datasetId: "tcga_gtex",
             datasetName: dataset.name,
             gene: item.symbol || upperGene,
@@ -452,6 +474,7 @@ export class QueryEngine {
 
           if (!validateNumeric(log2FC) || !validateNumeric(pval, [0, 1])) {
             return {
+              type: "gene",
               datasetId: "gse225767",
               datasetName: dataset.name,
               gene: actualGeneName,
@@ -509,6 +532,7 @@ export class QueryEngine {
           };
 
           return {
+            type: "gene",
             datasetId: "gse225767",
             datasetName: dataset.name,
             gene: actualGeneName,
@@ -525,6 +549,7 @@ export class QueryEngine {
     }
 
     return {
+      type: "gene",
       datasetId,
       datasetName: dataset.name,
       gene: geneSymbol,
@@ -579,12 +604,14 @@ export class QueryEngine {
           }));
 
         return {
+          type: "differential",
           datasetId: "tcga_gtex",
           datasetName: dataset.name,
           totalGenes: degResults.length,
           filteredCount: sig.length,
           topUpregulated: up,
           topDownregulated: down,
+          topDegs: up,
           thresholdsUsed: { log2FC: log2FCThresh, fdr: pValThresh },
           success: true
         };
@@ -621,13 +648,15 @@ export class QueryEngine {
         const down = [...sig].filter(d => d.log2FC < 0).sort((a, b) => a.log2FC - b.log2FC).slice(0, limit);
 
         return {
+          type: "differential",
           datasetId: "gse225767",
           datasetName: dataset.name,
           totalGenes: parsed.length,
           filteredCount: sig.length,
           topUpregulated: up,
           topDownregulated: down,
-          thresholdsUsed: { log2FC: log2FCThresh, pValue: pValThresh },
+          topDegs: up,
+          thresholdsUsed: { log2FC: log2FCThresh, fdr: pValThresh },
           success: true
         };
       }
@@ -720,6 +749,236 @@ export class QueryEngine {
       success: false
     };
   }
+
+  async queryPathwayEnrichment(
+    datasetId: string = "tcga_gtex",
+    database: string = "All",
+    fdrThreshold: number = 0.05
+  ) {
+    const filename = datasetId === "gse225767" ? "sbrt_pathways.json" : "tcga_gtex_pathways.json";
+    try {
+      const data = await fetchCachedJson(`${this.basePath}/data/pathways/${filename}`);
+      if (data && data.oraResults) {
+        const filtered = data.oraResults.filter((r: PathwayEnrichmentResult) => {
+          if (r.adjPValue > fdrThreshold) return false;
+          if (database !== "All" && r.database !== database) return false;
+          return true;
+        });
+
+        return {
+          datasetId: data.metadata.datasetId,
+          datasetName: data.metadata.datasetName,
+          comparisonLabel: data.metadata.comparisonLabel,
+          backgroundUniverseSize: data.metadata.backgroundUniverseSize,
+          totalEnrichedPathways: filtered.length,
+          pathways: filtered.map((r: PathwayEnrichmentResult) => ({
+            pathwayId: r.pathwayId,
+            pathwayName: r.pathwayName,
+            database: r.database,
+            pValue: r.pValue,
+            adjPValue: r.adjPValue,
+            foldEnrichment: r.foldEnrichment,
+            overlapCount: r.overlapCount,
+            geneSetSize: r.geneSetSize,
+            direction: r.direction,
+            contributingGenes: r.contributingGenes
+          })),
+          success: true
+        };
+      }
+    } catch (e) {
+      console.error("QueryEngine error in queryPathwayEnrichment:", e);
+    }
+
+    return {
+      datasetId,
+      datasetName: "Pathway Analysis",
+      comparisonLabel: "Pathways",
+      backgroundUniverseSize: 17943,
+      totalEnrichedPathways: 0,
+      pathways: [],
+      success: false
+    };
+  }
+  async queryPathwayGSEA(
+    datasetId: string = "gse225767",
+    database: string = "All",
+    fdrThreshold: number = 0.05
+  ) {
+    const filename = datasetId === "gse225767" ? "sbrt_pathways.json" : "tcga_gtex_pathways.json";
+    try {
+      const data = await fetchCachedJson(`${this.basePath}/data/pathways/${filename}`);
+      if (data && data.gseaResults) {
+        const filtered = data.gseaResults.filter((r: PathwayEnrichmentResult) => {
+          if (r.adjPValue > fdrThreshold) return false;
+          if (database !== "All" && database !== "Hallmark" && r.database !== database) return false;
+          if (database === "Hallmark" && r.database !== "Hallmark" && !r.pathwayName.toUpperCase().includes("HALLMARK")) return false;
+          return true;
+        });
+
+        const datasetName = datasetId === "gse225767" ? "PDAC SBRT Radiotherapy Response (GSE225767)" : "TCGA-PAAD vs GTEx Normal Reference";
+
+        const evidenceObject: EvidenceObject = {
+          dataset: datasetId,
+          datasetLabel: datasetName,
+          analysisType: "GSEA",
+          comparison: {
+            type: datasetId === "gse225767" ? "post_vs_pre_sbrt" : "tumor_vs_normal",
+            groupA: datasetId === "gse225767" ? "Post-SBRT (n=29)" : "TCGA Tumor (n=178)",
+            groupB: datasetId === "gse225767" ? "Pre-SBRT (n=26)" : "GTEx Normal (n=167)"
+          },
+          studyDesign: {
+            paired: false,
+            independentCohorts: true,
+            sampleCounts: datasetId === "gse225767" ? { pre: 26, post: 29 } : { tumor: 178, normal: 167 }
+          },
+          parameters: { database, fdrThreshold },
+          results: filtered,
+          statistics: { totalEnriched: filtered.length, fdrThreshold },
+          source: "BioPortal",
+          computed: true,
+          validated: true,
+          causalInferenceAllowed: false,
+          provenance: { engine: "pathwayEngine.ts (Rank-Sum GSEA)", version: "2.0", dataPath: `/data/pathways/${filename}` }
+        };
+
+        return {
+          datasetId: data.metadata.datasetId,
+          datasetName: data.metadata.datasetName,
+          comparisonLabel: data.metadata.comparisonLabel,
+          totalEnrichedPathways: filtered.length,
+          pathways: filtered.map((r: PathwayEnrichmentResult) => ({
+            pathwayId: r.pathwayId,
+            pathwayName: r.pathwayName,
+            database: r.database,
+            nes: r.nes,
+            pValue: r.pValue,
+            adjPValue: r.adjPValue,
+            direction: r.direction,
+            leadingEdge: r.contributingGenes || []
+          })),
+          evidenceObject,
+          success: true
+        };
+      }
+    } catch (e) {
+      console.error("QueryEngine error in queryPathwayGSEA:", e);
+    }
+
+    return {
+      datasetId,
+      datasetName: "Pathway GSEA",
+      comparisonLabel: "GSEA",
+      totalEnrichedPathways: 0,
+      pathways: [],
+      success: false
+    };
+  }
+
+  async queryPathwayGeneMembership(pathwayQuery: string, database: string = "All") {
+    const qUpper = pathwayQuery.toUpperCase();
+    try {
+      const tcgaData = await fetchCachedJson(`${this.basePath}/data/pathways/tcga_gtex_pathways.json`);
+      const allPathways: PathwayEnrichmentResult[] = [
+        ...(tcgaData?.oraResults || []),
+        ...(tcgaData?.gseaResults || [])
+      ];
+
+      const match = allPathways.find(p => p.pathwayName.toUpperCase().includes(qUpper) || p.pathwayId.toUpperCase() === qUpper);
+
+      if (match) {
+        const evidenceObject: EvidenceObject = {
+          dataset: "pathway_db",
+          datasetLabel: "BioPortal Pathway Reference Index",
+          analysisType: "ORA",
+          results: [match],
+          statistics: { geneCount: match.contributingGenes?.length || 0 },
+          source: "BioPortal",
+          computed: true,
+          validated: true,
+          causalInferenceAllowed: false
+        };
+
+        return {
+          found: true,
+          pathwayId: match.pathwayId,
+          pathwayName: match.pathwayName,
+          database: match.database,
+          genes: match.contributingGenes || [],
+          evidenceObject,
+          success: true
+        };
+      }
+    } catch (e) {
+      console.error("QueryEngine error in queryPathwayGeneMembership:", e);
+    }
+
+    return {
+      found: false,
+      pathwayName: pathwayQuery,
+      genes: [],
+      success: false
+    };
+  }
+
+  async queryCrossStudyComparison(genes: string[]) {
+    const targetGenes = genes.length > 0 ? genes : ["PHGDH", "PSAT1", "PSPH"];
+    const tcgaResults: GeneQueryResult[] = [];
+    const sbrtResults: GeneQueryResult[] = [];
+
+    for (const g of targetGenes) {
+      const tRes = await this.queryGeneExpression("tcga_gtex", g);
+      const sRes = await this.queryGeneExpression("gse225767", g);
+      if (tRes.success) tcgaResults.push(tRes);
+      if (sRes.success) sbrtResults.push(sRes);
+    }
+
+    const tcgaPathways = await this.queryPathwayEnrichment("tcga_gtex", "All", 0.05);
+    const sbrtPathways = await this.queryPathwayEnrichment("gse225767", "All", 0.05);
+
+    const tcgaSet = new Set(tcgaPathways.pathways.map((p: any) => p.pathwayName));
+    const sharedPathways = sbrtPathways.pathways.filter((p: any) => tcgaSet.has(p.pathwayName));
+
+    const evidenceObject: EvidenceObject = {
+      dataset: "cross_study",
+      datasetLabel: "TCGA-PAAD (Tumor vs Normal) vs SBRT GSE225767 (Pre vs Post)",
+      analysisType: "cross_study",
+      comparison: {
+        type: "cross_study_synthesis",
+        groupA: "TCGA-PAAD Tumor (n=178)",
+        groupB: "SBRT Post-Treatment (n=29)"
+      },
+      studyDesign: {
+        independentCohorts: true,
+        sampleCounts: { tcga_tumor: 178, gtex_normal: 167, sbrt_pre: 26, sbrt_post: 29 }
+      },
+      parameters: { queriedGenes: targetGenes },
+      results: [
+        { study: "TCGA-PAAD vs GTEx", genes: tcgaResults },
+        { study: "SBRT GSE225767", genes: sbrtResults },
+        { sharedPathwaysCount: sharedPathways.length }
+      ],
+      source: "BioPortal",
+      computed: true,
+      validated: true,
+      causalInferenceAllowed: false,
+      provenance: {
+        engine: "QueryEngine Cross-Study Synthesizer",
+        version: "2.0"
+      }
+    };
+
+    return {
+      genes: targetGenes,
+      tcgaResults,
+      sbrtResults,
+      sharedPathways: sharedPathways.slice(0, 10),
+      sharedPathwaysCount: sharedPathways.length,
+      evidenceObject,
+      success: true
+    };
+  }
 }
 
 export const queryEngine = new QueryEngine();
+

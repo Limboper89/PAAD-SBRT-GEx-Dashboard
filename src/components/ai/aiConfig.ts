@@ -1,6 +1,6 @@
 // aiConfig.ts - Pluggable AI Provider Configuration for PDAC BioPortal
 
-export type AIProviderType = 'llama-proxy' | 'gemini' | 'openai' | 'groq' | 'ollama';
+export type AIProviderType = 'gemini' | 'llama-proxy' | 'openai' | 'groq' | 'ollama';
 
 export interface AIProviderConfig {
   id: AIProviderType;
@@ -13,7 +13,7 @@ export interface AIProviderConfig {
 
 export const PORTAL_METADATA = {
   appName: "PDAC BioPortal",
-  appVersion: "1.2.0",
+  appVersion: "1.3.0",
   targetJournal: "Computational and Structural Biotechnology Journal (CSBJ)",
   datasetVersions: {
     sbrtBulk: "GSE225767 (Radiotherapy Pre/Post Paired Bulk RNA-seq)",
@@ -24,19 +24,20 @@ export const PORTAL_METADATA = {
 };
 
 export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
+  'gemini': {
+    id: 'gemini',
+    name: 'Google Gemini 3.1 Flash Lite',
+    endpoint: '/PAAD-SBRT-GEx-Dashboard/api/ai/gemini',
+    model: 'gemini-3.1-flash-lite',
+    description: 'High-quota Google Gemini 3.1 Flash Lite model for grounded scientific reasoning (500 RPD tier)'
+  },
+
   'llama-proxy': {
     id: 'llama-proxy',
     name: 'Llama (Groq Worker Proxy)',
     endpoint: 'https://paad-groq-proxy.kumarprincebt.workers.dev/api/chat',
     model: 'llama-3.3-70b-versatile',
-    description: 'Current low-latency default Llama endpoint hosted on Cloudflare Workers'
-  },
-  'gemini': {
-    id: 'gemini',
-    name: 'Google Gemini Pro',
-    endpoint: '/api/ai/gemini',
-    model: 'gemini-1.5-pro',
-    description: 'Future provider for high-context multimodal reasoning'
+    description: 'Current low-latency Llama endpoint hosted on Cloudflare Workers (A/B Benchmark option)'
   },
   'openai': {
     id: 'openai',
@@ -61,5 +62,6 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
   }
 };
 
-// Current active AI provider setting (change this string to swap backends cleanly)
-export const CURRENT_AI_PROVIDER: AIProviderType = 'llama-proxy';
+// Current active AI provider setting (defaults to Gemini 2.5 Flash; can be swapped via env NEXT_PUBLIC_LLM_PROVIDER)
+export const CURRENT_AI_PROVIDER: AIProviderType = 
+  (process.env.NEXT_PUBLIC_LLM_PROVIDER as AIProviderType) || 'gemini';
