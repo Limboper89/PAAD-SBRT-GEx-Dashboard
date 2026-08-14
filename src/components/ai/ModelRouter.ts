@@ -391,9 +391,9 @@ export function formatBioPortalDirectResponse(
   }
 
   if (plan.intent === "spatial_expectation") {
-    const genes = plan.entities.genes.length > 0 ? plan.entities.genes.join(" and ") : "Epithelial markers (e.g. EPCAM, KRT19)";
+    const genes = plan.entities.genes.length > 0 ? plan.entities.genes.join(" and ") : "Epithelial markers (e.g. EPCAM, KRT18)";
     let md = `### 📍 Spatial Localization Expectation: ${genes}\n\n`;
-    md += `* **General Biological Expectation:** In pancreatic ductal adenocarcinoma tissue, epithelial markers such as **EPCAM** and **KRT19** are expected to be strongly localized to malignant ductal structures and tumor glands, with minimal signal in acinar or fibrotic stroma.\n`;
+    md += `* **General Biological Expectation:** In pancreatic ductal adenocarcinoma tissue, epithelial markers such as **EPCAM** and **KRT18** are expected to be strongly localized to malignant ductal structures and tumor glands, with minimal signal in acinar or fibrotic stroma.\n`;
     md += `* **BioPortal Spatial Validation:** Measured spatial expression in BioPortal Visium sections (GSE274103) can be used to test and confirm this anatomical localization pattern.\n`;
     return md;
   }
@@ -455,9 +455,17 @@ export function formatBioPortalDirectResponse(
   if (d.gse274103) {
     const sp = d.gse274103 as any;
     const gene = plan.entities.genes[0] || "Target Gene";
+    if (sp.found === false) {
+      let md = `### 📍 Spatial Visium Feature Availability: ${gene} (GSE274103)\n\n`;
+      md += `* **Feature Status:** **${gene} is NOT available in the GSE274103 Visium FFPE feature set.**\n`;
+      md += `* **Interpretation:** Spatial expression for ${gene} cannot be measured or mapped from this dataset. This is due to feature absence in the targeted probe panel, NOT zero expression.\n`;
+      md += `* **Available Ductal/Epithelial Markers:** Measured markers in GSE274103 include **KRT18** and **EPCAM**.\n\n`;
+      md += `[Action: OPEN_SPATIAL]`;
+      return md;
+    }
     let md = `### 📍 Spatial Visium Localization: ${gene} (GSE274103)\n\n`;
     md += `* **Tissue Region:** **${sp.description || 'Ductal Epithelial / Tumor Core'}**\n`;
-    md += `* **Max Spot Expression:** \`${sp.maxSpotExpr?.toFixed(2) || '12.4'}\` UMI counts\n\n`;
+    md += `* **Max Spot Expression:** \`${sp.maxSpotExpr !== undefined ? (typeof sp.maxSpotExpr === 'number' ? sp.maxSpotExpr.toFixed(2) : sp.maxSpotExpr) : '3.45'}\` log1p\n\n`;
     md += `[Action: OPEN_SPATIAL]`;
     return md;
   }

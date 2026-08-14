@@ -163,11 +163,11 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
       "histopathological niche expression"
     ],
     groups: [
-      { id: "PDAC-p1", label: "Patient Section PDAC-p1", sampleCount: 2450, description: "Visium spatial spots for Patient 1" },
-      { id: "PDAC-p2", label: "Patient Section PDAC-p2", sampleCount: 2890, description: "Visium spatial spots for Patient 2" },
-      { id: "PDAC-p3", label: "Patient Section PDAC-p3", sampleCount: 3100, description: "Visium spatial spots for Patient 3" },
-      { id: "PDAC-p4", label: "Patient Section PDAC-p4", sampleCount: 2780, description: "Visium spatial spots for Patient 4" },
-      { id: "PDAC-p5", label: "Patient Section PDAC-p5", sampleCount: 2950, description: "Visium spatial spots for Patient 5" }
+      { id: "PDAC-p1", label: "Patient Section PDAC-p1", sampleCount: 4987, description: "Visium spatial spots for Patient 1" },
+      { id: "PDAC-p2", label: "Patient Section PDAC-p2", sampleCount: 4380, description: "Visium spatial spots for Patient 2" },
+      { id: "PDAC-p3", label: "Patient Section PDAC-p3", sampleCount: 4134, description: "Visium spatial spots for Patient 3" },
+      { id: "PDAC-p4", label: "Patient Section PDAC-p4", sampleCount: 4983, description: "Visium spatial spots for Patient 4" },
+      { id: "PDAC-p5", label: "Patient Section PDAC-p5", sampleCount: 4952, description: "Visium spatial spots for Patient 5" }
     ],
     analyses: [
       "spatial_spot_expression",
@@ -182,7 +182,8 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
     },
     limitations: [
       "10x Visium spots contain ~1-10 cells per spot (multicellular spatial resolution)",
-      "5 patient sections available in current portal build"
+      "5 patient sections available in current portal build",
+      "Targeted FFPE probe panel: KRT19 is absent from feature set; available ductal/epithelial markers include KRT18 and EPCAM"
     ],
     queryFunctions: [
       "querySpatialExpression"

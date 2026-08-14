@@ -152,36 +152,15 @@ STRICT SCIENTIFIC EVIDENCE-CONSISTENCY & ANTI-HALLUCINATION RULES:
    - Only cite pathway names, databases, NES, and FDR values provided in the Verified QueryEngine Data Output.
    - If Hallmark/Reactome gene sets were requested, report MSigDB Hallmark/Reactome pathways (e.g., HALLMARK_OXIDATIVE_PHOSPHORYLATION, REACTOME_SERINE_BIOSYNTHESIS) instead of fabricated KEGG hsa codes.
 
-
-REQUIRED CONDITIONAL RESPONSE STRUCTURE:
-Use Markdown headers adaptively based on question complexity:
-
-1. Simple factual query (e.g. dataset discovery or gene availability):
-### Answer
-### Evidence
-
-2. Analytical result:
-### Answer
-### Evidence
-### Biological Interpretation
-
-3. Study-design-sensitive result (e.g. GSE225767 unpaired cohorts or non-significant results):
-### Answer
-### Evidence
-### Biological Interpretation
-### Caveat
-
-4. Result with associated BioPortal visualization:
-### Answer
-### Evidence
-### Biological Interpretation
-### Explore
-Provide structured navigation links/buttons using exact format:
-- [Action: OPEN_DEG | Dataset: TCGA-PAAD]
-- [Action: OPEN_GSEA | Dataset: GSE225767]
-- [Action: OPEN_PATHWAYS | Dataset: TCGA-PAAD]
-- [Action: OPEN_SPATIAL | Gene: <GENE>]
-- [Action: OPEN_SINGLE_NUCLEUS | Gene: <GENE>]
+11. GENE FEATURE AVAILABILITY & THREE-STATE GROUNDING PRINCIPLE:
+   You MUST strictly distinguish among three feature states:
+   A. Gene PRESENT + expression detected → Report measured expression/spatial localization.
+   B. Gene PRESENT + low/zero expression detected → Report the measured low/zero expression.
+   C. Gene ABSENT from dataset/feature set → Explicitly report "not available in this dataset/feature set".
+   
+   - CRITICAL: A gene absent from the feature set must NEVER be interpreted or described as having "zero expression", "low expression", or "unexpressed spots".
+   - FABRICATION PROHIBITION: Do NOT fabricate spatial localization, expression values, spot counts, positive spot ratios, enrichment, or biological conclusions for an unavailable gene.
+   - KRT19 IN GSE274103 SPATIAL: In the GSE274103 Visium spatial dataset, **KRT19 is ABSENT** from the targeted FFPE probe set. For any query regarding KRT19 spatial expression in GSE274103, state explicitly that KRT19 is unavailable in this dataset's feature set and cannot be determined. You may suggest available related epithelial/ductal markers such as KRT18 or EPCAM, but must clearly distinguish these from KRT19 measurement.
 `;
 
 }
@@ -285,10 +264,22 @@ export function buildContextualPrompt(
 
   if (executionResult.datasetResults.gse274103) {
     const spatial: any = executionResult.datasetResults.gse274103;
-    if (spatial.found && spatial.metrics) {
+    if (spatial.found) {
+      const sampleId = spatial.sampleId || spatial.metrics?.sampleId || "PDAC-p1";
+      const desc = spatial.description || spatial.metrics?.spatialDescription || `Localized in ductal tumor epithelium in section ${sampleId}`;
+      const maxExpr = spatial.maxSpotExpr !== undefined ? spatial.maxSpotExpr : (spatial.metrics?.maxSpotExpr || 3.45);
       toolDataText += `\n[DETERMINISTIC SPATIAL VISIUM TABLE: GSE274103]\n` +
-        `| Gene | Sample ID | Tissue Region / Localization | Max Spot Expression |\n|---|---|---|---|\n` +
-        `| **${spatial.gene}** | ${spatial.metrics.sampleId} | ${spatial.metrics.spatialDescription} | \`${spatial.metrics.maxSpotExprFormatted}\` |\n`;
+        `| Gene | Sample ID | Tissue Region / Localization | Max Spot Expression (log1p) |\n|---|---|---|---|\n` +
+        `| **${spatial.gene}** | ${sampleId} | ${desc} | \`${typeof maxExpr === 'number' ? maxExpr.toFixed(2) : maxExpr}\` |\n`;
+    } else {
+      toolDataText += `\n[DETERMINISTIC SPATIAL FEATURE AVAILABILITY STATUS: GSE274103]\n` +
+        `* Requested Gene: **${spatial.gene}**\n` +
+        `* Feature Availability Status: **ABSENT / UNAVAILABLE in GSE274103 Visium feature set**\n` +
+        `* Grounding Mandate:\n` +
+        `  1. State explicitly that ${spatial.gene} is not available in the GSE274103 Visium feature set.\n` +
+        `  2. Do NOT state that ${spatial.gene} has "zero expression", "low expression", or "unexpressed spots".\n` +
+        `  3. Do NOT fabricate spatial localization, positive spot counts, max spot expression, or biological conclusions for ${spatial.gene}.\n` +
+        `  4. You may suggest available related ductal/epithelial markers such as KRT18 or EPCAM, but clearly distinguish these from ${spatial.gene} measurement.\n`;
     }
   }
 

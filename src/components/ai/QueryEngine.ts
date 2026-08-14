@@ -747,7 +747,7 @@ export class QueryEngine {
       found: false,
       sampleId,
       maxSpotExpr: 0,
-      description: "Spatial transcriptomics data not found for requested gene",
+      description: `Gene '${geneSymbol}' is not available in the GSE274103 Visium feature set for section ${sampleId}.`,
       success: false
     };
   }

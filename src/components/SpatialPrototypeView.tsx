@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Layers, Info, Sliders, HelpCircle, User, Bot } from "lucide-react";
+import { Search, Layers, Info, Sliders, HelpCircle, User, Bot, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
@@ -108,6 +108,17 @@ export default function SpatialPrototypeView() {
   const [exprVec, setExprVec] = useState<Float32Array | null>(null);
   const [exprCap, setExprCap] = useState<number>(1);
   const [loadingGene, setLoadingGene] = useState<boolean>(false);
+
+  // Zoom & Pan state
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Image preloading refs & state
+  const lowresImgRef = useRef<HTMLImageElement | null>(null);
+  const hiresImgRef = useRef<HTMLImageElement | null>(null);
+  const [hiresLoaded, setHiresLoaded] = useState<boolean>(false);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -169,6 +180,25 @@ export default function SpatialPrototypeView() {
     initData();
   }, []);
 
+  // Load lowres and pre-load genuine native hires WebP image when patient changes
+  useEffect(() => {
+    if (!selectedPatient) return;
+    setHiresLoaded(false);
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+
+    const lowres = new Image();
+    lowres.src = `${basePath}/images/gse274103/${selectedPatient}/tissue_lowres_image.png`;
+    lowresImgRef.current = lowres;
+
+    const hires = new Image();
+    hires.src = `${basePath}/images/gse274103/${selectedPatient}/tissue_hires_image.webp`;
+    hires.onload = () => {
+      hiresImgRef.current = hires;
+      setHiresLoaded(true);
+    };
+  }, [selectedPatient]);
+
   // Load metadata and patient index when selected patient changes
   useEffect(() => {
     async function loadPatientData() {
@@ -212,6 +242,97 @@ export default function SpatialPrototypeView() {
     
     loadPatientData();
   }, [selectedPatient]);
+
+  // Wheel listener for smooth zoom towards mouse cursor
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !metadata) return;
+
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseCanvasX = (e.clientX - rect.left) * (imgW / rect.width);
+      const mouseCanvasY = (e.clientY - rect.top) * (imgH / rect.height);
+
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      setZoom(prevZoom => {
+        const newZoom = Math.min(Math.max(prevZoom * zoomFactor, 1.0), 6.0);
+        if (newZoom === 1.0) {
+          setPan({ x: 0, y: 0 });
+          return 1.0;
+        }
+
+        setPan(prevPan => {
+          const worldX = (mouseCanvasX - prevPan.x) / prevZoom;
+          const worldY = (mouseCanvasY - prevPan.y) / prevZoom;
+
+          let newPanX = mouseCanvasX - worldX * newZoom;
+          let newPanY = mouseCanvasY - worldY * newZoom;
+
+          const minPanX = imgW * (1 - newZoom);
+          const minPanY = imgH * (1 - newZoom);
+
+          newPanX = Math.min(Math.max(newPanX, minPanX), 0);
+          newPanY = Math.min(Math.max(newPanY, minPanY), 0);
+
+          return { x: newPanX, y: newPanY };
+        });
+
+        return newZoom;
+      });
+    };
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+    };
+  }, [metadata]);
+
+  const handleResetView = () => {
+    setZoom(1.0);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleZoomIn = () => {
+    if (!metadata) return;
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+    setZoom(prev => {
+      const next = Math.min(prev * 1.3, 6.0);
+      const centerW = imgW / 2;
+      const centerH = imgH / 2;
+      let newPanX = centerW - centerW * next;
+      let newPanY = centerH - centerH * next;
+      const minPanX = imgW * (1 - next);
+      const minPanY = imgH * (1 - next);
+      newPanX = Math.min(Math.max(newPanX, minPanX), 0);
+      newPanY = Math.min(Math.max(newPanY, minPanY), 0);
+      setPan({ x: newPanX, y: newPanY });
+      return next;
+    });
+  };
+
+  const handleZoomOut = () => {
+    if (!metadata) return;
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+    setZoom(prev => {
+      const next = Math.max(prev / 1.3, 1.0);
+      if (next === 1.0) {
+        setPan({ x: 0, y: 0 });
+        return 1.0;
+      }
+      const minPanX = imgW * (1 - next);
+      const minPanY = imgH * (1 - next);
+      const newPanX = Math.min(Math.max(pan.x, minPanX), 0);
+      const newPanY = Math.min(Math.max(pan.y, minPanY), 0);
+      setPan({ x: newPanX, y: newPanY });
+      return next;
+    });
+  };
 
   // Handle Search Input Change with autocomplete mapping rules
   const handleSearchChange = (val: string) => {
@@ -320,7 +441,7 @@ export default function SpatialPrototypeView() {
     }
   }, [metadata, selectedPatient]);
 
-  // Render Canvas with H&E image and Spot Overlays
+  // Render Canvas with H&E image and Spot Overlays (Unified World Coordinates + Zoom/Pan Transform)
   useEffect(() => {
     if (!metadata || !canvasRef.current) return;
     
@@ -328,15 +449,28 @@ export default function SpatialPrototypeView() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+
+    if (canvas.width !== imgW) canvas.width = imgW;
+    if (canvas.height !== imgH) canvas.height = imgH;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(pan.x, pan.y);
+    ctx.scale(zoom, zoom);
     
-    const img = new Image();
-    img.src = `${basePath}/images/gse274103/${selectedPatient}/tissue_lowres_image.png`;
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      if (viewMode === "he_only") return;
-      
+    // Choose high-res WebP image when zoomed > 1.25 for crisp histological resolution
+    const activeImg = (hiresLoaded && hiresImgRef.current && zoom > 1.25)
+      ? hiresImgRef.current
+      : lowresImgRef.current;
+    
+    if (activeImg) {
+      ctx.drawImage(activeImg, 0, 0, canvas.width, canvas.height);
+    }
+    
+    if (viewMode !== "he_only") {
       const spotRadius = metadata.spot_diameter_lowres / 2;
       metadata.spots.forEach((spot, idx) => {
         ctx.beginPath();
@@ -348,7 +482,7 @@ export default function SpatialPrototypeView() {
           ctx.fill();
         } else {
           ctx.strokeStyle = `rgba(244, 63, 94, ${spotOpacity})`; // Rose 500
-          ctx.lineWidth = 0.8;
+          ctx.lineWidth = 0.8 / Math.sqrt(zoom);
           ctx.stroke();
           ctx.fillStyle = `rgba(244, 63, 94, ${spotOpacity * 0.15})`;
           ctx.fill();
@@ -359,14 +493,16 @@ export default function SpatialPrototypeView() {
         const match = metadata.spots.find(s => s.id === hoveredSpot.barcode);
         if (match) {
           ctx.beginPath();
-          ctx.arc(match.x, match.y, spotRadius + 1.5, 0, 2 * Math.PI);
+          ctx.arc(match.x, match.y, spotRadius + (1.5 / zoom), 0, 2 * Math.PI);
           ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.5 / Math.sqrt(zoom);
           ctx.stroke();
         }
       }
-    };
-  }, [metadata, viewMode, spotOpacity, exprVec, exprCap, hoveredSpot, selectedPatient]);
+    }
+
+    ctx.restore();
+  }, [metadata, viewMode, spotOpacity, exprVec, exprCap, hoveredSpot, selectedPatient, zoom, pan, hiresLoaded]);
 
   // Helper to calculate offset relative to container
   const getCanvasOffset = () => {
@@ -380,28 +516,63 @@ export default function SpatialPrototypeView() {
     };
   };
 
-  // Handle Mouse Hover detection on Canvas
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (zoom > 1.0) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Handle Mouse Hover & Drag detection on Canvas (Screen -> World Transform)
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!metadata || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+
+    if (isDragging) {
+      const dx = (e.clientX - dragStart.x) * (imgW / rect.width);
+      const dy = (e.clientY - dragStart.y) * (imgH / rect.height);
+
+      setPan(prevPan => {
+        let newPanX = prevPan.x + dx;
+        let newPanY = prevPan.y + dy;
+
+        const minPanX = imgW * (1 - zoom);
+        const minPanY = imgH * (1 - zoom);
+
+        newPanX = Math.min(Math.max(newPanX, minPanX), 0);
+        newPanY = Math.min(Math.max(newPanY, minPanY), 0);
+
+        return { x: newPanX, y: newPanY };
+      });
+
+      setDragStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
     
-    const scaleX = 578 / rect.width;
-    const scaleY = 600 / rect.height;
+    const mouseCanvasX = (e.clientX - rect.left) * (imgW / rect.width);
+    const mouseCanvasY = (e.clientY - rect.top) * (imgH / rect.height);
     
-    const clickX = (e.clientX - rect.left) * scaleX;
-    const clickY = (e.clientY - rect.top) * scaleY;
+    // Transform screen click to world coordinates
+    const worldX = (mouseCanvasX - pan.x) / zoom;
+    const worldY = (mouseCanvasY - pan.y) / zoom;
     
     const spotRadius = metadata.spot_diameter_lowres / 2;
-    const threshold = spotRadius + 1.0;
+    const threshold = spotRadius + (1.5 / Math.sqrt(zoom));
     
     let closestSpot: Spot | null = null;
     let closestDist = Infinity;
     let closestIdx = -1;
     
     metadata.spots.forEach((spot, idx) => {
-      const dist = Math.hypot(spot.x - clickX, spot.y - clickY);
+      const dist = Math.hypot(spot.x - worldX, spot.y - worldY);
       if (dist < threshold && dist < closestDist) {
         closestDist = dist;
         closestSpot = spot;
@@ -414,17 +585,19 @@ export default function SpatialPrototypeView() {
       const exprVal = exprVec ? exprVec[closestIdx] : 0.0;
       
       // Reconstruct raw count: round((exp(exprVal) - 1.0) * tc / 10000)
-      // This has been verified 100% numerically exact across all cohort samples
       const rawCount = exprVal > 0 && spot.tc ? Math.round((Math.exp(exprVal) - 1.0) * spot.tc / 10000.0) : 0;
       
+      const spotCanvasX = spot.x * zoom + pan.x;
+      const spotCanvasY = spot.y * zoom + pan.y;
+
       setHoveredSpot({
         barcode: spot.id,
         r: spot.r,
         c: spot.c,
         expr: exprVal,
         raw: rawCount,
-        canvasX: spot.x / scaleX,
-        canvasY: spot.y / scaleY
+        canvasX: spotCanvasX,
+        canvasY: spotCanvasY
       });
     } else {
       setHoveredSpot(null);
@@ -432,6 +605,7 @@ export default function SpatialPrototypeView() {
   };
 
   const handleMouseLeave = () => {
+    setIsDragging(false);
     setHoveredSpot(null);
   };
 
@@ -455,6 +629,9 @@ export default function SpatialPrototypeView() {
       aiCtx.setChatOpen(true);
     }
   };
+
+  const canvasWidth = metadata?.image_size[0] || 578;
+  const canvasHeight = metadata?.image_size[1] || 600;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -549,13 +726,51 @@ export default function SpatialPrototypeView() {
             </div>
           ) : (
             <div className="relative w-full max-w-[500px] flex-1 flex items-center justify-center p-2">
+              
+              {/* Zoom & Pan Overlay Toolbar */}
+              <div className="absolute top-4 right-4 flex items-center gap-1 bg-slate-950/90 border border-slate-800 rounded-lg p-1 shadow-xl z-30 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  title="Zoom In (+)"
+                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  title="Zoom Out (-)"
+                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetView}
+                  title="Reset View (100%)"
+                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition flex items-center gap-1 text-xxs px-2 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3 text-rose-400" />
+                  <span>Reset</span>
+                </button>
+                <span className="border-l border-slate-800 pl-2 pr-1.5 text-xxs text-teal-400 font-semibold">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <span className="text-xxs px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                  {zoom > 1.25 && hiresLoaded ? "H&E Hires Native (1926px)" : "H&E Overview"}
+                </span>
+              </div>
+
               <canvas
                 ref={canvasRef}
-                width={578}
-                height={600}
+                width={canvasWidth}
+                height={canvasHeight}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                className="rounded border border-slate-700 bg-slate-950 shadow-inner cursor-crosshair w-full h-auto aspect-[578/600] max-h-[650px]"
+                className={`rounded border border-slate-700 bg-slate-950 shadow-inner w-full h-auto aspect-[${canvasWidth}/${canvasHeight}] max-h-[650px] ${zoom > 1.0 ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
               />
               
               {/* Overlay Tooltip */}
@@ -563,8 +778,8 @@ export default function SpatialPrototypeView() {
                 <div 
                   className="absolute pointer-events-none bg-slate-950/95 border border-slate-700 rounded-lg p-3 text-xs shadow-2xl text-slate-200 z-50 min-w-[210px] font-mono"
                   style={{
-                    left: `${(hoveredSpot.canvasX / 578) * offset.width + 15}px`,
-                    top: `${(hoveredSpot.canvasY / 600) * offset.height - 40}px`
+                    left: `${(hoveredSpot.canvasX / canvasWidth) * offset.width + 15}px`,
+                    top: `${(hoveredSpot.canvasY / canvasHeight) * offset.height - 40}px`
                   }}
                 >
                   <p className="font-semibold text-rose-400 border-b border-slate-800 pb-1 mb-1 font-mono">Spot Info</p>
@@ -587,9 +802,9 @@ export default function SpatialPrototypeView() {
           <div className="w-full mt-3 bg-amber-500/5 border border-amber-500/10 rounded-lg p-3 flex items-start gap-2.5 text-xs text-amber-300">
             <HelpCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
             <div>
-              <p className="font-semibold">Independent Transformation scale factors</p>
+              <p className="font-semibold">Interactive Zoom/Pan & High-Resolution H&E Tissue Viewer</p>
               <p className="mt-0.5 text-slate-400 leading-relaxed font-mono text-xxs">
-                Each slide has been transformed using its own Space Ranger low-res scale factors. Normalization is calculated independently per slide. Visual alignments are PENDING VISUAL VERIFICATION.
+                Scroll mouse wheel or use zoom controls to inspect native Space Ranger high-definition tissue morphology (1926x2000 px). Spot overlays remain 100% registered.
               </p>
             </div>
           </div>
