@@ -49,12 +49,14 @@ export interface DEGeneRecord {
 }
 
 export interface DifferentialQueryResult {
+  type?: "differential";
   datasetId: string;
   datasetName: string;
   totalGenes: number;
   filteredCount: number;
   topUpregulated: DEGeneRecord[];
   topDownregulated: DEGeneRecord[];
+  topDegs?: DEGeneRecord[];
   thresholdsUsed: { log2FC: number; pValue?: number; fdr?: number };
   success: boolean;
   validationError?: string;

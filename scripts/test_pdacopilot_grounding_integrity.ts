@@ -43,6 +43,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: mockPlan,
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           type: "gene",
@@ -80,6 +83,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: { ...mockPlan, entities: { genes: ["PHGDH"] } },
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           type: "gene",
@@ -122,7 +128,7 @@ async function runGroundingIntegrityTestSuite() {
     };
 
     const textWithContamination = "TCGA-PAAD vs GTEx dataset design is unpaired pre=26 vs post=29 cohort comparison.";
-    const val = EvidenceValidator.validateResponse("Compare KRAS in TCGA vs GTEx", sbrtContextPlan, textWithContamination, { plan: sbrtContextPlan, datasetResults: {}, provenance: [], confidence: "High" });
+    const val = EvidenceValidator.validateResponse("Compare KRAS in TCGA vs GTEx", sbrtContextPlan, textWithContamination, { plan: sbrtContextPlan, datasetResults: {}, provenance: [], confidence: "High", evidenceComplete: true, missingEntities: [], unsupportedClaims: [] });
 
     const hasStudyDesignError = val.errors.some(e => e.type === "STUDY_DESIGN_ERROR");
     recordTest(
@@ -167,6 +173,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: gseaPlan,
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           pathways: [],
@@ -195,6 +204,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: gseaPlan,
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           type: "differential",
@@ -221,10 +233,10 @@ async function runGroundingIntegrityTestSuite() {
   // TEST H: Causality Claim Semantic Validation
   {
     const affirmText = "The data prove that serine metabolism causes radiation resistance in PDAC.";
-    const valAffirm = EvidenceValidator.validateResponse("Does serine metabolism cause radiation resistance?", mockPlan, affirmText, { plan: mockPlan, datasetResults: {}, provenance: [], confidence: "High" });
+    const valAffirm = EvidenceValidator.validateResponse("Does serine metabolism cause radiation resistance?", mockPlan, affirmText, { plan: mockPlan, datasetResults: {}, provenance: [], confidence: "High", evidenceComplete: true, missingEntities: [], unsupportedClaims: [] });
 
     const hedgeText = "The available data do not establish that serine metabolism causes radiation resistance; observed changes represent a transcriptomic association.";
-    const valHedge = EvidenceValidator.validateResponse("Does serine metabolism cause radiation resistance?", mockPlan, hedgeText, { plan: mockPlan, datasetResults: {}, provenance: [], confidence: "High" });
+    const valHedge = EvidenceValidator.validateResponse("Does serine metabolism cause radiation resistance?", mockPlan, hedgeText, { plan: mockPlan, datasetResults: {}, provenance: [], confidence: "High", evidenceComplete: true, missingEntities: [], unsupportedClaims: [] });
 
     const passed = !valAffirm.isValid && valHedge.isValid;
     recordTest(
@@ -275,6 +287,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: mockPlan,
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           type: "gene",
@@ -312,6 +327,9 @@ async function runGroundingIntegrityTestSuite() {
       plan: mockPlan,
       provenance: [],
       confidence: "High",
+      evidenceComplete: true,
+      missingEntities: [],
+      unsupportedClaims: [],
       datasetResults: {
         tcga_gtex: {
           type: "gene",

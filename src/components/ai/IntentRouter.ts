@@ -582,7 +582,10 @@ export class IntentRouter {
         plan,
         datasetResults,
         provenance,
-        confidence: "High"
+        confidence: "High",
+        evidenceComplete: true,
+        missingEntities: [],
+        unsupportedClaims: []
       };
     }
 
@@ -600,22 +603,26 @@ export class IntentRouter {
       provenance.push({
         datasetId: "tcga_gtex",
         datasetName: DATASET_REGISTRY.tcga_gtex.name,
-        status: "success",
+        status: tcgaDiff.success ? "success" : "failed",
         operation: "queryDifferentialExpression",
-        queryDetails: `Retrieved ${tcgaDiff.filteredCount} TCGA DEGs`
+        queryDetails: tcgaDiff.success ? `Retrieved ${tcgaDiff.filteredCount} TCGA DEGs` : "Failed TCGA lookup"
       });
       provenance.push({
         datasetId: "gse225767",
         datasetName: DATASET_REGISTRY.gse225767.name,
-        status: "success",
+        status: sbrtDiff.success ? "success" : "failed",
         operation: "queryDifferentialExpression",
-        queryDetails: `Retrieved ${sbrtDiff.filteredCount} SBRT DEGs`
+        queryDetails: sbrtDiff.success ? `Retrieved ${sbrtDiff.filteredCount} SBRT DEGs` : "Failed SBRT lookup"
       });
+
       return {
         plan,
         datasetResults,
         provenance,
-        confidence: "High"
+        confidence: "High",
+        evidenceComplete: true,
+        missingEntities: [],
+        unsupportedClaims: []
       };
     }
 
