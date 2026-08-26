@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
 import { Layers, Sparkles } from "lucide-react";
+import ExportButton from "@/components/ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface PathwayGeneMatrixProps {
   results: PathwayEnrichmentResult[];
@@ -15,6 +17,8 @@ export default function PathwayGeneMatrix({
   onSelectPathway,
   onSelectGene
 }: PathwayGeneMatrixProps) {
+  const matrixRef = useRef<HTMLDivElement>(null);
+
   if (!results || results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[350px] bg-slate-900/40 border border-slate-800 rounded-2xl p-6 text-center text-slate-500 font-mono text-xs">
@@ -47,8 +51,103 @@ export default function PathwayGeneMatrix({
     .filter(([_, count]) => count >= 2)
     .sort((a, b) => b[1] - a[1]);
 
+  const generateHighResMatrixCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 38px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Leading-Edge Gene Overlap Matrix", 80, 80);
+
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "24px monospace";
+    ctx.fillText(`Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} Leading-Edge Genes`, 80, 118);
+
+    const padLeft = 820;
+    const padRight = 80;
+    const padTop = 320;
+    const padBottom = 100;
+
+    const matrixW = size - padLeft - padRight;
+    const matrixH = size - padTop - padBottom;
+
+    const cellW = matrixW / Math.max(1, topGenes.length);
+    const rowH = matrixH / Math.max(1, topPathways.length);
+
+    // Draw Column Headers (Gene Symbols rotated 60 deg)
+    topGenes.forEach((gene, cIdx) => {
+      const x = padLeft + cIdx * cellW + cellW / 2;
+      ctx.save();
+      ctx.translate(x, padTop - 20);
+      ctx.rotate(-Math.PI / 3);
+      ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(gene, 0, 0);
+      ctx.restore();
+    });
+
+    // Draw Rows and Cells
+    topPathways.forEach((p, rIdx) => {
+      const y = padTop + rIdx * rowH;
+      const leadingSet = new Set(p.leadingEdgeGenes && p.leadingEdgeGenes.length > 0 ? p.leadingEdgeGenes : p.contributingGenes);
+
+      // Pathway name
+      ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
+      const fontSize = Math.min(22, Math.max(14, Math.round(rowH * 0.38)));
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = "right";
+
+      const maxLen = 42;
+      const displayName = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
+      ctx.fillText(displayName, padLeft - 20, y + rowH * 0.65);
+
+      // Cells
+      topGenes.forEach((gene, cIdx) => {
+        const x = padLeft + cIdx * cellW;
+        const isPresent = leadingSet.has(gene);
+        const geneDetail = p.geneExpressionDetails?.find((d) => d.symbol === gene);
+
+        if (isPresent) {
+          const isUp = geneDetail ? geneDetail.log2FC >= 0 : true;
+          ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.85)" : "rgba(37, 99, 235, 0.85)";
+          ctx.fillRect(x + 2, y + 2, cellW - 4, rowH - 4);
+
+          ctx.strokeStyle = isUp ? "#991b1b" : "#1e40af";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 2, y + 2, cellW - 4, rowH - 4);
+
+          // Checkmark / Dot inside
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(x + cellW / 2, y + rowH / 2, Math.min(10, cellW * 0.25), 0, 2 * Math.PI);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
+          ctx.fillRect(x + 1, y + 1, cellW - 2, rowH - 2);
+
+          ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 1, y + 1, cellW - 2, rowH - 2);
+        }
+      });
+    });
+
+    return offscreen;
+  };
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl font-sans text-slate-100">
+    <div ref={matrixRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl font-sans text-slate-100">
       <div className="flex justify-between items-center border-b border-slate-800 pb-3">
         <div>
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
@@ -59,6 +158,40 @@ export default function PathwayGeneMatrix({
             Top {topPathways.length} Enriched Pathways &bull; Top {topGenes.length} Leading-Edge Core Genes
           </p>
         </div>
+
+        <ExportButton
+          onExportCSV={() => {
+            exportToCSV({
+              filename: "Pathway_LeadingEdge_Gene_Matrix.csv",
+              metadata: {
+                module: "Pathway Leading Edge Matrix",
+                topPathways: String(topPathways.length),
+                topGenes: String(topGenes.length),
+              },
+              headers: ["Pathway Name", ...topGenes],
+              rows: topPathways.map((p) => {
+                const genes = (p.leadingEdgeGenes && p.leadingEdgeGenes.length > 0) ? p.leadingEdgeGenes : p.contributingGenes;
+                return [p.pathwayName, ...topGenes.map((g) => (genes.includes(g) ? "1" : "0"))];
+              }),
+            });
+          }}
+          onExportPNG={({ theme = "light" } = {}) => {
+            const exportCanvas = generateHighResMatrixCanvas(theme, 2400);
+            exportCanvasToPNG({
+              canvas: exportCanvas,
+              filename: "Pathway_LeadingEdge_Gene_Matrix.png",
+              theme,
+            });
+          }}
+          onExportSVG={({ theme = "light" } = {}) => {
+            const exportCanvas = generateHighResMatrixCanvas(theme, 1200);
+            exportCanvasToSVG({
+              canvas: exportCanvas,
+              filename: "Pathway_LeadingEdge_Gene_Matrix.svg",
+              theme,
+            });
+          }}
+        />
       </div>
 
       <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950 p-4 font-mono">

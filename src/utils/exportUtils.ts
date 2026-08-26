@@ -67,40 +67,34 @@ export function exportToCSV({
   URL.revokeObjectURL(url);
 }
 
+export type ExportTheme = "light" | "dark";
+
 /**
- * Export HTML Canvas element to High-Res 300 DPI PNG with metadata header banner.
+ * Export HTML Canvas element to High-Res 300 DPI PNG without banner clutter.
+ * Clean, full-canvas publication figure on pure white (Light) or dark (Dark) background.
  */
 export function exportCanvasToPNG({
   canvas,
   filename,
   title,
   subtitle,
-  bgColor = "#020617", // Slate 950
+  theme = "light",
+  bgColor,
 }: {
   canvas: HTMLCanvasElement;
   filename: string;
-  title: string;
+  title?: string;
   subtitle?: string;
+  theme?: ExportTheme;
   bgColor?: string;
 }) {
-  // High-res publication scale (3000px minimum target width)
-  const targetWidth = Math.max(3000, canvas.width * 2);
+  // High-res publication scale (2400px minimum target width)
+  const targetWidth = Math.max(2400, canvas.width * 2);
   const scale = targetWidth / canvas.width;
-  
-  // Font sizes scaled proportionally
-  const fontBrandSize = Math.round(14 * scale);
-  const fontTitleSize = Math.round(22 * scale);
-  const fontSubtitleSize = Math.round(13 * scale);
-  
-  const padLeft = Math.round(30 * scale);
-  const padTop = Math.round(25 * scale);
-  
-  const line1Y = padTop + fontBrandSize;
-  const line2Y = line1Y + Math.round(10 * scale) + fontTitleSize;
-  const line3Y = subtitle ? line2Y + Math.round(10 * scale) + fontSubtitleSize : line2Y;
-  
-  const headerHeight = Math.round(line3Y + Math.round(25 * scale));
-  const targetHeight = Math.round(canvas.height * scale + headerHeight);
+  const targetHeight = Math.round(canvas.height * scale);
+
+  const isLight = theme === "light";
+  const finalBgColor = bgColor || (isLight ? "#ffffff" : "#020617");
 
   const offscreen = document.createElement("canvas");
   offscreen.width = targetWidth;
@@ -109,40 +103,11 @@ export function exportCanvasToPNG({
   if (!ctx) return;
 
   // Background
-  ctx.fillStyle = bgColor;
+  ctx.fillStyle = finalBgColor;
   ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-  // Header Banner Background
-  ctx.fillStyle = "#0f172a"; // Slate 900
-  ctx.fillRect(0, 0, targetWidth, headerHeight);
-  
-  // Header Border Line
-  ctx.strokeStyle = "#1e293b"; // Slate 800
-  ctx.lineWidth = Math.max(2, Math.round(2 * scale));
-  ctx.beginPath();
-  ctx.moveTo(0, headerHeight);
-  ctx.lineTo(targetWidth, headerHeight);
-  ctx.stroke();
-
-  // 1. Brand Tag
-  ctx.fillStyle = "#38bdf8"; // Sky 400
-  ctx.font = `bold ${fontBrandSize}px sans-serif`;
-  ctx.fillText("PDAC BIOPORTAL — PUBLICATION FIGURE", padLeft, line1Y);
-
-  // 2. Figure Title
-  ctx.fillStyle = "#f8fafc"; // Slate 50
-  ctx.font = `bold ${fontTitleSize}px sans-serif`;
-  ctx.fillText(title, padLeft, line2Y);
-
-  // 3. Figure Subtitle
-  if (subtitle) {
-    ctx.fillStyle = "#94a3b8"; // Slate 400
-    ctx.font = `${fontSubtitleSize}px monospace`;
-    ctx.fillText(subtitle, padLeft, line3Y);
-  }
-
-  // Draw main plot canvas content strictly BELOW headerHeight
-  ctx.drawImage(canvas, 0, headerHeight, canvas.width * scale, canvas.height * scale);
+  // Draw plot canvas directly occupying the full image
+  ctx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
 
   // Trigger PNG download
   offscreen.toBlob((blob) => {
@@ -159,39 +124,31 @@ export function exportCanvasToPNG({
 }
 
 /**
- * Export Canvas visualization to SVG vector wrapper format.
+ * Export Canvas visualization to clean standalone SVG format without header banner.
  */
 export function exportCanvasToSVG({
   canvas,
   filename,
   title,
   subtitle,
+  theme = "light",
 }: {
   canvas: HTMLCanvasElement;
   filename: string;
-  title: string;
+  title?: string;
   subtitle?: string;
+  theme?: ExportTheme;
 }) {
+  const isLight = theme === "light";
   const dataUrl = canvas.toDataURL("image/png");
   const width = canvas.width;
-  const headerHeight = subtitle ? 115 : 90;
-  const height = canvas.height + headerHeight;
+  const height = canvas.height;
+  const bgColor = isLight ? "#ffffff" : "#020617";
 
   const svgContent = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <style>
-    .bg { fill: #020617; }
-    .header-bg { fill: #0f172a; stroke: #1e293b; stroke-width: 1.5; }
-    .brand { font-family: system-ui, sans-serif; font-weight: bold; font-size: 11px; fill: #38bdf8; letter-spacing: 0.5px; }
-    .title { font-family: system-ui, sans-serif; font-weight: bold; font-size: 16px; fill: #f8fafc; }
-    .subtitle { font-family: monospace; font-size: 11px; fill: #94a3b8; }
-  </style>
-  <rect class="bg" width="100%" height="100%" />
-  <rect class="header-bg" width="100%" height="${headerHeight}" />
-  <text x="20" y="24" class="brand">PDAC BIOPORTAL — PUBLICATION FIGURE</text>
-  <text x="20" y="50" class="title">${escapeXml(title)}</text>
-  ${subtitle ? `<text x="20" y="76" class="subtitle">${escapeXml(subtitle)}</text>` : ""}
-  <image x="0" y="${headerHeight}" width="${canvas.width}" height="${canvas.height}" href="${dataUrl}" />
+  <rect width="100%" height="100%" fill="${bgColor}" />
+  <image x="0" y="0" width="${width}" height="${height}" href="${dataUrl}" />
 </svg>`;
 
   const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8;" });
@@ -211,21 +168,26 @@ export function exportCanvasToSVG({
 import { toPng, toSvg } from "html-to-image";
 
 /**
- * Export any React / HTML / Recharts container element to high-res publication PNG (3000px min width)
- * with publication header banner using html-to-image.
+ * Export any React / HTML / Recharts container element to clean high-res publication PNG (2400px min width)
+ * without header banners.
  */
 export async function exportComponentToPNG({
   element,
   filename,
   title = "PDAC BioPortal Figure",
   subtitle,
+  theme = "light",
 }: {
   element: HTMLElement;
   filename: string;
   title?: string;
   subtitle?: string;
+  theme?: ExportTheme;
 }) {
   if (!element) return;
+
+  const isLight = theme === "light";
+  const finalBgColor = isLight ? "#ffffff" : "#020617";
 
   // 1. Wait for any pending frames/renders to finish
   await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
@@ -244,89 +206,25 @@ export async function exportComponentToPNG({
   };
 
   const origWidth = element.clientWidth || element.getBoundingClientRect().width || 1000;
-  const origHeight = element.clientHeight || element.getBoundingClientRect().height || 500;
 
-  // Enforce 3000px minimum publication target width
-  const targetWidth = Math.max(3000, origWidth * 3);
+  // Enforce 2400px minimum publication target width
+  const targetWidth = Math.max(2400, origWidth * 3);
   const scale = targetWidth / origWidth;
 
   // Render DOM element directly to PNG data URL at high pixel ratio
   const chartDataUrl = await toPng(element, {
     quality: 0.98,
     pixelRatio: scale,
-    backgroundColor: "#020617", // Slate 950
+    backgroundColor: finalBgColor,
     filter: filter as any,
   });
 
-  // Calculate publication header dimensions
-  const fontBrandSize = Math.round(13 * scale);
-  const fontTitleSize = Math.round(20 * scale);
-  const fontSubtitleSize = Math.round(12 * scale);
-
-  const padLeft = Math.round(24 * scale);
-  const padTop = Math.round(20 * scale);
-
-  const line1Y = padTop + fontBrandSize;
-  const line2Y = line1Y + Math.round(10 * scale) + fontTitleSize;
-  const line3Y = subtitle ? line2Y + Math.round(8 * scale) + fontSubtitleSize : line2Y;
-
-  const headerHeight = Math.round(line3Y + Math.round(20 * scale));
-  const targetPlotHeight = Math.round(origHeight * scale);
-  const targetHeight = targetPlotHeight + headerHeight;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  // Backgrounds
-  ctx.fillStyle = "#020617";
-  ctx.fillRect(0, 0, targetWidth, targetHeight);
-
-  ctx.fillStyle = "#0f172a";
-  ctx.fillRect(0, 0, targetWidth, headerHeight);
-
-  ctx.strokeStyle = "#1e293b";
-  ctx.lineWidth = Math.max(2, Math.round(1.5 * scale));
-  ctx.beginPath();
-  ctx.moveTo(0, headerHeight);
-  ctx.lineTo(targetWidth, headerHeight);
-  ctx.stroke();
-
-  // Banner text
-  ctx.fillStyle = "#38bdf8";
-  ctx.font = `bold ${fontBrandSize}px sans-serif`;
-  ctx.fillText("PDAC BIOPORTAL — PUBLICATION FIGURE", padLeft, line1Y);
-
-  ctx.fillStyle = "#f8fafc";
-  ctx.font = `bold ${fontTitleSize}px sans-serif`;
-  ctx.fillText(title, padLeft, line2Y);
-
-  if (subtitle) {
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = `${fontSubtitleSize}px monospace`;
-    ctx.fillText(subtitle, padLeft, line3Y);
-  }
-
-  // Draw chart PNG below header banner
-  const img = new Image();
-  img.onload = () => {
-    ctx.drawImage(img, 0, headerHeight, targetWidth, targetPlotHeight);
-
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const pngUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = pngUrl;
-      link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(pngUrl);
-    }, "image/png");
-  };
-  img.src = chartDataUrl;
+  const link = document.createElement("a");
+  link.href = chartDataUrl;
+  link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /**
@@ -338,13 +236,18 @@ export async function exportComponentToSVG({
   filename,
   title = "PDAC BioPortal Figure",
   subtitle,
+  theme = "light",
 }: {
   element: HTMLElement;
   filename: string;
   title?: string;
   subtitle?: string;
+  theme?: ExportTheme;
 }) {
   if (!element) return;
+
+  const isLight = theme === "light";
+  const finalBgColor = isLight ? "#ffffff" : "#020617";
 
   // 1. Wait for render frames to settle
   await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
@@ -364,7 +267,7 @@ export async function exportComponentToSVG({
 
   // Capture element to SVG Data URI
   const svgDataUrl = await toSvg(element, {
-    backgroundColor: "#020617", // Slate 950
+    backgroundColor: finalBgColor,
     filter: filter as any,
   });
 

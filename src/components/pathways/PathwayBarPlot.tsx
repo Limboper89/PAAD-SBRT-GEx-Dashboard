@@ -1,7 +1,10 @@
 "use client";
 
+import React, { useRef } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import ExportButton from "@/components/ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface PathwayBarPlotProps {
   results: PathwayEnrichmentResult[];
@@ -37,6 +40,8 @@ export default function PathwayBarPlot({
   onSelectPathway,
   analysisMode
 }: PathwayBarPlotProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
   if (results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[350px] bg-slate-900/40 border border-slate-800 rounded-2xl p-6 text-center text-slate-500 font-mono text-xs">
@@ -70,8 +75,128 @@ export default function PathwayBarPlot({
     };
   });
 
+  const generateHighResBarCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 38px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Pathway Enrichment Ranking", 80, 80);
+
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "24px monospace";
+    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 118);
+
+    const padLeft = 820;
+    const padRight = 200;
+    const padTop = 180;
+    const padBottom = 200;
+
+    const plotW = size - padLeft - padRight;
+    const plotH = size - padTop - padBottom;
+
+    const metrics = chartData.map((d) => d.metric);
+    let minVal = Math.min(0, ...metrics);
+    let maxVal = Math.max(...metrics);
+    if (isGsea) {
+      const maxAbs = Math.max(Math.abs(minVal), Math.abs(maxVal), 1.5);
+      minVal = -maxAbs * 1.15;
+      maxVal = maxAbs * 1.15;
+    } else {
+      minVal = 0;
+      maxVal = Math.ceil(maxVal * 1.15);
+    }
+
+    const getX = (val: number) => padLeft + ((val - minVal) / (maxVal - minVal)) * plotW;
+    const zeroX = getX(0);
+
+    const rowH = plotH / displayResults.length;
+    const barH = rowH * 0.65;
+
+    // Draw Grid & Bars
+    chartData.forEach((d, idx) => {
+      const y = padTop + idx * rowH + (rowH - barH) / 2;
+      const barX = Math.min(zeroX, getX(d.metric));
+      const barW = Math.max(4, Math.abs(getX(d.metric) - zeroX));
+
+      // Pathway name
+      ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
+      const fontSize = Math.min(24, Math.max(14, Math.round(rowH * 0.38)));
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = "right";
+
+      const maxLen = 44;
+      const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
+      ctx.fillText(displayName, padLeft - 20, y + barH * 0.7);
+
+      const isUp = d.direction === "Upregulated" || d.metric >= 0;
+
+      // Bar Fill
+      ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.85)" : "rgba(37, 99, 235, 0.85)";
+      ctx.fillRect(barX, y, barW, barH);
+
+      ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, y, barW, barH);
+
+      // Value label at end of bar
+      ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+      ctx.font = "bold 20px monospace";
+      ctx.textAlign = d.metric >= 0 ? "left" : "right";
+      const labelX = d.metric >= 0 ? getX(d.metric) + 12 : getX(d.metric) - 12;
+      ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.68);
+    });
+
+    // Zero line
+    ctx.strokeStyle = isLight ? "#334155" : "#64748b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(zeroX, padTop);
+    ctx.lineTo(zeroX, padTop + plotH);
+    ctx.stroke();
+
+    // X Axis ticks
+    const numTicks = 8;
+    const step = (maxVal - minVal) / numTicks;
+    ctx.font = "bold 22px monospace";
+    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.textAlign = "center";
+
+    for (let i = 0; i <= numTicks; i++) {
+      const val = minVal + i * step;
+      const xPos = getX(val);
+      ctx.beginPath();
+      ctx.moveTo(xPos, padTop + plotH);
+      ctx.lineTo(xPos, padTop + plotH + 8);
+      ctx.stroke();
+      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 34);
+    }
+
+    // X Axis Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+      padLeft + plotW / 2,
+      padTop + plotH + 90
+    );
+
+    return offscreen;
+  };
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[500px] shadow-xl">
+    <div ref={chartRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[500px] shadow-xl">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h3 className="text-sm font-bold text-slate-100">Enrichment Bar Plot</h3>
@@ -79,6 +204,43 @@ export default function PathwayBarPlot({
             Ranked by {isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment"} &bull; Top {displayResults.length} Pathways
           </p>
         </div>
+
+        <ExportButton
+          onExportCSV={() => {
+            exportToCSV({
+              filename: `Pathway_BarPlot_${analysisMode}.csv`,
+              metadata: {
+                module: "Pathway Bar Plot",
+                mode: analysisMode,
+                totalPathways: String(displayResults.length),
+              },
+              headers: ["Pathway ID", "Pathway Name", "Database", isGsea ? "NES" : "Fold Enrichment", "BH FDR"],
+              rows: displayResults.map((r) => [
+                r.pathwayId,
+                r.pathwayName,
+                r.database,
+                isGsea ? (r.nes ?? "N/A") : (r.foldEnrichment ?? "N/A"),
+                r.adjPValue.toExponential(4),
+              ]),
+            });
+          }}
+          onExportPNG={({ theme = "light" } = {}) => {
+            const exportCanvas = generateHighResBarCanvas(theme, 2400);
+            exportCanvasToPNG({
+              canvas: exportCanvas,
+              filename: `Pathway_BarPlot_${analysisMode}.png`,
+              theme,
+            });
+          }}
+          onExportSVG={({ theme = "light" } = {}) => {
+            const exportCanvas = generateHighResBarCanvas(theme, 1200);
+            exportCanvasToSVG({
+              canvas: exportCanvas,
+              filename: `Pathway_BarPlot_${analysisMode}.svg`,
+              theme,
+            });
+          }}
+        />
       </div>
 
       <div className="w-full h-[440px] min-h-[440px] relative">

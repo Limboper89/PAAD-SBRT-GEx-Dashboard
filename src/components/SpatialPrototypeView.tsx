@@ -697,22 +697,24 @@ export default function SpatialPrototypeView() {
                     ]),
                   });
                 }}
-                onExportPNG={() => {
+                onExportPNG={({ theme = "light" } = {}) => {
                   if (!canvasRef.current) return;
                   exportCanvasToPNG({
                     canvas: canvasRef.current,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.png`,
                     title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
                     subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
+                    theme,
                   });
                 }}
-                onExportSVG={() => {
+                onExportSVG={({ theme = "light" } = {}) => {
                   if (!canvasRef.current) return;
                   exportCanvasToSVG({
                     canvas: canvasRef.current,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.svg`,
                     title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
                     subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
+                    theme,
                   });
                 }}
               />

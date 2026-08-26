@@ -42,7 +42,7 @@ export default function AboutView() {
                 <th className="p-3 font-semibold">Dataset / Study</th>
                 <th className="p-3 font-semibold">Modality</th>
                 <th className="p-3 font-semibold">Cohort Details</th>
-                <th className="p-3 font-semibold">Main Dashboard Purpose</th>
+                <th className="p-3 font-semibold">Scientific &amp; Translational Purpose</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-850 bg-slate-900/40">

@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Info, ArrowRightLeft } from "lucide-react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import ExportButton from "@/components/ExportButton";
+import { exportToCSV } from "@/utils/exportUtils";
 
 interface PathwayComparisonViewProps {
   currentResults: PathwayEnrichmentResult[];
@@ -45,19 +47,63 @@ export default function PathwayComparisonView({
           </p>
         </div>
 
-        <div className="flex gap-2 font-mono text-xs bg-slate-950 p-1 rounded-xl border border-slate-850">
-          <button
-            onClick={() => setCompMode("up_down")}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition ${compMode === "up_down" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
-          >
-            Up vs Down Pathways
-          </button>
-          <button
-            onClick={() => setCompMode("cross_cohort")}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition ${compMode === "cross_cohort" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
-          >
-            Cross-Study Observation
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2 font-mono text-xs bg-slate-950 p-1 rounded-xl border border-slate-850">
+            <button
+              onClick={() => setCompMode("up_down")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition ${compMode === "up_down" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
+            >
+              Up vs Down Pathways
+            </button>
+            <button
+              onClick={() => setCompMode("cross_cohort")}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition ${compMode === "cross_cohort" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
+            >
+              Cross-Study Observation
+            </button>
+          </div>
+
+          <ExportButton
+            onExportCSV={() => {
+              if (compMode === "up_down") {
+                exportToCSV({
+                  filename: "Comparative_Pathway_UpDown.csv",
+                  metadata: {
+                    module: "Comparative Pathway Analysis",
+                    mode: "Up vs Down",
+                    upCount: String(upPathways.length),
+                    downCount: String(downPathways.length),
+                  },
+                  headers: ["Direction", "Pathway ID", "Pathway Name", "Database", "NES / Metric", "BH FDR"],
+                  rows: [
+                    ...upPathways.map((p) => ["Upregulated", p.pathwayId, p.pathwayName, p.database, p.nes ?? p.foldEnrichment ?? "N/A", p.adjPValue.toExponential(4)]),
+                    ...downPathways.map((p) => ["Downregulated", p.pathwayId, p.pathwayName, p.database, p.nes ?? p.foldEnrichment ?? "N/A", p.adjPValue.toExponential(4)]),
+                  ],
+                });
+              } else {
+                exportToCSV({
+                  filename: "Comparative_Pathway_CrossCohort.csv",
+                  metadata: {
+                    module: "Comparative Pathway Analysis",
+                    mode: "Cross Cohort (TCGA vs SBRT)",
+                  },
+                  headers: ["Pathway ID", "Pathway Name", "TCGA PAAD NES", "TCGA BH FDR", "SBRT GSE225767 NES", "SBRT BH FDR"],
+                  rows: allPathwayIds.map((id) => {
+                    const t = tcgaMap.get(id);
+                    const s = sbrtMap.get(id);
+                    return [
+                      id,
+                      t?.pathwayName || s?.pathwayName || id,
+                      t?.nes?.toFixed(3) ?? "N/A",
+                      t?.adjPValue ? t.adjPValue.toExponential(3) : "N/A",
+                      s?.nes?.toFixed(3) ?? "N/A",
+                      s?.adjPValue ? s.adjPValue.toExponential(3) : "N/A",
+                    ];
+                  }),
+                });
+              }
+            }}
+          />
         </div>
       </div>
 

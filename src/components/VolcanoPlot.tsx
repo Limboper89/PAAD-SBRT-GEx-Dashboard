@@ -452,6 +452,191 @@ export default function VolcanoPlot({
     }
   };
 
+  // Generate dedicated 1:1 square high-res canvas for publication export
+  const generateSquareVolcanoCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+    const pad = { left: 240, right: 100, top: 120, bottom: 240 };
+    const plotW = size - pad.left - pad.right;
+    const plotH = size - pad.top - pad.bottom;
+
+    // Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    const getExportScreenCoords = (xVal: number, yVal: number) => {
+      const scrX = pad.left + ((xVal - bounds.minX) / (bounds.maxX - bounds.minX)) * plotW;
+      const scrY = pad.top + ((bounds.maxY - yVal) / (bounds.maxY - bounds.minY)) * plotH;
+      return { x: scrX, y: scrY };
+    };
+
+    // Grid lines
+    const xStep = Math.max(1, Math.ceil((bounds.maxX - bounds.minX) / 8));
+    const startX = Math.floor(bounds.minX);
+    const yStep = Math.max(1, Math.ceil((bounds.maxY - bounds.minY) / 8));
+
+    ctx.strokeStyle = isLight ? "#f1f5f9" : "rgba(148, 163, 184, 0.08)";
+    ctx.lineWidth = 2;
+
+    for (let x = startX; x <= bounds.maxX; x += xStep) {
+      const pt = getExportScreenCoords(x, 0);
+      ctx.beginPath();
+      ctx.moveTo(pt.x, pad.top);
+      ctx.lineTo(pt.x, pad.top + plotH);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= bounds.maxY; y += yStep) {
+      const pt = getExportScreenCoords(0, y);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pt.y);
+      ctx.lineTo(pad.left + plotW, pt.y);
+      ctx.stroke();
+    }
+
+    // Zero line
+    const zeroPt = getExportScreenCoords(0, 0);
+    ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(zeroPt.x, pad.top);
+    ctx.lineTo(zeroPt.x, pad.top + plotH);
+    ctx.stroke();
+
+    // Significance threshold line
+    const threshY = -Math.log10(0.05);
+    const threshPt = getExportScreenCoords(0, threshY);
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, threshPt.y);
+    ctx.lineTo(pad.left + plotW, threshPt.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "bold 26px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 15, threshPt.y - 12);
+
+    // Fold change threshold lines
+    if (fcThreshold > 0) {
+      const rPt = getExportScreenCoords(fcThreshold, 0);
+      const lPt = getExportScreenCoords(-fcThreshold, 0);
+      ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(rPt.x, pad.top);
+      ctx.lineTo(rPt.x, pad.top + plotH);
+      ctx.moveTo(lPt.x, pad.top);
+      ctx.lineTo(lPt.x, pad.top + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Draw Points
+    const sortedPoints = [...points].sort((a, b) => {
+      const aSel = a.gene.gene_name === selectedGene ? 1 : 0;
+      const bSel = b.gene.gene_name === selectedGene ? 1 : 0;
+      return aSel - bSel;
+    });
+
+    sortedPoints.forEach((p) => {
+      const scr = getExportScreenCoords(p.x, p.y);
+      let color = isLight ? "rgba(148, 163, 184, 0.45)" : "rgba(148, 163, 184, 0.25)";
+      let radius = 6.5;
+
+      const isSig = isTcgaGtex
+        ? (p.gene.qval !== undefined && p.gene.qval < 0.05)
+        : p.gene.p_value < 0.05;
+      const passesFC = Math.abs(p.x) >= fcThreshold;
+
+      if (isSig && passesFC) {
+        color = p.x > 0 ? "#dc2626" : "#2563eb";
+        radius = 9.5;
+      } else if (isSig) {
+        color = isLight ? "rgba(148, 163, 184, 0.65)" : "rgba(148, 163, 184, 0.4)";
+        radius = 7.5;
+      }
+
+      ctx.beginPath();
+      ctx.arc(scr.x, scr.y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+
+    // Draw Selected Gene Callout
+    if (selectedGene) {
+      const p = points.find((pt) => pt.gene.gene_name === selectedGene);
+      if (p) {
+        const scr = getExportScreenCoords(p.x, p.y);
+        ctx.beginPath();
+        ctx.arc(scr.x, scr.y, 22, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#d97706";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(scr.x, scr.y, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "#d97706";
+        ctx.fill();
+
+        // Label
+        ctx.fillStyle = isLight ? "#0f172a" : "#ffffff";
+        ctx.font = "bold 32px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(selectedGene, scr.x + 28, scr.y + 10);
+      }
+    }
+
+    // Outer Axis Frame
+    ctx.strokeStyle = isLight ? "#334155" : "#475569";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(pad.left, pad.top, plotW, plotH);
+
+    // Axis Ticks & Numbers
+    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
+    ctx.font = "bold 28px sans-serif";
+    for (let x = startX; x <= bounds.maxX; x += xStep) {
+      const pt = getExportScreenCoords(x, 0);
+      if (pt.x >= pad.left - 5 && pt.x <= pad.left + plotW + 5) {
+        ctx.textAlign = "center";
+        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 42);
+      }
+    }
+    for (let y = 0; y <= bounds.maxY; y += yStep) {
+      const pt = getExportScreenCoords(0, y);
+      if (pt.y >= pad.top - 5 && pt.y <= pad.top + plotH + 5) {
+        ctx.textAlign = "right";
+        ctx.fillText(y.toString(), pad.left - 18, pt.y + 10);
+      }
+    }
+
+    // Axis Titles
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 36px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      isTcgaGtex ? "Wilcoxon log₂(Fold Change)" : "DESeq2 log₂(Fold Change)",
+      pad.left + plotW / 2,
+      pad.top + plotH + 110
+    );
+
+    ctx.save();
+    ctx.translate(65, pad.top + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(isTcgaGtex ? "−log₁₀(Wilcoxon FDR)" : "−log₁₀(p-value)", 0, 0);
+    ctx.restore();
+
+    return offscreen;
+  };
+
   return (
     <div
       ref={containerRef}
@@ -519,22 +704,20 @@ export default function VolcanoPlot({
             </button>
             <div className="w-px h-4 bg-slate-800 my-auto mx-0.5" />
             <ExportButton
-              onExportPNG={() => {
-                if (!canvasRef.current) return;
+              onExportPNG={({ theme = "light" } = {}) => {
+                const squareCanvas = generateSquareVolcanoCanvas(theme, 2400);
                 exportCanvasToPNG({
-                  canvas: canvasRef.current,
+                  canvas: squareCanvas,
                   filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.png`,
-                  title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Volcano Plot`,
-                  subtitle: `Target: ${selectedGene || "None"} | fcThreshold: ${fcThreshold}`,
+                  theme,
                 });
               }}
-              onExportSVG={() => {
-                if (!canvasRef.current) return;
+              onExportSVG={({ theme = "light" } = {}) => {
+                const squareCanvas = generateSquareVolcanoCanvas(theme, 1200);
                 exportCanvasToSVG({
-                  canvas: canvasRef.current,
+                  canvas: squareCanvas,
                   filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.svg`,
-                  title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Volcano Plot`,
-                  subtitle: `Target: ${selectedGene || "None"} | fcThreshold: ${fcThreshold}`,
+                  theme,
                 });
               }}
             />

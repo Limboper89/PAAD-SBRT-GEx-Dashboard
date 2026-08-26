@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Download, FileText, Image, Code, Table, Database, ChevronDown } from "lucide-react";
+import { Download, FileText, Image, Code, Table, Database, ChevronDown, Sun, Moon } from "lucide-react";
 
 export interface ExportButtonProps {
   label?: string;
@@ -9,8 +9,8 @@ export interface ExportButtonProps {
   disabled?: boolean;
   disabledTooltip?: string;
   onExportCSV?: () => void;
-  onExportPNG?: () => void;
-  onExportSVG?: () => void;
+  onExportPNG?: (options?: { theme?: "light" | "dark" }) => void;
+  onExportSVG?: (options?: { theme?: "light" | "dark" }) => void;
   onExportCellMetadata?: () => void;
   onExportExpressionMatrix?: () => void;
 }
@@ -53,8 +53,8 @@ export default function ExportButton({
   const handleSingleClick = () => {
     if (disabled) return;
     if (onExportCSV) onExportCSV();
-    else if (onExportPNG) onExportPNG();
-    else if (onExportSVG) onExportSVG();
+    else if (onExportPNG) onExportPNG({ theme: "light" });
+    else if (onExportSVG) onExportSVG({ theme: "light" });
     else if (onExportCellMetadata) onExportCellMetadata();
     else if (onExportExpressionMatrix) onExportExpressionMatrix();
   };
@@ -90,7 +90,7 @@ export default function ExportButton({
 
       {/* Dropdown Menu */}
       {isOpen && !disabled && (
-        <div className="origin-top-right absolute right-0 mt-1.5 w-56 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl z-50 py-1.5 divide-y divide-slate-800/80 font-mono text-xs">
+        <div className="origin-top-right absolute right-0 mt-1.5 w-64 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl z-50 py-1.5 divide-y divide-slate-800/80 font-mono text-xs">
           
           {/* Table / Data Section */}
           {(onExportCSV || onExportCellMetadata || onExportExpressionMatrix) && (
@@ -140,31 +140,43 @@ export default function ExportButton({
           {/* Graphics Section */}
           {(onExportPNG || onExportSVG) && (
             <div className="py-1">
-              <div className="px-3 py-1 text-[9px] text-slate-500 uppercase tracking-wider font-bold">
+              <div className="px-3 py-1 text-[9px] text-teal-400 uppercase tracking-wider font-bold">
                 Publication Figure (300 DPI)
               </div>
               {onExportPNG && (
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    onExportPNG();
+                    onExportPNG({ theme: "light" });
                   }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 text-slate-200 hover:bg-slate-800 hover:text-teal-400 transition"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 text-slate-100 hover:bg-slate-800 hover:text-teal-300 transition font-medium"
                 >
-                  <Image className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Download Figure (PNG)</span>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Journal Figure (White BG, 300 DPI)</span>
                 </button>
               )}
               {onExportSVG && (
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    onExportSVG();
+                    onExportSVG({ theme: "light" });
                   }}
                   className="w-full text-left px-3 py-1.5 flex items-center gap-2 text-slate-200 hover:bg-slate-800 hover:text-indigo-400 transition"
                 >
                   <Code className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Download Vector Figure (SVG)</span>
+                  <span>Vector Figure (Light SVG / PDF)</span>
+                </button>
+              )}
+              {onExportPNG && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onExportPNG({ theme: "dark" });
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition text-[11px]"
+                >
+                  <Moon className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Presentation Figure (Dark Theme)</span>
                 </button>
               )}
             </div>

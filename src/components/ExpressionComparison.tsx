@@ -341,22 +341,24 @@ export default function ExpressionComparison({
                   rows: SbrtData.map((d: any) => [d.gene_name, d["Pre-SBRT"], d["Post-SBRT"], d.log2FC]),
                 });
               }}
-              onExportPNG={async () => {
+              onExportPNG={async ({ theme = "light" } = {}) => {
                 if (!sbrtChartRef.current) return;
                 await exportComponentToPNG({
                   element: sbrtChartRef.current,
                   filename: `ExpressionComparison_SBRT.png`,
                   title: "Pre-SBRT vs Post-SBRT Expression Comparison",
                   subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
+                  theme,
                 });
               }}
-              onExportSVG={async () => {
+              onExportSVG={async ({ theme = "light" } = {}) => {
                 if (!sbrtChartRef.current) return;
                 await exportComponentToSVG({
                   element: sbrtChartRef.current,
                   filename: `ExpressionComparison_SBRT.svg`,
                   title: "Pre-SBRT vs Post-SBRT Expression Comparison",
                   subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
+                  theme,
                 });
               }}
             />
@@ -497,22 +499,24 @@ export default function ExpressionComparison({
                 rows: points.map((p) => [p.sample, p.cohortName, p.y]),
               });
             }}
-            onExportPNG={async () => {
+            onExportPNG={async ({ theme = "light" } = {}) => {
               if (!tcgaChartRef.current) return;
               await exportComponentToPNG({
                 element: tcgaChartRef.current,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.png`,
                 title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
                 subtitle: `PAAD Tumor vs Normal Expression`,
+                theme,
               });
             }}
-            onExportSVG={async () => {
+            onExportSVG={async ({ theme = "light" } = {}) => {
               if (!tcgaChartRef.current) return;
               await exportComponentToSVG({
                 element: tcgaChartRef.current,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.svg`,
                 title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
                 subtitle: `PAAD Tumor vs Normal Expression`,
+                theme,
               });
             }}
           />

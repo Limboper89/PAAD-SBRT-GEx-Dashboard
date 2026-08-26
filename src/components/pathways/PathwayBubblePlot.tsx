@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Cell, ReferenceLine } from "recharts";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import ExportButton from "@/components/ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface PathwayBubblePlotProps {
   results: PathwayEnrichmentResult[];
@@ -64,6 +66,7 @@ export default function PathwayBubblePlot({
   analysisMode
 }: PathwayBubblePlotProps) {
   const [topCount, setTopCount] = useState<number>(20);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   if (!results || results.length === 0) {
     return (
@@ -110,8 +113,192 @@ export default function PathwayBubblePlot({
     };
   });
 
+  const generateHighResBubbleCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 38px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("GSEA Pathway Enrichment Summary", 80, 80);
+
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "24px monospace";
+    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 118);
+
+    const padLeft = 820; // Generous space for pathway names on the left
+    const padRight = 100;
+    const padTop = 180;
+    const padBottom = 220;
+
+    const plotW = size - padLeft - padRight;
+    const plotH = size - padTop - padBottom;
+
+    // Calculate X-axis bounds
+    const xValues = chartData.map((d) => d.xValue);
+    let minX = Math.min(...xValues);
+    let maxX = Math.max(...xValues);
+
+    if (isGsea) {
+      const maxAbs = Math.max(Math.abs(minX), Math.abs(maxX), 1.5);
+      minX = -maxAbs * 1.15;
+      maxX = maxAbs * 1.15;
+    } else {
+      minX = Math.max(0, Math.floor(minX * 0.9));
+      maxX = Math.ceil(maxX * 1.1);
+    }
+
+    const getXCoord = (val: number) => {
+      return padLeft + ((val - minX) / (maxX - minX)) * plotW;
+    };
+
+    const rowH = plotH / displayResults.length;
+
+    // Draw Grid Lines
+    ctx.strokeStyle = isLight ? "#f1f5f9" : "rgba(148, 163, 184, 0.08)";
+    ctx.lineWidth = 1.5;
+
+    // Horizontal Row Lines
+    for (let i = 0; i < displayResults.length; i++) {
+      const y = padTop + i * rowH + rowH / 2;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(padLeft + plotW, y);
+      ctx.stroke();
+    }
+
+    // Zero / baseline line if GSEA
+    if (isGsea) {
+      const zeroX = getXCoord(0);
+      ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(zeroX, padTop);
+      ctx.lineTo(zeroX, padTop + plotH);
+      ctx.stroke();
+    }
+
+    // Draw Pathway Names and Bubbles
+    chartData.forEach((d, idx) => {
+      const y = padTop + idx * rowH + rowH / 2;
+      const x = getXCoord(d.xValue);
+
+      // Pathway name text (Bold Dark Slate/Black in Light Mode)
+      ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
+      const fontSize = Math.min(24, Math.max(14, Math.round(rowH * 0.4)));
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = "right";
+
+      const maxLen = 44;
+      const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
+      ctx.fillText(displayName, padLeft - 20, y + fontSize * 0.35);
+
+      // Bubble size
+      const maxCount = Math.max(...chartData.map((cd) => cd.size), 20);
+      const minCount = Math.min(...chartData.map((cd) => cd.size), 1);
+      const normalizedSize = (d.size - minCount) / Math.max(1, maxCount - minCount);
+      const radius = 12 + normalizedSize * 24;
+
+      const isUp = d.direction === "Upregulated" || d.xValue >= 0;
+
+      // Bubble fill
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.85)" : "rgba(37, 99, 235, 0.85)";
+      ctx.fill();
+
+      // Bubble stroke
+      ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    });
+
+    // Outer Axis Frame (X Axis)
+    ctx.strokeStyle = isLight ? "#334155" : "#475569";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, padTop + plotH);
+    ctx.lineTo(padLeft + plotW, padTop + plotH);
+    ctx.moveTo(padLeft, padTop);
+    ctx.lineTo(padLeft, padTop + plotH);
+    ctx.stroke();
+
+    // X-Axis Ticks & Labels
+    const numXTicks = 8;
+    const xStep = (maxX - minX) / numXTicks;
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.font = "bold 22px monospace";
+    ctx.textAlign = "center";
+
+    for (let i = 0; i <= numXTicks; i++) {
+      const val = minX + i * xStep;
+      const xPos = getXCoord(val);
+      ctx.beginPath();
+      ctx.moveTo(xPos, padTop + plotH);
+      ctx.lineTo(xPos, padTop + plotH + 8);
+      ctx.stroke();
+      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 34);
+    }
+
+    // X-Axis Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+      padLeft + plotW / 2,
+      padTop + plotH + 90
+    );
+
+    // Bottom Legend
+    const legY = size - 70;
+    ctx.font = "bold 20px sans-serif";
+    ctx.textAlign = "left";
+
+    // Red dot for Upregulated
+    ctx.beginPath();
+    ctx.arc(padLeft + 40, legY, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(220, 38, 38, 0.85)";
+    ctx.fill();
+    ctx.strokeStyle = "#991b1b";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.fillText("Upregulated in Phenotype", padLeft + 65, legY + 7);
+
+    // Blue dot for Downregulated
+    ctx.beginPath();
+    ctx.arc(padLeft + 420, legY, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(37, 99, 235, 0.85)";
+    ctx.fill();
+    ctx.strokeStyle = "#1e40af";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillText("Downregulated in Phenotype", padLeft + 445, legY + 7);
+
+    // Bubble size text
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "18px monospace";
+    ctx.fillText("• Bubble Area ∝ Leading-Edge Gene Count", padLeft + 800, legY + 6);
+
+    return offscreen;
+  };
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[520px] shadow-xl font-sans">
+    <div ref={chartRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[520px] shadow-xl font-sans">
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-slate-800 pb-4">
         <div>
@@ -126,25 +313,66 @@ export default function PathwayBubblePlot({
           </p>
         </div>
 
-        {/* Top Count Selector */}
-        <div className="flex items-center gap-2 font-mono text-xs">
-          <span className="text-slate-400">Display:</span>
-          <div className="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-850">
-            {[10, 20, 30].map((cnt) => (
-              <button
-                key={cnt}
-                type="button"
-                onClick={() => setTopCount(cnt)}
-                className={`px-2.5 py-1 rounded-lg text-xxs font-bold transition ${
-                  topCount === cnt
-                    ? "bg-indigo-500 text-slate-950 shadow"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Top {cnt}
-              </button>
-            ))}
+        {/* Top Count Selector and Export */}
+        <div className="flex items-center gap-3 font-mono text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">Display:</span>
+            <div className="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-850">
+              {[10, 20, 30].map((cnt) => (
+                <button
+                  key={cnt}
+                  type="button"
+                  onClick={() => setTopCount(cnt)}
+                  className={`px-2.5 py-1 rounded-lg text-xxs font-bold transition ${
+                    topCount === cnt
+                      ? "bg-indigo-500 text-slate-950 shadow"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  {cnt}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <ExportButton
+            onExportCSV={() => {
+              exportToCSV({
+                filename: `Pathway_BubblePlot_${analysisMode}.csv`,
+                metadata: {
+                  module: "Pathway Bubble Plot",
+                  mode: analysisMode,
+                  totalPathways: String(displayResults.length),
+                },
+                headers: ["Pathway ID", "Pathway Name", "Database", isGsea ? "NES" : "Fold Enrichment", "BH FDR", "Nominal P", isGsea ? "Leading-Edge Count" : "Overlap Count"],
+                rows: displayResults.map((r) => [
+                  r.pathwayId,
+                  r.pathwayName,
+                  r.database,
+                  isGsea ? (r.nes ?? "N/A") : (r.foldEnrichment ?? "N/A"),
+                  r.adjPValue.toExponential(4),
+                  r.pValue.toExponential(4),
+                  isGsea ? (r.leadingEdgeCount ?? "N/A") : r.overlapCount,
+                ]),
+              });
+            }}
+            onExportPNG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResBubbleCanvas(theme, 2400);
+              exportCanvasToPNG({
+                canvas: exportCanvas,
+                filename: `Pathway_BubblePlot_${analysisMode}.png`,
+                theme,
+              });
+            }}
+            onExportSVG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResBubbleCanvas(theme, 1200);
+              exportCanvasToSVG({
+                canvas: exportCanvas,
+                filename: `Pathway_BubblePlot_${analysisMode}.svg`,
+                theme,
+              });
+            }}
+          />
         </div>
       </div>
 

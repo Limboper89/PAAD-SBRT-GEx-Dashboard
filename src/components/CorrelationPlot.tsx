@@ -295,22 +295,24 @@ export default function CorrelationPlot({
                 rows: points.map((p) => [p.sample, p.x, p.y]),
               });
             }}
-            onExportPNG={async () => {
+            onExportPNG={async ({ theme = "light" } = {}) => {
               if (!chartContainerRef.current) return;
               await exportComponentToPNG({
                 element: chartContainerRef.current,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.png`,
                 title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
                 subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
+                theme,
               });
             }}
-            onExportSVG={async () => {
+            onExportSVG={async ({ theme = "light" } = {}) => {
               if (!chartContainerRef.current) return;
               await exportComponentToSVG({
                 element: chartContainerRef.current,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.svg`,
                 title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
                 subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
+                theme,
               });
             }}
           />

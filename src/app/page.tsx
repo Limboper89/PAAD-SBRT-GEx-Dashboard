@@ -568,7 +568,7 @@ export default function Dashboard() {
             <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent font-sans">
               PDAC BioPortal
             </h1>
-            <p className="text-xs text-slate-400 font-mono">PDAC Multi-Cohort Transcriptomics Dashboard</p>
+            <p className="text-xs text-slate-400 font-mono">A Multi-Cohort Transcriptomics &amp; SBRT Translational Knowledgebase</p>
           </div>
         </div>
 

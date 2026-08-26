@@ -666,22 +666,24 @@ export default function SingleNucleusExplorer() {
 
               <ExportButton
                 label="Export UMAP"
-                onExportPNG={() => {
+                onExportPNG={({ theme = "light" } = {}) => {
                   if (!canvasRef.current) return;
                   exportCanvasToPNG({
                     canvas: canvasRef.current,
                     filename: `UMAP_GSE202051_${activeGene || colorMode}.png`,
                     title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
                     subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
+                    theme,
                   });
                 }}
-                onExportSVG={() => {
+                onExportSVG={({ theme = "light" } = {}) => {
                   if (!canvasRef.current) return;
                   exportCanvasToSVG({
                     canvas: canvasRef.current,
                     filename: `UMAP_GSE202051_${activeGene || colorMode}.svg`,
                     title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
                     subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
+                    theme,
                   });
                 }}
               />

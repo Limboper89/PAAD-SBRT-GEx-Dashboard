@@ -398,24 +398,216 @@ export default function Heatmap({
     setHoveredCell(null);
   };
 
+  // Generate dedicated 1:1 square high-res canvas for publication export
+  const generateHighResHeatmapCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    if (!heatmapData || heatmapData.rows.length === 0) return offscreen;
+
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // Title Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 40px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Z-score Expression Heatmap", 80, 80);
+
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "24px monospace";
+    const sub = isTcgaGtex 
+      ? `TCGA-PAAD Primary Tumor (n=${heatmapData.tumorCount}) vs GTEx Normal (n=${heatmapData.gtexCount})`
+      : `Pre-SBRT (N=${heatmapData.preCount}) vs Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount}) Paired Cohort`;
+    ctx.fillText(sub, 80, 118);
+
+    const padLeft = 460;
+    const padRight = 80;
+    const padTop = 220;
+    const padBottom = 260; // Space for bottom colorbar legend
+
+    const matrixWidth = size - padLeft - padRight;
+    const matrixHeight = size - padTop - padBottom;
+
+    const cellWidth = matrixWidth / heatmapData.samples.length;
+    const rowHeight = matrixHeight / heatmapData.rows.length;
+
+    // 1. Draw Cohort Header Banners (Height 60px)
+    const bannerY = padTop - 65;
+    const bannerH = 50;
+
+    if (isTcgaGtex) {
+      const normalW = heatmapData.gtexCount * cellWidth;
+      const tumorW = heatmapData.tumorCount * cellWidth;
+      const solidW = heatmapData.solidCount * cellWidth;
+
+      const normalX = padLeft;
+      const tumorX = padLeft + normalW;
+      const solidX = padLeft + normalW + tumorW;
+
+      if (normalW > 0) {
+        ctx.fillStyle = isLight ? "rgba(69, 117, 180, 0.18)" : "rgba(69, 117, 180, 0.35)";
+        ctx.fillRect(normalX, bannerY, normalW - 3, bannerH);
+        ctx.fillStyle = isLight ? "#1e40af" : "#60a5fa";
+        ctx.font = "bold 22px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`GTEx Normal (n=${heatmapData.gtexCount})`, normalX + normalW / 2, bannerY + 32);
+      }
+
+      if (tumorW > 0) {
+        ctx.fillStyle = isLight ? "rgba(215, 48, 39, 0.18)" : "rgba(215, 48, 39, 0.35)";
+        ctx.fillRect(tumorX, bannerY, tumorW - 3, bannerH);
+        ctx.fillStyle = isLight ? "#991b1b" : "#f87171";
+        ctx.font = "bold 22px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`TCGA Primary Tumor (n=${heatmapData.tumorCount})`, tumorX + tumorW / 2, bannerY + 32);
+      }
+
+      if (solidW > 0) {
+        ctx.fillStyle = isLight ? "rgba(234, 179, 8, 0.18)" : "rgba(234, 179, 8, 0.35)";
+        ctx.fillRect(solidX, bannerY, solidW - 3, bannerH);
+        ctx.fillStyle = isLight ? "#854d0e" : "#fbbf24";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`Adjacent Norm (n=${heatmapData.solidCount})`, solidX + solidW / 2, bannerY + 32);
+      }
+    } else {
+      const dividerX = padLeft + heatmapData.preCount * cellWidth;
+
+      // Pre-SBRT Banner
+      ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.18)" : "rgba(100, 116, 139, 0.35)";
+      ctx.fillRect(padLeft, bannerY, heatmapData.preCount * cellWidth - 4, bannerH);
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = "bold 24px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`Pre-SBRT (N=${heatmapData.preCount})`, padLeft + (heatmapData.preCount * cellWidth) / 2, bannerY + 33);
+
+      // Post-SBRT Banner
+      ctx.fillStyle = isLight ? "rgba(20, 184, 166, 0.18)" : "rgba(20, 184, 166, 0.35)";
+      ctx.fillRect(dividerX + 1, bannerY, matrixWidth - heatmapData.preCount * cellWidth - 4, bannerH);
+      ctx.fillStyle = isLight ? "#0f766e" : "#14b8a6";
+      ctx.font = "bold 24px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`, dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2, bannerY + 33);
+    }
+
+    // 2. Draw Rows & Cells
+    const geneFontSize = Math.min(32, Math.max(16, Math.round(rowHeight * 0.6)));
+
+    heatmapData.rows.forEach((row, rIdx) => {
+      const y = padTop + rIdx * rowHeight;
+
+      // Draw Row Label (Gene Symbol) in BOLD HIGH-CONTRAST DARK TEXT
+      const isActive = row.gene === activeGene;
+      ctx.fillStyle = isActive ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#0f172a" : "#f1f5f9");
+      ctx.font = `bold ${geneFontSize}px sans-serif`;
+      ctx.textAlign = "left";
+      ctx.fillText(row.gene, 80, y + rowHeight * 0.65);
+
+      // Draw Cells
+      row.zScores.forEach((z, cIdx) => {
+        const x = padLeft + cIdx * cellWidth;
+
+        const maxZ = 2.0;
+        const normalized = Math.min(Math.max(z / maxZ, -1), 1);
+
+        let color = "";
+        if (normalized > 0) {
+          const r = 255;
+          const g = Math.round(255 - normalized * 187);
+          const b = Math.round(255 - normalized * 187);
+          color = `rgb(${r}, ${g}, ${b})`;
+        } else {
+          const abs = Math.abs(normalized);
+          const r = Math.round(255 - abs * 196);
+          const g = Math.round(255 - abs * 125);
+          const b = 255;
+          color = `rgb(${r}, ${g}, ${b})`;
+        }
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y + 2, cellWidth - 0.5, rowHeight - 3);
+      });
+    });
+
+    // 3. Draw Z-Score Colorbar Legend at the Bottom
+    const legendW = 700;
+    const legendH = 26;
+    const legendX = size / 2 - legendW / 2;
+    const legendY = size - 120;
+
+    const grad = ctx.createLinearGradient(legendX, legendY, legendX + legendW, legendY);
+    grad.addColorStop(0, "rgb(59, 130, 255)");   // -2.0 Blue
+    grad.addColorStop(0.5, "rgb(255, 255, 255)"); // 0.0 White
+    grad.addColorStop(1, "rgb(255, 68, 68)");    // +2.0 Red
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(legendX, legendY, legendW, legendH);
+
+    ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(legendX, legendY, legendW, legendH);
+
+    // Legend Tick Labels
+    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.font = "bold 20px monospace";
+    ctx.textAlign = "center";
+
+    const ticks = [
+      { val: "-2.0", pos: 0 },
+      { val: "-1.0", pos: 0.25 },
+      { val: "0.0", pos: 0.5 },
+      { val: "+1.0", pos: 0.75 },
+      { val: "+2.0", pos: 1.0 },
+    ];
+
+    ticks.forEach((t) => {
+      const tx = legendX + t.pos * legendW;
+      ctx.beginPath();
+      ctx.moveTo(tx, legendY + legendH);
+      ctx.lineTo(tx, legendY + legendH + 6);
+      ctx.stroke();
+      ctx.fillText(t.val, tx, legendY + legendH + 26);
+    });
+
+    // Legend Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 24px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Relative Expression (Row Z-Score)", size / 2, legendY - 14);
+
+    return offscreen;
+  };
+
   return (
-    <div ref={containerRef} className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col h-full w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+    <div
+      ref={containerRef}
+      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl select-none flex flex-col justify-between"
+    >
+      {/* Header with Search and Gene count */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-slate-800/80 pb-3 font-mono">
         <div>
           <h3 className="text-slate-200 font-semibold text-lg flex items-center gap-2">
-            Gene Expression Heatmap
-            <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded font-mono font-normal">
-              Z-score matrix
+            <span>Z-score Expression Heatmap</span>
+            <span className="text-xs bg-slate-800 text-teal-400 px-2 py-0.5 rounded-full font-mono">
+              {selectedGenes.length} {selectedGenes.length === 1 ? "gene" : "genes"}
             </span>
           </h3>
-          <p className="text-xs text-slate-400">
-            Row-normalized expressions (relative Z-scores) across selected genes (Max {MAX_HEATMAP_GENES})
+          <p className="text-[10px] text-slate-400 mt-0.5">
+            {isTcgaGtex 
+              ? "Samples ordered by GTEx Pancreas Normal -> TCGA-PAAD Primary Tumor -> Solid Normal"
+              : "Paired samples grouped by Pre-SBRT vs Post-SBRT response"}
           </p>
         </div>
 
-        {/* Controls: Add Gene & Export */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="w-full sm:w-44">
+          <div className="w-48 sm:w-56">
             <SearchableGeneSelect
               options={allGenes}
               value={null}
@@ -450,22 +642,20 @@ export default function Heatmap({
                 ]),
               });
             }}
-            onExportPNG={() => {
-              if (!canvasRef.current) return;
+            onExportPNG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResHeatmapCanvas(theme);
               exportCanvasToPNG({
-                canvas: canvasRef.current,
+                canvas: exportCanvas,
                 filename: `Heatmap_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}.png`,
-                title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Z-score Heatmap`,
-                subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.slice(0, 10).join(", ")}${selectedGenes.length > 10 ? "..." : ""}`,
+                theme,
               });
             }}
-            onExportSVG={() => {
-              if (!canvasRef.current) return;
+            onExportSVG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResHeatmapCanvas(theme);
               exportCanvasToSVG({
-                canvas: canvasRef.current,
+                canvas: exportCanvas,
                 filename: `Heatmap_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}.svg`,
-                title: `${isTcgaGtex ? "TCGA-PAAD vs GTEx" : "GSE225767"} Z-score Heatmap`,
-                subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.slice(0, 10).join(", ")}${selectedGenes.length > 10 ? "..." : ""}`,
+                theme,
               });
             }}
           />

@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
 import { CheckCircle2, ExternalLink, Zap, Info } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
+import ExportButton from "@/components/ExportButton";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface GSEAEnrichmentCurveProps {
   pathway: PathwayEnrichmentResult | null;
@@ -11,6 +13,9 @@ interface GSEAEnrichmentCurveProps {
 }
 
 export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichmentCurveProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+
   if (!pathway) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 font-mono text-xs flex flex-col items-center justify-center min-h-[300px]">
@@ -50,6 +55,232 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
   // Highest absolute ES for Y-axis domain padding
   const maxAbsES = points.reduce((max, p) => Math.max(max, Math.abs(p.runningES)), 0.2);
   const esDomain: [number, number] = [-maxAbsES * 1.15, maxAbsES * 1.15];
+
+  const generateHighResGseaMountainCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // Title
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 38px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(pathway.pathwayName, 80, 80);
+
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "22px monospace";
+    ctx.fillText(
+      `Database: ${pathway.database} | NES: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Leading Edge: ${leadingEdgeGenes.length} genes`,
+      80,
+      118
+    );
+
+    const padLeft = 180;
+    const padRight = 80;
+    const plotW = size - padLeft - padRight;
+
+    const nPoints = chartData.length;
+    const maxRank = nPoints > 0 ? chartData[nPoints - 1].rankIndex : totalGenes;
+
+    const getX = (rank: number) => padLeft + (rank / Math.max(1, maxRank)) * plotW;
+
+    // --- PANEL A: Mountain Plot (y: 180 to 1100, height 920) ---
+    const panelATop = 180;
+    const panelAH = 920;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
+    ctx.fillRect(padLeft, panelATop, plotW, panelAH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(padLeft, panelATop, plotW, panelAH);
+
+    const minES = esDomain[0];
+    const maxES = esDomain[1];
+    const getESY = (es: number) => panelATop + ((maxES - es) / (maxES - minES)) * panelAH;
+    const zeroY = getESY(0);
+
+    // Zero line
+    ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, zeroY);
+    ctx.lineTo(padLeft + plotW, zeroY);
+    ctx.stroke();
+
+    // ES Mountain Area + Line
+    if (chartData.length > 0) {
+      const areaGrad = ctx.createLinearGradient(0, panelATop, 0, panelATop + panelAH);
+      if (isUp) {
+        areaGrad.addColorStop(0, "rgba(220, 38, 38, 0.45)");
+        areaGrad.addColorStop(1, "rgba(220, 38, 38, 0.02)");
+      } else {
+        areaGrad.addColorStop(0, "rgba(37, 99, 235, 0.02)");
+        areaGrad.addColorStop(1, "rgba(37, 99, 235, 0.45)");
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(getX(chartData[0].rankIndex), zeroY);
+      chartData.forEach((d) => {
+        ctx.lineTo(getX(d.rankIndex), getESY(d.runningES));
+      });
+      ctx.lineTo(getX(chartData[chartData.length - 1].rankIndex), zeroY);
+      ctx.closePath();
+      ctx.fillStyle = areaGrad;
+      ctx.fill();
+
+      // Stroke
+      ctx.beginPath();
+      chartData.forEach((d, i) => {
+        const x = getX(d.rankIndex);
+        const y = getESY(d.runningES);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = isUp ? "#dc2626" : "#2563eb";
+      ctx.lineWidth = 4.5;
+      ctx.stroke();
+
+      // Peak line
+      const peakX = getX(peakIndex);
+      const peakY = getESY(pathway.enrichmentScore ?? 0);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.9)";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(peakX, panelATop);
+      ctx.lineTo(peakX, panelATop + panelAH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Peak label
+      ctx.fillStyle = "#d97706";
+      ctx.font = "bold 22px sans-serif";
+      ctx.textAlign = isUp ? "left" : "right";
+      const peakLabelX = isUp ? peakX + 15 : peakX - 15;
+      ctx.fillText(`Peak ES = ${pathway.enrichmentScore?.toFixed(4)} (Rank #${peakIndex})`, peakLabelX, peakY - 15);
+    }
+
+    // Panel A Y Axis label
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 26px sans-serif";
+    ctx.save();
+    ctx.translate(65, panelATop + panelAH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillText("Enrichment Score (ES)", 0, 0);
+    ctx.restore();
+
+    // --- PANEL B: Hit Barcode Strip (y: 1150 to 1350, height 200) ---
+    const panelBTop = 1150;
+    const panelBH = 200;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
+    ctx.fillRect(padLeft, panelBTop, plotW, panelBH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(padLeft, panelBTop, plotW, panelBH);
+
+    chartData.forEach((d) => {
+      if (d.isHit) {
+        const x = getX(d.rankIndex);
+        ctx.strokeStyle = d.isLeadingEdge ? (isUp ? "#dc2626" : "#2563eb") : (isLight ? "#334155" : "#94a3b8");
+        ctx.lineWidth = d.isLeadingEdge ? 3.5 : 2;
+        ctx.beginPath();
+        ctx.moveTo(x, panelBTop + 8);
+        ctx.lineTo(x, panelBTop + panelBH - 8);
+        ctx.stroke();
+      }
+    });
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 24px sans-serif";
+    ctx.save();
+    ctx.translate(65, panelBTop + panelBH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillText("Hits", 0, 0);
+    ctx.restore();
+
+    // --- PANEL C: Ranked Metric (y: 1400 to 2050, height 650) ---
+    const panelCTop = 1400;
+    const panelCH = 650;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
+    ctx.fillRect(padLeft, panelCTop, plotW, panelCH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(padLeft, panelCTop, plotW, panelCH);
+
+    const metrics = chartData.map((d) => d.rankMetric);
+    const maxMetric = Math.max(...metrics, 1);
+    const minMetric = Math.min(...metrics, -1);
+    const maxAbsMetric = Math.max(Math.abs(maxMetric), Math.abs(minMetric));
+
+    const getMetricY = (m: number) => panelCTop + ((maxAbsMetric - m) / (2 * maxAbsMetric)) * panelCH;
+    const metricZeroY = getMetricY(0);
+
+    ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, metricZeroY);
+    ctx.lineTo(padLeft + plotW, metricZeroY);
+    ctx.stroke();
+
+    // Metric line
+    if (chartData.length > 0) {
+      ctx.beginPath();
+      chartData.forEach((d, i) => {
+        const x = getX(d.rankIndex);
+        const y = getMetricY(d.rankMetric);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 24px sans-serif";
+    ctx.save();
+    ctx.translate(65, panelCTop + panelCH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillText("Rank Metric", 0, 0);
+    ctx.restore();
+
+    // Bottom X Axis (Ranks)
+    const numXTicks = 8;
+    const rankStep = Math.round(maxRank / numXTicks);
+    ctx.font = "bold 22px monospace";
+    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.textAlign = "center";
+
+    for (let i = 0; i <= numXTicks; i++) {
+      const r = i * rankStep;
+      const xPos = getX(r);
+      ctx.beginPath();
+      ctx.moveTo(xPos, panelCTop + panelCH);
+      ctx.lineTo(xPos, panelCTop + panelCH + 8);
+      ctx.stroke();
+      ctx.fillText(r.toLocaleString(), xPos, panelCTop + panelCH + 34);
+    }
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Rank in Ordered Gene List", padLeft + plotW / 2, panelCTop + panelCH + 90);
+
+    return offscreen;
+  };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-2xl font-sans text-slate-100 relative">
@@ -117,15 +348,50 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
 
       {/* Main Canonical GSEA Multi-Panel Plot */}
       {isGsea && chartData.length > 0 ? (
-        <div className="flex flex-col gap-4 font-mono">
+        <div ref={chartContainerRef} className="flex flex-col gap-4 font-mono bg-slate-900 p-2 rounded-xl">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span>Canonical GSEA Mountain Plot</span>
-            </span>
-            <span className="text-xxs text-slate-500">
-              Ranked Transcriptome Size: <strong>{totalGenes.toLocaleString()} genes</strong>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>Canonical GSEA Mountain Plot</span>
+              </span>
+              <span className="text-xxs text-slate-500">
+                ({totalGenes.toLocaleString()} genes)
+              </span>
+            </div>
+            
+            <ExportButton
+              onExportCSV={() => {
+                exportToCSV({
+                  filename: `GSEA_Curve_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.csv`,
+                  metadata: {
+                    dataset: pathway.database,
+                    module: "GSEA Enrichment Curve",
+                    pathway: pathway.pathwayName,
+                    nes: String(pathway.nes ?? "N/A"),
+                    fdr: String(pathway.adjPValue ?? "N/A"),
+                  },
+                  headers: ["Rank", "Gene Symbol", "Running ES", "Rank Metric", "Is Hit", "Is Leading Edge"],
+                  rows: chartData.map((d) => [d.rankIndex, d.symbol, d.runningES, d.rankMetric, d.isHit, d.isLeadingEdge]),
+                });
+              }}
+              onExportPNG={({ theme = "light" } = {}) => {
+                const exportCanvas = generateHighResGseaMountainCanvas(theme, 2400);
+                exportCanvasToPNG({
+                  canvas: exportCanvas,
+                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.png`,
+                  theme,
+                });
+              }}
+              onExportSVG={({ theme = "light" } = {}) => {
+                const exportCanvas = generateHighResGseaMountainCanvas(theme, 1200);
+                exportCanvasToSVG({
+                  canvas: exportCanvas,
+                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.svg`,
+                  theme,
+                });
+              }}
+            />
           </div>
 
           {/* Panel A: Running ES Curve */}
