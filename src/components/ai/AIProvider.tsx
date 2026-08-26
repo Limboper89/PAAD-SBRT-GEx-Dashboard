@@ -466,9 +466,21 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
         }
       }
 
-      const finalContent = response.error 
-        ? response.reply 
-        : assembleProductionResponse(userText, plan, response.reply, executionResult, activeContext.gene || undefined);
+      // 7. Assemble final response with single-source-of-truth quantitative block
+      // If remote LLM returned error (e.g. 405 on static hosting / 500 on proxy), seamlessly activate Level 0 Deterministic Engine
+      let finalContent: string;
+      let isFinalError = false;
+
+      if (response.error || !response.reply) {
+        console.warn("[PDACopilot AIProvider]: Remote LLM unavailable -> Activating Level 0 BioPortal Grounding Engine fallback");
+        const fallbackReply = formatBioPortalDirectResponse(plan, executionResult);
+        finalContent = fallbackReply;
+        isFinalError = false;
+      } else {
+        finalContent = routingDecision.route === "BIOPORTAL" 
+          ? response.reply 
+          : assembleProductionResponse(userText, plan, response.reply, executionResult, activeContext.gene || undefined);
+      }
 
       const assistantMsg: ChatMessageItem = {
         id: `assistant-${Date.now()}`,
@@ -480,7 +492,7 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
         provenanceItems: executionResult.provenance,
         confidence: executionResult.confidence,
         queryPlanDebug: plan,
-        isError: response.error
+        isError: isFinalError
       };
 
       setMessages(prev => [...prev, assistantMsg]);
