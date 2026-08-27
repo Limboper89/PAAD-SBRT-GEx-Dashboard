@@ -27,7 +27,7 @@ export const AI_PROVIDERS: Record<AIProviderType, AIProviderConfig> = {
   'gemini': {
     id: 'gemini',
     name: 'Google Gemini 3.1 Flash Lite',
-    endpoint: '/PAAD-SBRT-GEx-Dashboard/api/ai/gemini',
+    endpoint: 'https://paad-groq-proxy.kumarprincebt.workers.dev/api/chat',
     model: 'gemini-3.1-flash-lite',
     description: 'High-quota Google Gemini 3.1 Flash Lite model for grounded scientific reasoning (500 RPD tier)'
   },
