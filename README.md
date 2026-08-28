@@ -1,6 +1,10 @@
 # PDAC BioPortal & PDACopilot 🧬🤖
 ### Interactive Transcriptomic Analytics & AI Research Copilot for Pancreatic Ductal Adenocarcinoma
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22149338.svg)](https://doi.org/10.5281/zenodo.22149338)
+[![Live Portal](https://img.shields.io/badge/Live%20Portal-GitHub%20Pages-blue.svg)](https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/)
+[![Release](https://img.shields.io/badge/Release-v1.2.0-green.svg)](https://github.com/Limboper89/PAAD-SBRT-GEx-Dashboard/releases/tag/v1.2.0)
+
 PDAC BioPortal is an interactive multi-modal transcriptomics analytics platform built with **Next.js 16**, **React 19**, **TypeScript**, and **Tailwind CSS**. It includes **PDACopilot**, a context-aware scientific AI assistant designed for pancreatic cancer research.
 
 ---
@@ -152,3 +156,5 @@ This platform accompanies manuscript submission for:
 **Computational and Structural Biotechnology Journal (CSBJ)**
 
 *PDAC BioPortal v1.2.0 — Context-Aware Transcriptomic Analytics & PDACopilot AI Assistant.*
+- **Permanent Archive / DOI**: [10.5281/zenodo.22149338](https://doi.org/10.5281/zenodo.22149338)
+- **Live Deployment**: [https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/](https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/)
