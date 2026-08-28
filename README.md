@@ -153,7 +153,7 @@ Once started, open your web browser and navigate to:
 
 ## 📄 Target Publication Reference
 This platform accompanies manuscript submission for:
-**Computational and Structural Biotechnology Journal (CSBJ)**
+**Nature Communications**
 
 *PDAC BioPortal v1.2.0 — Context-Aware Transcriptomic Analytics & PDACopilot AI Assistant.*
 - **Permanent Archive / DOI**: [10.5281/zenodo.22149338](https://doi.org/10.5281/zenodo.22149338)

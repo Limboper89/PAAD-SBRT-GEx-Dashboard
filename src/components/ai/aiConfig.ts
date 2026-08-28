@@ -14,7 +14,7 @@ export interface AIProviderConfig {
 export const PORTAL_METADATA = {
   appName: "PDAC BioPortal",
   appVersion: "1.3.0",
-  targetJournal: "Computational and Structural Biotechnology Journal (CSBJ)",
+  targetJournal: "Nature Communications",
   datasetVersions: {
     sbrtBulk: "GSE225767 (Radiotherapy Pre/Post Paired Bulk RNA-seq)",
     tcgaGtex: "TCGA-PAAD vs GTEx Pancreas (349-sample Normal Reference Atlas)",
