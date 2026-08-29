@@ -128,15 +128,15 @@ export default function PathwayBubblePlot({
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("GSEA Pathway Enrichment Summary", 80, 80);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
-    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 118);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 122);
 
-    const padLeft = 820; // Generous space for pathway names on the left
+    const padLeft = 840; // Generous space for pathway names on the left
     const padRight = 100;
     const padTop = 180;
     const padBottom = 220;
@@ -195,19 +195,19 @@ export default function PathwayBubblePlot({
 
       // Pathway name text (Bold Dark Slate/Black in Light Mode)
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(24, Math.max(14, Math.round(rowH * 0.4)));
-      ctx.font = `bold ${fontSize}px sans-serif`;
+      const fontSize = Math.min(32, Math.max(18, Math.round(rowH * 0.48)));
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
       ctx.textAlign = "right";
 
-      const maxLen = 44;
+      const maxLen = 42;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      ctx.fillText(displayName, padLeft - 20, y + fontSize * 0.35);
+      ctx.fillText(displayName, padLeft - 24, y + fontSize * 0.35);
 
       // Bubble size
       const maxCount = Math.max(...chartData.map((cd) => cd.size), 20);
       const minCount = Math.min(...chartData.map((cd) => cd.size), 1);
       const normalizedSize = (d.size - minCount) / Math.max(1, maxCount - minCount);
-      const radius = 12 + normalizedSize * 24;
+      const radius = 14 + normalizedSize * 26;
 
       const isUp = d.direction === "Upregulated" || d.xValue >= 0;
 
@@ -224,7 +224,7 @@ export default function PathwayBubblePlot({
     });
 
     // Outer Axis Frame (X Axis)
-    ctx.strokeStyle = isLight ? "#334155" : "#475569";
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop + plotH);
@@ -237,8 +237,8 @@ export default function PathwayBubblePlot({
     const numXTicks = 8;
     const xStep = (maxX - minX) / numXTicks;
 
-    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-    ctx.font = "bold 22px monospace";
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 26px monospace";
     ctx.textAlign = "center";
 
     for (let i = 0; i <= numXTicks; i++) {
@@ -248,22 +248,22 @@ export default function PathwayBubblePlot({
       ctx.moveTo(xPos, padTop + plotH);
       ctx.lineTo(xPos, padTop + plotH + 8);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 34);
+      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 38);
     }
 
     // X-Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px sans-serif";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
       isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
       padLeft + plotW / 2,
-      padTop + plotH + 90
+      padTop + plotH + 95
     );
 
     // Bottom Legend
     const legY = size - 70;
-    ctx.font = "bold 20px sans-serif";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
 
     // Red dot for Upregulated
@@ -276,7 +276,7 @@ export default function PathwayBubblePlot({
     ctx.stroke();
 
     ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-    ctx.fillText("Upregulated in Phenotype", padLeft + 65, legY + 7);
+    ctx.fillText("Upregulated in Phenotype", padLeft + 65, legY + 8);
 
     // Blue dot for Downregulated
     ctx.beginPath();

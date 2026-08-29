@@ -89,15 +89,15 @@ export default function PathwayBarPlot({
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("Pathway Enrichment Ranking", 80, 80);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
-    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 118);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 122);
 
-    const padLeft = 820;
+    const padLeft = 840;
     const padRight = 200;
     const padTop = 180;
     const padBottom = 200;
@@ -131,13 +131,13 @@ export default function PathwayBarPlot({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(24, Math.max(14, Math.round(rowH * 0.38)));
-      ctx.font = `bold ${fontSize}px sans-serif`;
+      const fontSize = Math.min(32, Math.max(18, Math.round(rowH * 0.48)));
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
       ctx.textAlign = "right";
 
-      const maxLen = 44;
+      const maxLen = 42;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      ctx.fillText(displayName, padLeft - 20, y + barH * 0.7);
+      ctx.fillText(displayName, padLeft - 24, y + barH * 0.7);
 
       const isUp = d.direction === "Upregulated" || d.metric >= 0;
 
@@ -151,14 +151,14 @@ export default function PathwayBarPlot({
 
       // Value label at end of bar
       ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.font = "bold 20px monospace";
+      ctx.font = "bold 22px monospace";
       ctx.textAlign = d.metric >= 0 ? "left" : "right";
-      const labelX = d.metric >= 0 ? getX(d.metric) + 12 : getX(d.metric) - 12;
+      const labelX = d.metric >= 0 ? getX(d.metric) + 14 : getX(d.metric) - 14;
       ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.68);
     });
 
     // Zero line
-    ctx.strokeStyle = isLight ? "#334155" : "#64748b";
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(zeroX, padTop);
@@ -168,8 +168,8 @@ export default function PathwayBarPlot({
     // X Axis ticks
     const numTicks = 8;
     const step = (maxVal - minVal) / numTicks;
-    ctx.font = "bold 22px monospace";
-    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.font = "bold 26px monospace";
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
 
     for (let i = 0; i <= numTicks; i++) {
@@ -179,17 +179,17 @@ export default function PathwayBarPlot({
       ctx.moveTo(xPos, padTop + plotH);
       ctx.lineTo(xPos, padTop + plotH + 8);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 34);
+      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 38);
     }
 
     // X Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px sans-serif";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
       isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
       padLeft + plotW / 2,
-      padTop + plotH + 90
+      padTop + plotH + 95
     );
 
     return offscreen;

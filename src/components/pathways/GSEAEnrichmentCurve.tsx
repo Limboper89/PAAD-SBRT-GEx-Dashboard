@@ -71,16 +71,16 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(pathway.pathwayName, 80, 80);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "22px monospace";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
     ctx.fillText(
       `Database: ${pathway.database} | NES: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Leading Edge: ${leadingEdgeGenes.length} genes`,
       80,
-      118
+      122
     );
 
     const padLeft = 180;
@@ -162,7 +162,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
 
       // Peak label
       ctx.fillStyle = "#d97706";
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 24px monospace";
       ctx.textAlign = isUp ? "left" : "right";
       const peakLabelX = isUp ? peakX + 15 : peakX - 15;
       ctx.fillText(`Peak ES = ${pathway.enrichmentScore?.toFixed(4)} (Rank #${peakIndex})`, peakLabelX, peakY - 15);
@@ -170,7 +170,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
 
     // Panel A Y Axis label
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 26px sans-serif";
+    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.save();
     ctx.translate(65, panelATop + panelAH / 2);
     ctx.rotate(-Math.PI / 2);
@@ -201,7 +201,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     });
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.save();
     ctx.translate(65, panelBTop + panelBH / 2);
     ctx.rotate(-Math.PI / 2);
@@ -219,22 +219,20 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     ctx.lineWidth = 2;
     ctx.strokeRect(padLeft, panelCTop, plotW, panelCH);
 
-    const metrics = chartData.map((d) => d.rankMetric);
-    const maxMetric = Math.max(...metrics, 1);
-    const minMetric = Math.min(...metrics, -1);
-    const maxAbsMetric = Math.max(Math.abs(maxMetric), Math.abs(minMetric));
+    const minMetric = chartData.length > 0 ? Math.min(...chartData.map((d) => d.rankMetric)) : -5;
+    const maxMetric = chartData.length > 0 ? Math.max(...chartData.map((d) => d.rankMetric)) : 5;
+    const getMetricY = (m: number) => panelCTop + ((maxMetric - m) / (maxMetric - minMetric)) * panelCH;
+    const zeroMetricY = getMetricY(0);
 
-    const getMetricY = (m: number) => panelCTop + ((maxAbsMetric - m) / (2 * maxAbsMetric)) * panelCH;
-    const metricZeroY = getMetricY(0);
-
+    // Zero Metric Line
     ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(padLeft, metricZeroY);
-    ctx.lineTo(padLeft + plotW, metricZeroY);
+    ctx.moveTo(padLeft, zeroMetricY);
+    ctx.lineTo(padLeft + plotW, zeroMetricY);
     ctx.stroke();
 
-    // Metric line
+    // Ranked Metric Area + Line
     if (chartData.length > 0) {
       ctx.beginPath();
       chartData.forEach((d, i) => {
@@ -249,7 +247,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     }
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.save();
     ctx.translate(65, panelCTop + panelCH / 2);
     ctx.rotate(-Math.PI / 2);
@@ -260,8 +258,8 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     // Bottom X Axis (Ranks)
     const numXTicks = 8;
     const rankStep = Math.round(maxRank / numXTicks);
-    ctx.font = "bold 22px monospace";
-    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+    ctx.font = "bold 26px monospace";
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
 
     for (let i = 0; i <= numXTicks; i++) {
@@ -271,13 +269,13 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
       ctx.moveTo(xPos, panelCTop + panelCH);
       ctx.lineTo(xPos, panelCTop + panelCH + 8);
       ctx.stroke();
-      ctx.fillText(r.toLocaleString(), xPos, panelCTop + panelCH + 34);
+      ctx.fillText(r.toLocaleString(), xPos, panelCTop + panelCH + 38);
     }
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px sans-serif";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Rank in Ordered Gene List", padLeft + plotW / 2, panelCTop + panelCH + 90);
+    ctx.fillText("Rank in Ordered Gene List", padLeft + plotW / 2, panelCTop + panelCH + 95);
 
     return offscreen;
   };

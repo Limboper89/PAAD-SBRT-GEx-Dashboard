@@ -65,15 +65,15 @@ export default function PathwayGeneMatrix({
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("Leading-Edge Gene Overlap Matrix", 80, 80);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
-    ctx.fillText(`Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} Leading-Edge Genes`, 80, 118);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(`Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} Leading-Edge Genes`, 80, 122);
 
-    const padLeft = 820;
+    const padLeft = 840;
     const padRight = 80;
     const padTop = 320;
     const padBottom = 100;
@@ -90,8 +90,8 @@ export default function PathwayGeneMatrix({
       ctx.save();
       ctx.translate(x, padTop - 20);
       ctx.rotate(-Math.PI / 3);
-      ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.font = "bold 22px monospace";
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
       ctx.textAlign = "left";
       ctx.fillText(gene, 0, 0);
       ctx.restore();
@@ -104,13 +104,13 @@ export default function PathwayGeneMatrix({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(22, Math.max(14, Math.round(rowH * 0.38)));
-      ctx.font = `bold ${fontSize}px sans-serif`;
+      const fontSize = Math.min(32, Math.max(18, Math.round(rowH * 0.48)));
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
       ctx.textAlign = "right";
 
       const maxLen = 42;
       const displayName = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      ctx.fillText(displayName, padLeft - 20, y + rowH * 0.65);
+      ctx.fillText(displayName, padLeft - 24, y + rowH * 0.65);
 
       // Cells
       topGenes.forEach((gene, cIdx) => {

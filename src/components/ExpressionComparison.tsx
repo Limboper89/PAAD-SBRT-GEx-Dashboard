@@ -665,17 +665,21 @@ export default function ExpressionComparison({
     ctx.restore();
 
     // 6. Cohort Columns
-    const col1X = padLeft + plotW * 0.28;
-    const col2X = padLeft + plotW * 0.72;
+    const showSolid = showSolidNormal;
+    const col1X = showSolid ? padLeft + plotW * 0.22 : padLeft + plotW * 0.28;
+    const col2X = showSolid ? padLeft + plotW * 0.55 : padLeft + plotW * 0.72;
+    const col3X = padLeft + plotW * 0.85;
 
     // Draw Jitter Points
-    points.forEach((p: any) => {
+    points.forEach((p: any, pIdx: number) => {
       const isTumor = p.cohortName.includes("Tumor");
       const isGtex = p.cohortName.includes("GTEx");
-      if (!isTumor && !isGtex && !showSolidNormal) return;
+      const isSolid = p.cohortName.includes("Solid");
+      if (isSolid && !showSolid) return;
 
-      const baseX = isGtex ? col1X : (isTumor ? col2X : padLeft + plotW * 0.5);
-      const jitter = (p.jitter || 0) * 160;
+      const baseX = isGtex ? col1X : (isTumor ? col2X : col3X);
+      const pseudoRand = (((pIdx * 9301 + 49297) % 233280) / 233280) - 0.5;
+      const jitter = pseudoRand * (isSolid ? 60 : 150);
       const px = baseX + jitter;
       const py = mapY(p.y);
 
@@ -692,18 +696,19 @@ export default function ExpressionComparison({
 
     // Draw Boxplot Whiskers & Median Bars
     boxStats.forEach((b: any) => {
-      const isTumor = b.cohort.includes("Tumor");
-      const isGtex = b.cohort.includes("GTEx");
-      if (!isTumor && !isGtex && !showSolidNormal) return;
+      const isTumor = b.cohortName?.includes("Tumor");
+      const isGtex = b.cohortName?.includes("GTEx");
+      const isSolid = b.cohortName?.includes("Solid");
+      if (isSolid && !showSolid) return;
 
-      const cx = isGtex ? col1X : (isTumor ? col2X : padLeft + plotW * 0.5);
-      const boxW = 180;
+      const cx = isGtex ? col1X : (isTumor ? col2X : col3X);
+      const boxW = isSolid ? 110 : 180;
 
       const q1Y = mapY(b.q1);
       const q3Y = mapY(b.q3);
       const medY = mapY(b.median);
-      const minYpos = mapY(b.min);
-      const maxYpos = mapY(b.max);
+      const minYpos = mapY(b.minW);
+      const maxYpos = mapY(b.maxW);
 
       // Whisker vertical line
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
@@ -724,7 +729,7 @@ export default function ExpressionComparison({
       ctx.stroke();
 
       // Box Rect
-      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.75)" : "rgba(15, 23, 42, 0.75)";
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.85)" : "rgba(15, 23, 42, 0.85)";
       ctx.fillRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.lineWidth = 3.5;
@@ -743,6 +748,23 @@ export default function ExpressionComparison({
       ctx.font = "bold 20px monospace";
       ctx.textAlign = "left";
       ctx.fillText(`Med: ${b.median.toFixed(2)}`, cx + boxW / 2 + 12, medY + 6);
+
+      // Diamond Mean Marker (if showMean is active)
+      if (showMean && b.mean !== undefined) {
+        const meanY = mapY(b.mean);
+        const dR = 12;
+        ctx.beginPath();
+        ctx.moveTo(cx, meanY - dR);
+        ctx.lineTo(cx + dR, meanY);
+        ctx.lineTo(cx, meanY + dR);
+        ctx.lineTo(cx - dR, meanY);
+        ctx.closePath();
+        ctx.fillStyle = "#fbbf24";
+        ctx.fill();
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     });
 
     // Column X-Axis Labels
@@ -760,6 +782,15 @@ export default function ExpressionComparison({
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
     ctx.font = "bold 22px monospace";
     ctx.fillText("n = 178 samples", col2X, padTop + plotH + 82);
+
+    if (showSolid) {
+      ctx.fillStyle = "#eab308";
+      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Solid Normal", col3X, padTop + plotH + 48);
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = "bold 20px monospace";
+      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 82);
+    }
 
     // Summary Statistics Card (Top-Center)
     const cardX = padLeft + plotW / 2 - 280;
