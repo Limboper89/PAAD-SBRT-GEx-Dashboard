@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { Info, AlertTriangle } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportToCSV, exportSvgElement, exportComponentToPNG, exportComponentToSVG } from "@/utils/exportUtils";
+import { exportToCSV, exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
 
 interface CorrelationPlotProps {
   gene1Name: string;
@@ -252,6 +252,155 @@ export default function CorrelationPlot({
     return null;
   };
 
+  const generateHighResCorrelationCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // 2. Title & Subtitle Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`Gene-Gene Co-Expression: ${gene1Name} vs ${gene2Name}`, 120, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
+    ctx.fillText(`${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho}`, 120, 132);
+
+    // 3. Layout Dimensions
+    const padLeft = 200;
+    const padRight = 100;
+    const padTop = 200;
+    const padBottom = 220;
+    const plotW = size - padLeft - padRight;
+    const plotH = size - padTop - padBottom;
+
+    const minX = bounds.minX;
+    const maxX = bounds.maxX;
+    const minY = bounds.minY;
+    const maxY = bounds.maxY;
+
+    const mapX = (x: number) => padLeft + ((x - minX) / (maxX - minX)) * plotW;
+    const mapY = (y: number) => padTop + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+    // 4. Grid Lines
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(30, 41, 59, 0.6)";
+    ctx.lineWidth = 1.5;
+
+    const numTicks = 6;
+    for (let i = 0; i <= numTicks; i++) {
+      // Horizontal grid
+      const yVal = minY + (i / numTicks) * (maxY - minY);
+      const py = mapY(yVal);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, py);
+      ctx.lineTo(padLeft + plotW, py);
+      ctx.stroke();
+
+      // Tick label Y
+      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(yVal.toFixed(1), padLeft - 20, py + 7);
+
+      // Vertical grid
+      const xVal = minX + (i / numTicks) * (maxX - minX);
+      const px = mapX(xVal);
+      ctx.beginPath();
+      ctx.moveTo(px, padTop);
+      ctx.lineTo(px, padTop + plotH);
+      ctx.stroke();
+
+      // Tick label X
+      ctx.textAlign = "center";
+      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 40);
+    }
+
+    // 5. Axes Box
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+    // Axis Titles (Bold Large)
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(`${gene1Name} Expression [log2(TPM + 0.001)]`, padLeft + plotW / 2, padTop + plotH + 110);
+
+    ctx.save();
+    ctx.translate(padLeft - 100, padTop + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`${gene2Name} Expression [log2(TPM + 0.001)]`, 0, 0);
+    ctx.restore();
+
+    // 6. Linear Regression Trendline
+    const trendX1 = minX;
+    const trendY1 = m * trendX1 + b;
+    const trendX2 = maxX;
+    const trendY2 = m * trendX2 + b;
+
+    ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b"; // Amber-600 / 500
+    ctx.lineWidth = 4.5;
+    ctx.beginPath();
+    ctx.moveTo(mapX(trendX1), mapY(trendY1));
+    ctx.lineTo(mapX(trendX2), mapY(trendY2));
+    ctx.stroke();
+
+    // 7. Scatter Points
+    const ptColor = filteredExpressionData?.color || "#14b8a6";
+    points.forEach(p => {
+      const px = mapX(p.x);
+      const py = mapY(p.y);
+
+      ctx.beginPath();
+      ctx.arc(px, py, 11, 0, Math.PI * 2);
+      ctx.fillStyle = ptColor;
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.3)" : "rgba(255,255,255,0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // 8. Statistics Summary Card (Top-Left inside plot)
+    const cardX = padLeft + 40;
+    const cardY = padTop + 40;
+    const cardW = 560;
+    const cardH = 220;
+
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(11, 19, 41, 0.95)";
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Correlation Statistics", cardX + 24, cardY + 45);
+
+    ctx.font = "bold 22px monospace";
+    ctx.fillStyle = isLight ? "#0d9488" : "#2dd4bf"; // Teal
+    ctx.fillText(`Pearson r  = ${r}`, cardX + 24, cardY + 92);
+    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 24, cardY + 132);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "20px monospace";
+    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 24, cardY + 180);
+
+    return offscreen;
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col h-full w-full">
       {/* Top Header Row: Title & Action Controls */}
@@ -295,23 +444,19 @@ export default function CorrelationPlot({
                 rows: points.map((p) => [p.sample, p.x, p.y]),
               });
             }}
-            onExportPNG={async ({ theme = "light" } = {}) => {
-              if (!chartContainerRef.current) return;
-              await exportComponentToPNG({
-                element: chartContainerRef.current,
+            onExportPNG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResCorrelationCanvas(theme, 2400);
+              exportCanvasToPNG({
+                canvas: exportCanvas,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.png`,
-                title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
-                subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
                 theme,
               });
             }}
-            onExportSVG={async ({ theme = "light" } = {}) => {
-              if (!chartContainerRef.current) return;
-              await exportComponentToSVG({
-                element: chartContainerRef.current,
+            onExportSVG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResCorrelationCanvas(theme, 1200);
+              exportCanvasToSVG({
+                canvas: exportCanvas,
                 filename: `Correlation_${gene1Name}_vs_${gene2Name}.svg`,
-                title: `Co-Expression: ${gene1Name} vs ${gene2Name} (r=${r})`,
-                subtitle: `Pearson r = ${r}, Spearman rho = ${rho}`,
                 theme,
               });
             }}

@@ -552,6 +552,373 @@ export default function SingleNucleusExplorer() {
     }
   };
 
+  const generateHighResSingleCellCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background Fill
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // 2. Title and Subtitle Header (Large Bold Publication Typography)
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Single-Nucleus Transcriptomic Atlas (GSE202051)", 80, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    let sub = "";
+    if (colorMode === "broad") {
+      sub = `Broad Cell Lineages · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
+    } else if (colorMode === "level2") {
+      sub = `Detailed Sub-Lineages · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
+    } else if (colorMode === "treatment") {
+      sub = `Treatment Cohort Distribution · ${activeCells.length.toLocaleString()} nuclei (Treatment-naïve vs NAT)`;
+    } else {
+      sub = `Target Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max Log-Expr: ${exprActualMax.toFixed(2)}`;
+    }
+    ctx.fillText(sub, 80, 132);
+
+    // 3. Coordinate Layout
+    // Main UMAP area on the left: x: 90 to 1640 (width 1550), y: 170 to 2320 (height 2150)
+    // Legend panel on the right: x: 1680 to 2320 (width 640)
+    const padLeft = 90;
+    const padTop = 170;
+    const plotW = 1550;
+    const plotH = 2150;
+
+    const legendLeft = 1670;
+    const legendTop = 170;
+    const legendW = 650;
+    const legendH = 2150;
+
+    // Coordinate mapping helper
+    const mapX = (x: number) => {
+      const margin = 50;
+      return padLeft + margin + ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * (plotW - margin * 2);
+    };
+
+    const mapY = (y: number) => {
+      const margin = 50;
+      return padTop + plotH - margin - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * (plotH - margin * 2);
+    };
+
+    // 4. Draw Nuclei Points
+    const order = activeCells.map((_, i) => i);
+    if (colorMode === "expression" && exprVec) {
+      order.sort((a, b) => (exprVec[activeOrigIdx[a]] ?? 0) - (exprVec[activeOrigIdx[b]] ?? 0));
+    }
+
+    for (const i of order) {
+      const cell = activeCells[i];
+      const origIdx = activeOrigIdx[i];
+      const px = mapX(cell.x);
+      const py = mapY(cell.y);
+
+      // Hierarchical cell-type display check
+      let color = "#64748b";
+      if (selectedBroadInspect !== "ALL" && cell.broad_celltype !== selectedBroadInspect) {
+        color = isLight ? "rgba(203, 213, 225, 0.2)" : "rgba(51, 65, 85, 0.15)";
+      } else {
+        if (colorMode === "broad") color = BROAD_COLORS[cell.broad_celltype] ?? "#64748b";
+        else if (colorMode === "level2") color = LEVEL2_COLORS[cell.level2] ?? "#64748b";
+        else if (colorMode === "treatment") color = TREATMENT_COLORS[cell.treatment_group] ?? "#64748b";
+        else if (colorMode === "expression" && exprVec) {
+          const val = exprVec[origIdx] ?? 0;
+          color = exprColor(val, exprCap);
+          if (val <= 0 && isLight) {
+            color = "rgba(226, 232, 240, 0.6)";
+          }
+        }
+      }
+
+      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0) : 0;
+      const radius = (colorMode === "expression" && exprVal > 0) ? 6.5 : 5.0;
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 5. Draw Prominent UMAP Coordinate Axes (Bottom-Left of Plot)
+    const axisX = padLeft + 60;
+    const axisY = padTop + plotH - 60;
+    const axisLen = 180;
+
+    ctx.strokeStyle = isLight ? "#0f172a" : "#94a3b8";
+    ctx.lineWidth = 4.5;
+
+    // X Axis (UMAP_1)
+    ctx.beginPath();
+    ctx.moveTo(axisX, axisY);
+    ctx.lineTo(axisX + axisLen, axisY);
+    ctx.stroke();
+
+    // X Arrow
+    ctx.beginPath();
+    ctx.moveTo(axisX + axisLen, axisY - 8);
+    ctx.lineTo(axisX + axisLen + 14, axisY);
+    ctx.lineTo(axisX + axisLen, axisY + 8);
+    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
+    ctx.fill();
+
+    // Y Axis (UMAP_2)
+    ctx.beginPath();
+    ctx.moveTo(axisX, axisY);
+    ctx.lineTo(axisX, axisY - axisLen);
+    ctx.stroke();
+
+    // Y Arrow
+    ctx.beginPath();
+    ctx.moveTo(axisX - 8, axisY - axisLen);
+    ctx.lineTo(axisX, axisY - axisLen - 14);
+    ctx.lineTo(axisX + 8, axisY - axisLen);
+    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
+    ctx.fill();
+
+    // Axis Labels (Bold Large)
+    ctx.font = "bold 28px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
+    ctx.fillText("UMAP_1", axisX + 20, axisY + 36);
+
+    ctx.save();
+    ctx.translate(axisX - 32, axisY - 20);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("UMAP_2", 0, 0);
+    ctx.restore();
+
+    // 6. Draw Dedicated Legend Panel on the Right
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.fillRect(legendLeft, legendTop, legendW, legendH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
+
+    if (colorMode === "broad") {
+      // Broad Lineage Legend
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Cell Lineages", legendLeft + 36, legendTop + 55);
+
+      // Count frequencies
+      const counts: Record<string, number> = {};
+      activeCells.forEach(c => {
+        counts[c.broad_celltype] = (counts[c.broad_celltype] || 0) + 1;
+      });
+
+      const broadEntries = Object.keys(BROAD_COLORS)
+        .filter(k => counts[k] > 0)
+        .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+      broadEntries.forEach((key, idx) => {
+        const itemY = legendTop + 130 + idx * 88;
+        const color = BROAD_COLORS[key] || "#64748b";
+        const count = counts[key] || 0;
+        const pct = ((count / activeCells.length) * 100).toFixed(1);
+
+        // Color dot (Prominent)
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(legendLeft + 56, itemY, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Label (Large Bold)
+        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(key, legendLeft + 94, itemY + 10);
+
+        // Count / %
+        ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+        ctx.font = "bold 24px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 36, itemY + 10);
+      });
+
+    } else if (colorMode === "level2") {
+      // Detailed Sub-Lineages (Large Clean 1-Column Format)
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Cell Sub-Lineages", legendLeft + 36, legendTop + 55);
+
+      const counts: Record<string, number> = {};
+      activeCells.forEach(c => {
+        counts[c.level2] = (counts[c.level2] || 0) + 1;
+      });
+
+      const level2Entries = Object.keys(LEVEL2_COLORS)
+        .filter(k => (counts[k] || 0) > 0)
+        .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+      const maxShow = 26;
+      const displayEntries = level2Entries.slice(0, maxShow);
+
+      displayEntries.forEach((key, idx) => {
+        const itemY = legendTop + 115 + idx * 74;
+        const color = LEVEL2_COLORS[key] || "#64748b";
+        const count = counts[key] || 0;
+        const pct = ((count / activeCells.length) * 100).toFixed(1);
+
+        // Color dot
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(legendLeft + 52, itemY, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Label (Large Bold)
+        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = "left";
+        const maxLen = 18;
+        const dispName = key.length > maxLen ? key.slice(0, maxLen - 2) + "..." : key;
+        ctx.fillText(dispName, legendLeft + 82, itemY + 8);
+
+        // Count / % (Large Bold Monospace)
+        ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+        ctx.font = "bold 22px monospace";
+        ctx.textAlign = "right";
+        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 32, itemY + 8);
+      });
+
+    } else if (colorMode === "treatment") {
+      // Treatment Group
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Treatment Group", legendLeft + 36, legendTop + 55);
+
+      const counts: Record<string, number> = {};
+      activeCells.forEach(c => {
+        counts[c.treatment_group] = (counts[c.treatment_group] || 0) + 1;
+      });
+
+      const treatmentEntries = Object.keys(TREATMENT_COLORS).filter(k => (counts[k] || 0) > 0);
+
+      treatmentEntries.forEach((key, idx) => {
+        const itemY = legendTop + 140 + idx * 130;
+        const color = TREATMENT_COLORS[key] || "#64748b";
+        const count = counts[key] || 0;
+        const pct = ((count / activeCells.length) * 100).toFixed(1);
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(legendLeft + 60, itemY, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+        ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(key, legendLeft + 102, itemY + 10);
+
+        ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+        ctx.font = "bold 26px monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`${count.toLocaleString()} nuclei (${pct}%)`, legendLeft + 102, itemY + 48);
+      });
+
+    } else if (colorMode === "expression" && activeGene && exprVec) {
+      // Expression Colorbar Legend
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`Expression: ${activeGene}`, legendLeft + 36, legendTop + 55);
+
+      // Color Bar (Large)
+      const barX = legendLeft + 40;
+      const barY = legendTop + 120;
+      const barW = legendW - 80;
+      const barH = 44;
+
+      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+      grad.addColorStop(0, "rgb(20, 184, 166)");    // Teal
+      grad.addColorStop(0.5, "rgb(234, 179, 8)");   // Amber
+      grad.addColorStop(1, "rgb(244, 63, 94)");     // Rose
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(barX, barY, barW, barH);
+
+      // Ticks & Labels (Large Bold Monospace)
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 26px monospace";
+      ctx.textAlign = "center";
+
+      ctx.fillText("0.0", barX + 10, barY + barH + 34);
+      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 34);
+      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 34);
+
+      // Expression Statistics Summary Box
+      let positiveCount = 0;
+      let sumPositive = 0;
+      activeOrigIdx.forEach(origIdx => {
+        const val = exprVec[origIdx] ?? 0;
+        if (val > 0) {
+          positiveCount++;
+          sumPositive += val;
+        }
+      });
+      const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
+      const pctPos = ((positiveCount / activeCells.length) * 100).toFixed(1);
+
+      const statsY = barY + barH + 110;
+      const statsH = 340;
+      ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
+      ctx.fillRect(barX, statsY, barW, statsH);
+      ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, statsY, barW, statsH);
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Cohort Metrics", barX + 24, statsY + 45);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Positive Nuclei:", barX + 24, statsY + 95);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${positiveCount.toLocaleString()} / ${activeCells.length.toLocaleString()} (${pctPos}%)`, barX + 24, statsY + 130);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Mean Log-Expr (Pos):", barX + 24, statsY + 185);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${meanPos} log2(counts+1)`, barX + 24, statsY + 220);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Maximum Observed:", barX + 24, statsY + 275);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${exprActualMax.toFixed(2)} log2(counts+1)`, barX + 24, statsY + 310);
+    }
+
+    return offscreen;
+  };
+
   return (
     <div className="flex flex-col gap-6 flex-1 w-full text-slate-300">
       
@@ -666,23 +1033,63 @@ export default function SingleNucleusExplorer() {
 
               <ExportButton
                 label="Export UMAP"
+                disabled={activeCells.length === 0}
+                onExportCSV={() => {
+                  if (activeCells.length === 0) return;
+                  exportToCSV({
+                    filename: `UMAP_GSE202051_${activeGene || colorMode}_Metadata.csv`,
+                    metadata: {
+                      dataset: "GSE202051 PDAC Single-Nucleus Atlas",
+                      module: "Single-Nucleus Explorer UMAP",
+                      colorMode: colorMode.toUpperCase(),
+                      selectedGene: activeGene || "None",
+                      patientFilter: selectedPid,
+                      lineageFilter: selectedBroadInspect,
+                      totalNuclei: String(activeCells.length),
+                    },
+                    headers: [
+                      "Cell ID",
+                      "Patient ID",
+                      "UMAP_1",
+                      "UMAP_2",
+                      "Broad Cell Type",
+                      "Sub-Lineage (Level 2)",
+                      "Treatment Group",
+                      "Treatment Regimen",
+                      "Response",
+                      ...(colorMode === "expression" && activeGene ? [`${activeGene} Log-Expression`] : []),
+                    ],
+                    rows: activeCells.map((c, i) => {
+                      const origIdx = activeOrigIdx[i];
+                      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0).toFixed(4) : "";
+                      return [
+                        c.id,
+                        c.pid,
+                        c.x.toFixed(4),
+                        c.y.toFixed(4),
+                        c.broad_celltype,
+                        c.level2,
+                        c.treatment_group,
+                        c.treatment,
+                        c.response,
+                        ...(colorMode === "expression" && activeGene ? [exprVal] : []),
+                      ];
+                    }),
+                  });
+                }}
                 onExportPNG={({ theme = "light" } = {}) => {
-                  if (!canvasRef.current) return;
+                  const exportCanvas = generateHighResSingleCellCanvas(theme, 2400);
                   exportCanvasToPNG({
-                    canvas: canvasRef.current,
+                    canvas: exportCanvas,
                     filename: `UMAP_GSE202051_${activeGene || colorMode}.png`,
-                    title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
-                    subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
                     theme,
                   });
                 }}
                 onExportSVG={({ theme = "light" } = {}) => {
-                  if (!canvasRef.current) return;
+                  const exportCanvas = generateHighResSingleCellCanvas(theme, 1200);
                   exportCanvasToSVG({
-                    canvas: canvasRef.current,
+                    canvas: exportCanvas,
                     filename: `UMAP_GSE202051_${activeGene || colorMode}.svg`,
-                    title: `GSE202051 UMAP (${colorMode.toUpperCase()})`,
-                    subtitle: `Gene: ${activeGene || "None"} | Patient: ${selectedPid} | Lineage: ${selectedBroadInspect}`,
                     theme,
                   });
                 }}

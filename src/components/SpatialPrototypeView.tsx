@@ -630,6 +630,212 @@ export default function SpatialPrototypeView() {
     }
   };
 
+  const generateHighResSpatialCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx || !metadata) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background Fill
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    const exprActualMax = exprVec ? Math.max(...Array.from(exprVec)) : 0;
+
+    // 2. Title & Subtitle Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Spatial Transcriptomics Atlas (10x Visium · GSE274103)", 80, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    const sub = `Sample: ${selectedPatient} · ${metadata.spots.length.toLocaleString()} Spots · Target Gene: ${activeGene || "None"} (Max Log-Expr: ${exprActualMax.toFixed(2)})`;
+    ctx.fillText(sub, 80, 132);
+
+    // 3. Layout Dimensions
+    const padLeft = 90;
+    const padTop = 170;
+    const plotW = 1550;
+    const plotH = 2150;
+
+    const legendLeft = 1670;
+    const legendTop = 170;
+    const legendW = 650;
+    const legendH = 2150;
+
+    const imgW = metadata.image_size[0] || 578;
+    const imgH = metadata.image_size[1] || 600;
+
+    // Coordinate mapping into spatial box maintaining aspect ratio
+    const scale = Math.min(plotW / imgW, plotH / imgH);
+    const offsetX = padLeft + (plotW - imgW * scale) / 2;
+    const offsetY = padTop + (plotH - imgH * scale) / 2;
+
+    // 4. Draw H&E Tissue Background
+    const activeImg = hiresLoaded && hiresImgRef.current ? hiresImgRef.current : lowresImgRef.current;
+    if (activeImg) {
+      ctx.drawImage(activeImg, offsetX, offsetY, imgW * scale, imgH * scale);
+    } else {
+      ctx.fillStyle = isLight ? "#f1f5f9" : "#0f172a";
+      ctx.fillRect(offsetX, offsetY, imgW * scale, imgH * scale);
+    }
+
+    // 5. Draw Visium Spots
+    const spotRadius = (metadata.spot_diameter_lowres / 2) * scale;
+    metadata.spots.forEach((spot, idx) => {
+      const px = offsetX + spot.x * scale;
+      const py = offsetY + spot.y * scale;
+
+      ctx.beginPath();
+      ctx.arc(px, py, spotRadius, 0, 2 * Math.PI);
+
+      if (viewMode === "expression" && exprVec) {
+        const val = exprVec[idx] || 0.0;
+        ctx.fillStyle = getExpressionColor(val, exprCap, spotOpacity);
+        ctx.fill();
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.15)" : "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = `rgba(244, 63, 94, ${spotOpacity})`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.fillStyle = `rgba(244, 63, 94, ${spotOpacity * 0.25})`;
+        ctx.fill();
+      }
+    });
+
+    // 6. Draw Dedicated Legend Panel on the Right
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.fillRect(legendLeft, legendTop, legendW, legendH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Spatial Expression Key", legendLeft + 36, legendTop + 55);
+
+    if (viewMode === "expression" && activeGene && exprVec) {
+      // Color Bar (Large Plasma Gradient)
+      const barX = legendLeft + 40;
+      const barY = legendTop + 120;
+      const barW = legendW - 80;
+      const barH = 44;
+
+      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+      grad.addColorStop(0, "rgb(13, 8, 135)");     // Dark Blue
+      grad.addColorStop(0.25, "rgb(76, 12, 50)");  // Purple
+      grad.addColorStop(0.5, "rgb(182, 54, 121)"); // Magenta/Orange
+      grad.addColorStop(0.75, "rgb(241, 136, 18)");// Orange
+      grad.addColorStop(1, "rgb(252, 253, 191)");  // Yellow
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(barX, barY, barW, barH);
+
+      // Ticks & Labels
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 26px monospace";
+      ctx.textAlign = "center";
+
+      ctx.fillText("0.0", barX + 10, barY + barH + 34);
+      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 34);
+      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 34);
+
+      // Positive Spot Metrics Box
+      let positiveCount = 0;
+      let sumPositive = 0;
+      exprVec.forEach(val => {
+        if (val > 0) {
+          positiveCount++;
+          sumPositive += val;
+        }
+      });
+      const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
+      const pctPos = ((positiveCount / metadata.spots.length) * 100).toFixed(1);
+
+      const statsY = barY + barH + 110;
+      const statsH = 340;
+      ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
+      ctx.fillRect(barX, statsY, barW, statsH);
+      ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, statsY, barW, statsH);
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Spot Expression Metrics", barX + 24, statsY + 45);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Positive Spots:", barX + 24, statsY + 95);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${positiveCount.toLocaleString()} / ${metadata.spots.length.toLocaleString()} (${pctPos}%)`, barX + 24, statsY + 130);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Mean Log-Expr (Pos):", barX + 24, statsY + 185);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${meanPos} log1p(Float16)`, barX + 24, statsY + 220);
+
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText("Maximum Observed:", barX + 24, statsY + 275);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText(`${exprActualMax.toFixed(2)} log1p(Float16)`, barX + 24, statsY + 310);
+    }
+
+    // Sample Metadata Info Card (Bottom of legend panel)
+    const cardY = legendTop + (viewMode === "expression" && activeGene ? 600 : 120);
+    const cardH = 340;
+    const barX = legendLeft + 40;
+    const barW = legendW - 80;
+
+    ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
+    ctx.fillRect(barX, cardY, barW, cardH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, cardY, barW, cardH);
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Sample Metadata", barX + 24, cardY + 45);
+
+    const metaRows = [
+      ["Sample ID:", selectedPatient],
+      ["Pathology:", "Pancreatic Ductal Adenocarcinoma"],
+      ["Platform:", "10x Genomics Visium Spatial"],
+      ["Total Spots:", `${metadata.spots.length.toLocaleString()} in-tissue spots`],
+      ["Spot Diameter:", `${metadata.spot_diameter_lowres.toFixed(1)} px (low-res grid)`]
+    ];
+
+    metaRows.forEach(([k, v], i) => {
+      const rowY = cardY + 88 + i * 48;
+      ctx.font = "bold 18px sans-serif";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.fillText(k, barX + 24, rowY);
+
+      ctx.font = "bold 18px monospace";
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText(v, barX + 24, rowY + 22);
+    });
+
+    return offscreen;
+  };
+
   const canvasWidth = metadata?.image_size[0] || 578;
   const canvasHeight = metadata?.image_size[1] || 600;
 
@@ -698,22 +904,18 @@ export default function SpatialPrototypeView() {
                   });
                 }}
                 onExportPNG={({ theme = "light" } = {}) => {
-                  if (!canvasRef.current) return;
+                  const exportCanvas = generateHighResSpatialCanvas(theme, 2400);
                   exportCanvasToPNG({
-                    canvas: canvasRef.current,
+                    canvas: exportCanvas,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.png`,
-                    title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
-                    subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
                     theme,
                   });
                 }}
                 onExportSVG={({ theme = "light" } = {}) => {
-                  if (!canvasRef.current) return;
+                  const exportCanvas = generateHighResSpatialCanvas(theme, 1200);
                   exportCanvasToSVG({
-                    canvas: canvasRef.current,
+                    canvas: exportCanvas,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.svg`,
-                    title: `GSE274103 Spatial Expression Overlay (${selectedPatient})`,
-                    subtitle: `Gene: ${activeGene || "None"} | View: ${viewMode}`,
                     theme,
                   });
                 }}

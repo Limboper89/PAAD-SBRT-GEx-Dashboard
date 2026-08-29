@@ -17,7 +17,7 @@ import {
 import SearchableGeneSelect from "./SearchableGeneSelect";
 import { X, Info, AlertTriangle, HelpCircle } from "lucide-react";
 import ExportButton from "./ExportButton";
-import { exportToCSV, exportSvgElement, exportComponentToPNG, exportComponentToSVG } from "@/utils/exportUtils";
+import { exportToCSV, exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
 
 interface DegGene {
   gene_name: string;
@@ -301,6 +301,164 @@ export default function ExpressionComparison({
     );
   };
 
+  const generateHighResSbrtCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx || SbrtData.length === 0) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // 2. Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Pre-SBRT vs Post-SBRT Expression Response (GSE225767)", 120, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Paired Cohort (N = 55)`, 120, 132);
+
+    // 3. Layout Dimensions
+    const padLeft = 200;
+    const padRight = 120;
+    const padTop = 200;
+    const padBottom = 260;
+    const plotW = size - padLeft - padRight;
+    const plotH = size - padTop - padBottom;
+
+    // Max expression value
+    let maxVal = 0;
+    SbrtData.forEach((d: any) => {
+      if (d["Pre-SBRT"] > maxVal) maxVal = d["Pre-SBRT"];
+      if (d["Post-SBRT"] > maxVal) maxVal = d["Post-SBRT"];
+    });
+    maxVal = Math.ceil(maxVal * 1.2) || 10;
+
+    const mapY = (y: number) => padTop + plotH - (y / maxVal) * plotH;
+
+    // 4. Grid Lines & Ticks
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(30, 41, 59, 0.6)";
+    ctx.lineWidth = 1.5;
+
+    const numTicks = 5;
+    for (let i = 0; i <= numTicks; i++) {
+      const yVal = (i / numTicks) * maxVal;
+      const py = mapY(yVal);
+
+      ctx.beginPath();
+      ctx.moveTo(padLeft, py);
+      ctx.lineTo(padLeft + plotW, py);
+      ctx.stroke();
+
+      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(yVal.toFixed(1), padLeft - 20, py + 7);
+    }
+
+    // 5. Axes Box
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+    ctx.save();
+    ctx.translate(padLeft - 100, padTop + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Normalized Log2-Expression", 0, 0);
+    ctx.restore();
+
+    // 6. Draw Grouped Bars
+    const groupW = plotW / SbrtData.length;
+    const barW = Math.min(groupW * 0.35, 120);
+
+    SbrtData.forEach((d: any, idx: number) => {
+      const groupCenter = padLeft + idx * groupW + groupW / 2;
+
+      // Pre-SBRT Bar (Teal #14b8a6)
+      const preX = groupCenter - barW - 6;
+      const preH = (d["Pre-SBRT"] / maxVal) * plotH;
+      const preY = padTop + plotH - preH;
+
+      ctx.fillStyle = "#14b8a6";
+      ctx.fillRect(preX, preY, barW, preH);
+      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(preX, preY, barW, preH);
+
+      // Pre Value above bar
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 20px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(d["Pre-SBRT"].toFixed(2), preX + barW / 2, preY - 12);
+
+      // Post-SBRT Bar (Orange #f97316)
+      const postX = groupCenter + 6;
+      const postH = (d["Post-SBRT"] / maxVal) * plotH;
+      const postY = padTop + plotH - postH;
+
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(postX, postY, barW, postH);
+      ctx.strokeRect(postX, postY, barW, postH);
+
+      // Post Value above bar
+      ctx.fillText(d["Post-SBRT"].toFixed(2), postX + barW / 2, postY - 12);
+
+      // Gene Symbol Label on X-Axis
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(d.gene_name, groupCenter, padTop + plotH + 45);
+
+      // Delta / log2FC annotation
+      const fcColor = d.log2FC >= 0 ? (isLight ? "#15803d" : "#4ade80") : (isLight ? "#b91c1c" : "#f87171");
+      ctx.fillStyle = fcColor;
+      ctx.font = "bold 20px monospace";
+      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 80);
+    });
+
+    // 7. Dedicated Legend Card (Top-Right)
+    const legendCardX = padLeft + plotW - 480;
+    const legendCardY = padTop + 30;
+    const legendCardW = 450;
+    const legendCardH = 140;
+
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(11, 19, 41, 0.95)";
+    ctx.fillRect(legendCardX, legendCardY, legendCardW, legendCardH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legendCardX, legendCardY, legendCardW, legendCardH);
+
+    // Pre-SBRT Swatch
+    ctx.fillStyle = "#14b8a6";
+    ctx.fillRect(legendCardX + 24, legendCardY + 30, 28, 28);
+    ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(legendCardX + 24, legendCardY + 30, 28, 28);
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Pre-SBRT Baseline", legendCardX + 66, legendCardY + 52);
+
+    // Post-SBRT Swatch
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(legendCardX + 24, legendCardY + 80, 28, 28);
+    ctx.strokeRect(legendCardX + 24, legendCardY + 80, 28, 28);
+
+    ctx.fillText("Post-SBRT Treated", legendCardX + 66, legendCardY + 102);
+
+    return offscreen;
+  };
+
   // Render SBRT Mode Comparison
   if (!isTcgaGtex) {
     return (
@@ -341,23 +499,19 @@ export default function ExpressionComparison({
                   rows: SbrtData.map((d: any) => [d.gene_name, d["Pre-SBRT"], d["Post-SBRT"], d.log2FC]),
                 });
               }}
-              onExportPNG={async ({ theme = "light" } = {}) => {
-                if (!sbrtChartRef.current) return;
-                await exportComponentToPNG({
-                  element: sbrtChartRef.current,
+              onExportPNG={({ theme = "light" } = {}) => {
+                const exportCanvas = generateHighResSbrtCanvas(theme, 2400);
+                exportCanvasToPNG({
+                  canvas: exportCanvas,
                   filename: `ExpressionComparison_SBRT.png`,
-                  title: "Pre-SBRT vs Post-SBRT Expression Comparison",
-                  subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
                   theme,
                 });
               }}
-              onExportSVG={async ({ theme = "light" } = {}) => {
-                if (!sbrtChartRef.current) return;
-                await exportComponentToSVG({
-                  element: sbrtChartRef.current,
+              onExportSVG={({ theme = "light" } = {}) => {
+                const exportCanvas = generateHighResSbrtCanvas(theme, 1200);
+                exportCanvasToSVG({
+                  canvas: exportCanvas,
                   filename: `ExpressionComparison_SBRT.svg`,
-                  title: "Pre-SBRT vs Post-SBRT Expression Comparison",
-                  subtitle: `Genes (${selectedGenes.length}): ${selectedGenes.join(", ")}`,
                   theme,
                 });
               }}
@@ -438,6 +592,200 @@ export default function ExpressionComparison({
 
   // 3. Render TCGA-GTEx Mode Comparison (Tumor vs Normal Boxplot / Strip Plot)
   const { points, meanPoints, boxStats, stats } = tcgaGtexScatterData;
+  const generateHighResTcgaCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx || !points || points.length === 0) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // 2. Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`Tumor vs Normal Expression: ${selectedGeneSymbol || "Target Gene"}`, 120, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(`TCGA-PAAD Tumors (n=178) vs GTEx Pancreas (n=167) · Reference Atlas (N = 349)`, 120, 132);
+
+    // 3. Layout Dimensions
+    const padLeft = 200;
+    const padRight = 120;
+    const padTop = 200;
+    const padBottom = 220;
+    const plotW = size - padLeft - padRight;
+    const plotH = size - padTop - padBottom;
+
+    // Y Axis Range
+    const yVals = points.map((p: any) => p.y);
+    const minY = Math.floor(Math.min(...yVals)) || 0;
+    const maxY = Math.ceil(Math.max(...yVals) * 1.15) || 12;
+
+    const mapY = (y: number) => padTop + plotH - ((y - minY) / (maxY - minY)) * plotH;
+
+    // 4. Grid Lines & Ticks
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(30, 41, 59, 0.6)";
+    ctx.lineWidth = 1.5;
+
+    const numTicks = 6;
+    for (let i = 0; i <= numTicks; i++) {
+      const yVal = minY + (i / numTicks) * (maxY - minY);
+      const py = mapY(yVal);
+
+      ctx.beginPath();
+      ctx.moveTo(padLeft, py);
+      ctx.lineTo(padLeft + plotW, py);
+      ctx.stroke();
+
+      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(yVal.toFixed(1), padLeft - 20, py + 7);
+    }
+
+    // 5. Axes Box
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(padLeft, padTop, plotW, plotH);
+
+    ctx.save();
+    ctx.translate(padLeft - 100, padTop + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Expression log2(TPM + 0.001)", 0, 0);
+    ctx.restore();
+
+    // 6. Cohort Columns
+    const col1X = padLeft + plotW * 0.28;
+    const col2X = padLeft + plotW * 0.72;
+
+    // Draw Jitter Points
+    points.forEach((p: any) => {
+      const isTumor = p.cohortName.includes("Tumor");
+      const isGtex = p.cohortName.includes("GTEx");
+      if (!isTumor && !isGtex && !showSolidNormal) return;
+
+      const baseX = isGtex ? col1X : (isTumor ? col2X : padLeft + plotW * 0.5);
+      const jitter = (p.jitter || 0) * 160;
+      const px = baseX + jitter;
+      const py = mapY(p.y);
+
+      ctx.beginPath();
+      ctx.arc(px, py, 9, 0, Math.PI * 2);
+      ctx.fillStyle = isGtex ? "#3b82f6" : (isTumor ? "#f43f5e" : "#fbbf24");
+      ctx.globalAlpha = 0.65;
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // Draw Boxplot Whiskers & Median Bars
+    boxStats.forEach((b: any) => {
+      const isTumor = b.cohort.includes("Tumor");
+      const isGtex = b.cohort.includes("GTEx");
+      if (!isTumor && !isGtex && !showSolidNormal) return;
+
+      const cx = isGtex ? col1X : (isTumor ? col2X : padLeft + plotW * 0.5);
+      const boxW = 180;
+
+      const q1Y = mapY(b.q1);
+      const q3Y = mapY(b.q3);
+      const medY = mapY(b.median);
+      const minYpos = mapY(b.min);
+      const maxYpos = mapY(b.max);
+
+      // Whisker vertical line
+      ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, minYpos);
+      ctx.lineTo(cx, q1Y);
+      ctx.moveTo(cx, q3Y);
+      ctx.lineTo(cx, maxYpos);
+      ctx.stroke();
+
+      // Whisker caps
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, minYpos);
+      ctx.lineTo(cx + 30, minYpos);
+      ctx.moveTo(cx - 30, maxYpos);
+      ctx.lineTo(cx + 30, maxYpos);
+      ctx.stroke();
+
+      // Box Rect
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.75)" : "rgba(15, 23, 42, 0.75)";
+      ctx.fillRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
+      ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.lineWidth = 3.5;
+      ctx.strokeRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
+
+      // Median Line
+      ctx.strokeStyle = isGtex ? "#1d4ed8" : (isTumor ? "#be123c" : "#b45309");
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(cx - boxW / 2, medY);
+      ctx.lineTo(cx + boxW / 2, medY);
+      ctx.stroke();
+
+      // Median label text
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 20px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(`Med: ${b.median.toFixed(2)}`, cx + boxW / 2 + 12, medY + 6);
+    });
+
+    // Column X-Axis Labels
+    ctx.fillStyle = "#3b82f6";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 48);
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 82);
+
+    ctx.fillStyle = "#f43f5e";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 48);
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 22px monospace";
+    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 82);
+
+    // Summary Statistics Card (Top-Center)
+    const cardX = padLeft + plotW / 2 - 280;
+    const cardY = padTop + 30;
+    const cardW = 560;
+    const cardH = 150;
+
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(11, 19, 41, 0.95)";
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 38);
+
+    ctx.font = "bold 22px monospace";
+    const delta = (stats.tumorMean - stats.gtexMean).toFixed(2);
+    ctx.fillStyle = Number(delta) >= 0 ? (isLight ? "#be123c" : "#f43f5e") : "#3b82f6";
+    ctx.fillText(`Tumor Mean: ${stats.tumorMean.toFixed(2)} | Normal Mean: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 80);
+    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 118);
+
+    return offscreen;
+  };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl flex flex-col h-full w-full">
@@ -499,23 +847,19 @@ export default function ExpressionComparison({
                 rows: points.map((p) => [p.sample, p.cohortName, p.y]),
               });
             }}
-            onExportPNG={async ({ theme = "light" } = {}) => {
-              if (!tcgaChartRef.current) return;
-              await exportComponentToPNG({
-                element: tcgaChartRef.current,
+            onExportPNG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResTcgaCanvas(theme, 2400);
+              exportCanvasToPNG({
+                canvas: exportCanvas,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.png`,
-                title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
-                subtitle: `PAAD Tumor vs Normal Expression`,
                 theme,
               });
             }}
-            onExportSVG={async ({ theme = "light" } = {}) => {
-              if (!tcgaChartRef.current) return;
-              await exportComponentToSVG({
-                element: tcgaChartRef.current,
+            onExportSVG={({ theme = "light" } = {}) => {
+              const exportCanvas = generateHighResTcgaCanvas(theme, 1200);
+              exportCanvasToSVG({
+                canvas: exportCanvas,
                 filename: `Tumor_vs_Normal_${selectedGeneSymbol || "Target"}.svg`,
-                title: `TCGA vs GTEx: ${selectedGeneSymbol || "Target"}`,
-                subtitle: `PAAD Tumor vs Normal Expression`,
                 theme,
               });
             }}
