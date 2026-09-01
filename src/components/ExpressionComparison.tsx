@@ -316,34 +316,34 @@ export default function ExpressionComparison({
 
     // 2. Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT vs Post-SBRT Expression Response (GSE225767)", 120, 85);
+    ctx.fillText("Pre-SBRT vs. Post-SBRT Expression Response (GSE225767)", 100, 85);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Paired Cohort (N = 55)`, 120, 132);
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Paired Cohort (N = 55)`, 100, 136);
 
     // 3. Layout Dimensions
-    const padLeft = 200;
-    const padRight = 120;
-    const padTop = 200;
+    const padLeft = 240;
+    const padRight = 100;
+    const padTop = 260;
     const padBottom = 260;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
-    // Max expression value
-    let maxVal = 0;
+    // Max expression value with 20% headroom
+    let rawMax = 0;
     SbrtData.forEach((d: any) => {
-      if (d["Pre-SBRT"] > maxVal) maxVal = d["Pre-SBRT"];
-      if (d["Post-SBRT"] > maxVal) maxVal = d["Post-SBRT"];
+      if (d["Pre-SBRT"] > rawMax) rawMax = d["Pre-SBRT"];
+      if (d["Post-SBRT"] > rawMax) rawMax = d["Post-SBRT"];
     });
-    maxVal = Math.ceil(maxVal * 1.2) || 10;
+    const maxVal = Math.ceil(rawMax * 1.25) || 10;
 
     const mapY = (y: number) => padTop + plotH - (y / maxVal) * plotH;
 
     // 4. Grid Lines & Ticks
-    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(30, 41, 59, 0.6)";
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
     ctx.lineWidth = 1.5;
 
     const numTicks = 5;
@@ -356,52 +356,52 @@ export default function ExpressionComparison({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.font = "bold 22px monospace";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = "bold 36px monospace";
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 20, py + 7);
+      ctx.fillText(yVal.toFixed(1), padLeft - 24, py + 12);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 100, padTop + plotH / 2);
+    ctx.translate(padLeft - 120, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Normalized Log2-Expression", 0, 0);
+    ctx.fillText("Normalized log2-Expression", 0, 0);
     ctx.restore();
 
     // 6. Draw Grouped Bars
     const groupW = plotW / SbrtData.length;
-    const barW = Math.min(groupW * 0.35, 120);
+    const barW = Math.min(groupW * 0.36, 140);
 
     SbrtData.forEach((d: any, idx: number) => {
       const groupCenter = padLeft + idx * groupW + groupW / 2;
 
       // Pre-SBRT Bar (Teal #14b8a6)
-      const preX = groupCenter - barW - 6;
+      const preX = groupCenter - barW - 8;
       const preH = (d["Pre-SBRT"] / maxVal) * plotH;
       const preY = padTop + plotH - preH;
 
       ctx.fillStyle = "#14b8a6";
       ctx.fillRect(preX, preY, barW, preH);
-      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.2)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.3)" : "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(preX, preY, barW, preH);
 
       // Pre Value above bar
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 20px monospace";
+      ctx.font = "bold 28px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(d["Pre-SBRT"].toFixed(2), preX + barW / 2, preY - 12);
+      ctx.fillText(d["Pre-SBRT"].toFixed(2), preX + barW / 2, preY - 14);
 
       // Post-SBRT Bar (Orange #f97316)
-      const postX = groupCenter + 6;
+      const postX = groupCenter + 8;
       const postH = (d["Post-SBRT"] / maxVal) * plotH;
       const postY = padTop + plotH - postH;
 
@@ -410,28 +410,28 @@ export default function ExpressionComparison({
       ctx.strokeRect(postX, postY, barW, postH);
 
       // Post Value above bar
-      ctx.fillText(d["Post-SBRT"].toFixed(2), postX + barW / 2, postY - 12);
+      ctx.fillText(d["Post-SBRT"].toFixed(2), postX + barW / 2, postY - 14);
 
       // Gene Symbol Label on X-Axis
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(d.gene_name, groupCenter, padTop + plotH + 45);
+      ctx.fillText(d.gene_name, groupCenter, padTop + plotH + 54);
 
       // Delta / log2FC annotation
       const fcColor = d.log2FC >= 0 ? (isLight ? "#15803d" : "#4ade80") : (isLight ? "#b91c1c" : "#f87171");
       ctx.fillStyle = fcColor;
-      ctx.font = "bold 20px monospace";
-      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 80);
+      ctx.font = "bold 32px monospace";
+      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 100);
     });
 
     // 7. Dedicated Legend Card (Top-Right)
-    const legendCardX = padLeft + plotW - 480;
-    const legendCardY = padTop + 30;
-    const legendCardW = 450;
-    const legendCardH = 140;
+    const legendCardX = padLeft + plotW - 540;
+    const legendCardY = padTop + 25;
+    const legendCardW = 520;
+    const legendCardH = 160;
 
-    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(11, 19, 41, 0.95)";
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
     ctx.fillRect(legendCardX, legendCardY, legendCardW, legendCardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
     ctx.lineWidth = 2.5;
@@ -439,22 +439,22 @@ export default function ExpressionComparison({
 
     // Pre-SBRT Swatch
     ctx.fillStyle = "#14b8a6";
-    ctx.fillRect(legendCardX + 24, legendCardY + 30, 28, 28);
+    ctx.fillRect(legendCardX + 28, legendCardY + 30, 36, 36);
     ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(legendCardX + 24, legendCardY + 30, 28, 28);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(legendCardX + 28, legendCardY + 30, 36, 36);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT Baseline", legendCardX + 66, legendCardY + 52);
+    ctx.fillText("Pre-SBRT Baseline", legendCardX + 80, legendCardY + 58);
 
     // Post-SBRT Swatch
     ctx.fillStyle = "#f97316";
-    ctx.fillRect(legendCardX + 24, legendCardY + 80, 28, 28);
-    ctx.strokeRect(legendCardX + 24, legendCardY + 80, 28, 28);
+    ctx.fillRect(legendCardX + 28, legendCardY + 95, 36, 36);
+    ctx.strokeRect(legendCardX + 28, legendCardY + 95, 36, 36);
 
-    ctx.fillText("Post-SBRT Treated", legendCardX + 66, legendCardY + 102);
+    ctx.fillText("Post-SBRT Treated", legendCardX + 80, legendCardY + 123);
 
     return offscreen;
   };
@@ -607,19 +607,19 @@ export default function ExpressionComparison({
 
     // 2. Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(`Tumor vs. Normal Expression: ${selectedGeneSymbol || "Target Gene"}`, 100, 85);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText(`TCGA-PAAD Tumors (n=178) vs GTEx Normal Pancreas (n=167) · Reference Atlas (N = 349)`, 100, 132);
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(`TCGA-PAAD Tumors (n=178) vs GTEx Normal Pancreas (n=167) · Reference Atlas (N = 349)`, 100, 136);
 
     // 3. Layout Dimensions (Clean Top Headroom)
-    const padLeft = 220;
+    const padLeft = 240;
     const padRight = 100;
     const padTop = 300; // Gives 300px headroom so boxplot never touches top border
-    const padBottom = 220;
+    const padBottom = 240;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -649,21 +649,21 @@ export default function ExpressionComparison({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 28px monospace";
+      ctx.font = "bold 38px monospace";
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 24, py + 9);
+      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 12);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 110, padTop + plotH / 2);
+    ctx.translate(padLeft - 120, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Expression log2(TPM + 0.001)", 0, 0);
     ctx.restore();
@@ -688,13 +688,13 @@ export default function ExpressionComparison({
       const py = mapY(p.y);
 
       ctx.beginPath();
-      ctx.arc(px, py, 10, 0, Math.PI * 2);
+      ctx.arc(px, py, 12, 0, Math.PI * 2);
       ctx.fillStyle = isGtex ? "#3b82f6" : (isTumor ? "#f43f5e" : "#fbbf24");
       ctx.globalAlpha = 0.65;
       ctx.fill();
       ctx.globalAlpha = 1.0;
       ctx.strokeStyle = isLight ? "rgba(15,23,42,0.3)" : "rgba(255,255,255,0.4)";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
     });
 
@@ -706,7 +706,7 @@ export default function ExpressionComparison({
       if (isSolid && !showSolid) return;
 
       const cx = isGtex ? col1X : (isTumor ? col2X : col3X);
-      const boxW = isSolid ? 120 : 200;
+      const boxW = isSolid ? 130 : 220;
 
       const q1Y = mapY(b.q1);
       const q3Y = mapY(b.q3);
@@ -716,7 +716,7 @@ export default function ExpressionComparison({
 
       // Whisker vertical line
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4.5;
       ctx.beginPath();
       ctx.moveTo(cx, minYpos);
       ctx.lineTo(cx, q1Y);
@@ -726,22 +726,22 @@ export default function ExpressionComparison({
 
       // Whisker caps
       ctx.beginPath();
-      ctx.moveTo(cx - 35, minYpos);
-      ctx.lineTo(cx + 35, minYpos);
-      ctx.moveTo(cx - 35, maxYpos);
-      ctx.lineTo(cx + 35, maxYpos);
+      ctx.moveTo(cx - 40, minYpos);
+      ctx.lineTo(cx + 40, minYpos);
+      ctx.moveTo(cx - 40, maxYpos);
+      ctx.lineTo(cx + 40, maxYpos);
       ctx.stroke();
 
       // Box Rect
-      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(15, 23, 42, 0.9)";
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.92)" : "rgba(15, 23, 42, 0.92)";
       ctx.fillRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 4.5;
       ctx.strokeRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
 
       // Median Line (Bold Contrast)
       ctx.strokeStyle = isGtex ? "#1d4ed8" : (isTumor ? "#be123c" : "#b45309");
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.moveTo(cx - boxW / 2, medY);
       ctx.lineTo(cx + boxW / 2, medY);
@@ -749,22 +749,22 @@ export default function ExpressionComparison({
 
       // Median label badge
       const medText = `Med: ${b.median.toFixed(2)}`;
-      ctx.font = "bold 24px monospace";
+      ctx.font = "bold 30px monospace";
       const textW = ctx.measureText(medText).width;
-      ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.92)" : "rgba(2, 6, 23, 0.92)";
-      ctx.fillRect(cx + boxW / 2 + 10, medY - 18, textW + 16, 32);
-      ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(cx + boxW / 2 + 10, medY - 18, textW + 16, 32);
+      ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.94)" : "rgba(2, 6, 23, 0.94)";
+      ctx.fillRect(cx + boxW / 2 + 12, medY - 22, textW + 18, 42);
+      ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx + boxW / 2 + 12, medY - 22, textW + 18, 42);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
-      ctx.fillText(medText, cx + boxW / 2 + 18, medY + 6);
+      ctx.fillText(medText, cx + boxW / 2 + 20, medY + 8);
 
       // Diamond Mean Marker (if showMean is active)
       if (showMean && b.mean !== undefined) {
         const meanY = mapY(b.mean);
-        const dR = 14;
+        const dR = 16;
         ctx.beginPath();
         ctx.moveTo(cx, meanY - dR);
         ctx.lineTo(cx + dR, meanY);
@@ -774,41 +774,41 @@ export default function ExpressionComparison({
         ctx.fillStyle = "#fbbf24";
         ctx.fill();
         ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
     });
 
     // Column X-Axis Labels (Bold Large)
     ctx.fillStyle = "#2563eb";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 52);
+    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 60);
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 26px monospace";
-    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 90);
+    ctx.font = "bold 34px monospace";
+    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 106);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 52);
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 60);
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 26px monospace";
-    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 90);
+    ctx.font = "bold 34px monospace";
+    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 106);
 
     if (showSolid) {
       ctx.fillStyle = "#d97706";
-      ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Solid Normal", col3X, padTop + plotH + 52);
+      ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Solid Normal", col3X, padTop + plotH + 60);
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 90);
+      ctx.font = "bold 30px monospace";
+      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 106);
     }
 
     // Top Summary Statistics Card (Placed Outside Plot Area at Header)
-    const cardX = padLeft + plotW - 640;
-    const cardY = 30;
-    const cardW = 640;
-    const cardH = 140;
+    const cardX = padLeft + plotW - 740;
+    const cardY = 25;
+    const cardW = 740;
+    const cardH = 150;
 
     ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
@@ -817,15 +817,15 @@ export default function ExpressionComparison({
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 40);
+    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 44);
 
-    ctx.font = "bold 22px monospace";
+    ctx.font = "bold 26px monospace";
     const delta = (stats.tumorMean - stats.gtexMean).toFixed(2);
     ctx.fillStyle = Number(delta) >= 0 ? (isLight ? "#be123c" : "#f43f5e") : "#2563eb";
-    ctx.fillText(`Tumor: ${stats.tumorMean.toFixed(2)} | Normal: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 80);
-    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 116);
+    ctx.fillText(`Tumor: ${stats.tumorMean.toFixed(2)} | Normal: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 88);
+    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 126);
 
     return offscreen;
   };

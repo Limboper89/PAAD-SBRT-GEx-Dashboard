@@ -416,20 +416,20 @@ export default function Heatmap({
 
     // Title Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 40px sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Z-score Expression Heatmap", 80, 80);
+    ctx.fillText("Z-score Expression Heatmap", 80, 85);
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
+    ctx.font = "bold 30px monospace";
     const sub = isTcgaGtex 
       ? `TCGA-PAAD Primary Tumor (n=${heatmapData.tumorCount}) vs GTEx Normal (n=${heatmapData.gtexCount})`
       : `Pre-SBRT (N=${heatmapData.preCount}) vs Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount}) Paired Cohort`;
-    ctx.fillText(sub, 80, 118);
+    ctx.fillText(sub, 80, 136);
 
-    const padLeft = 460;
+    const padLeft = 480;
     const padRight = 80;
-    const padTop = 220;
+    const padTop = 240;
     const padBottom = 260; // Space for bottom colorbar legend
 
     const matrixWidth = size - padLeft - padRight;
@@ -438,9 +438,9 @@ export default function Heatmap({
     const cellWidth = matrixWidth / heatmapData.samples.length;
     const rowHeight = matrixHeight / heatmapData.rows.length;
 
-    // 1. Draw Cohort Header Banners (Height 60px)
-    const bannerY = padTop - 65;
-    const bannerH = 50;
+    // 1. Draw Cohort Header Banners (Height 70px)
+    const bannerY = padTop - 75;
+    const bannerH = 60;
 
     if (isTcgaGtex) {
       const normalW = heatmapData.gtexCount * cellWidth;
@@ -455,27 +455,27 @@ export default function Heatmap({
         ctx.fillStyle = isLight ? "rgba(69, 117, 180, 0.18)" : "rgba(69, 117, 180, 0.35)";
         ctx.fillRect(normalX, bannerY, normalW - 3, bannerH);
         ctx.fillStyle = isLight ? "#1e40af" : "#60a5fa";
-        ctx.font = "bold 22px sans-serif";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`GTEx Normal (n=${heatmapData.gtexCount})`, normalX + normalW / 2, bannerY + 32);
+        ctx.fillText(`GTEx Normal (n=${heatmapData.gtexCount})`, normalX + normalW / 2, bannerY + 40);
       }
 
       if (tumorW > 0) {
         ctx.fillStyle = isLight ? "rgba(215, 48, 39, 0.18)" : "rgba(215, 48, 39, 0.35)";
         ctx.fillRect(tumorX, bannerY, tumorW - 3, bannerH);
         ctx.fillStyle = isLight ? "#991b1b" : "#f87171";
-        ctx.font = "bold 22px sans-serif";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`TCGA Primary Tumor (n=${heatmapData.tumorCount})`, tumorX + tumorW / 2, bannerY + 32);
+        ctx.fillText(`TCGA Tumor (n=${heatmapData.tumorCount})`, tumorX + tumorW / 2, bannerY + 40);
       }
 
       if (solidW > 0) {
         ctx.fillStyle = isLight ? "rgba(234, 179, 8, 0.18)" : "rgba(234, 179, 8, 0.35)";
         ctx.fillRect(solidX, bannerY, solidW - 3, bannerH);
         ctx.fillStyle = isLight ? "#854d0e" : "#fbbf24";
-        ctx.font = "bold 20px sans-serif";
+        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`Adjacent Norm (n=${heatmapData.solidCount})`, solidX + solidW / 2, bannerY + 32);
+        ctx.fillText(`Solid Norm (n=${heatmapData.solidCount})`, solidX + solidW / 2, bannerY + 40);
       }
     } else {
       const dividerX = padLeft + heatmapData.preCount * cellWidth;
@@ -484,21 +484,21 @@ export default function Heatmap({
       ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.18)" : "rgba(100, 116, 139, 0.35)";
       ctx.fillRect(padLeft, bannerY, heatmapData.preCount * cellWidth - 4, bannerH);
       ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = "bold 24px sans-serif";
+      ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`Pre-SBRT (N=${heatmapData.preCount})`, padLeft + (heatmapData.preCount * cellWidth) / 2, bannerY + 33);
+      ctx.fillText(`Pre-SBRT (N=${heatmapData.preCount})`, padLeft + (heatmapData.preCount * cellWidth) / 2, bannerY + 40);
 
       // Post-SBRT Banner
       ctx.fillStyle = isLight ? "rgba(20, 184, 166, 0.18)" : "rgba(20, 184, 166, 0.35)";
       ctx.fillRect(dividerX + 1, bannerY, matrixWidth - heatmapData.preCount * cellWidth - 4, bannerH);
       ctx.fillStyle = isLight ? "#0f766e" : "#14b8a6";
-      ctx.font = "bold 24px sans-serif";
+      ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`, dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2, bannerY + 33);
+      ctx.fillText(`Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`, dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2, bannerY + 40);
     }
 
     // 2. Draw Rows & Cells
-    const geneFontSize = Math.min(32, Math.max(16, Math.round(rowHeight * 0.6)));
+    const geneFontSize = Math.min(42, Math.max(22, Math.round(rowHeight * 0.65)));
 
     heatmapData.rows.forEach((row, rIdx) => {
       const y = padTop + rIdx * rowHeight;
@@ -506,9 +506,9 @@ export default function Heatmap({
       // Draw Row Label (Gene Symbol) in BOLD HIGH-CONTRAST DARK TEXT
       const isActive = row.gene === activeGene;
       ctx.fillStyle = isActive ? (isLight ? "#d97706" : "#f59e0b") : (isLight ? "#0f172a" : "#f1f5f9");
-      ctx.font = `bold ${geneFontSize}px sans-serif`;
+      ctx.font = `bold ${geneFontSize}px monospace`;
       ctx.textAlign = "left";
-      ctx.fillText(row.gene, 80, y + rowHeight * 0.65);
+      ctx.fillText(row.gene, 80, y + rowHeight * 0.68);
 
       // Draw Cells
       row.zScores.forEach((z, cIdx) => {
@@ -537,10 +537,10 @@ export default function Heatmap({
     });
 
     // 3. Draw Z-Score Colorbar Legend at the Bottom
-    const legendW = 700;
-    const legendH = 26;
+    const legendW = 800;
+    const legendH = 38;
     const legendX = size / 2 - legendW / 2;
-    const legendY = size - 120;
+    const legendY = size - 110;
 
     const grad = ctx.createLinearGradient(legendX, legendY, legendX + legendW, legendY);
     grad.addColorStop(0, "rgb(59, 130, 255)");   // -2.0 Blue
@@ -550,13 +550,13 @@ export default function Heatmap({
     ctx.fillStyle = grad;
     ctx.fillRect(legendX, legendY, legendW, legendH);
 
-    ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(legendX, legendY, legendW, legendH);
 
     // Legend Tick Labels
     ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-    ctx.font = "bold 20px monospace";
+    ctx.font = "bold 28px monospace";
     ctx.textAlign = "center";
 
     const ticks = [
@@ -571,16 +571,16 @@ export default function Heatmap({
       const tx = legendX + t.pos * legendW;
       ctx.beginPath();
       ctx.moveTo(tx, legendY + legendH);
-      ctx.lineTo(tx, legendY + legendH + 6);
+      ctx.lineTo(tx, legendY + legendH + 8);
       ctx.stroke();
-      ctx.fillText(t.val, tx, legendY + legendH + 26);
+      ctx.fillText(t.val, tx, legendY + legendH + 34);
     });
 
     // Legend Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Relative Expression (Row Z-Score)", size / 2, legendY - 14);
+    ctx.fillText("Relative Expression (Row Z-Score)", size / 2, legendY - 18);
 
     return offscreen;
   };

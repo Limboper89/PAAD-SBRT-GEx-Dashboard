@@ -461,13 +461,24 @@ export default function VolcanoPlot({
     if (!ctx) return offscreen;
 
     const isLight = theme === "light";
-    const pad = { left: 240, right: 100, top: 120, bottom: 240 };
-    const plotW = size - pad.left - pad.right;
-    const plotH = size - pad.top - pad.bottom;
 
-    // Background
+    // 1. Background
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
+
+    // 2. Title & Subtitle Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(isTcgaGtex ? "Differential Expression: TCGA vs. GTEx (N=349)" : "Differential Expression: GSE225767 Pre vs. Post SBRT", 100, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(`Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}`, 100, 136);
+
+    const pad = { left: 240, right: 100, top: 220, bottom: 240 };
+    const plotW = size - pad.left - pad.right;
+    const plotH = size - pad.top - pad.bottom;
 
     const getExportScreenCoords = (xVal: number, yVal: number) => {
       const scrX = pad.left + ((xVal - bounds.minX) / (bounds.maxX - bounds.minX)) * plotW;
@@ -480,8 +491,8 @@ export default function VolcanoPlot({
     const startX = Math.floor(bounds.minX);
     const yStep = Math.max(1, Math.ceil((bounds.maxY - bounds.minY) / 8));
 
-    ctx.strokeStyle = isLight ? "#f1f5f9" : "rgba(148, 163, 184, 0.08)";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
+    ctx.lineWidth = 1.5;
 
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const pt = getExportScreenCoords(x, 0);
@@ -501,7 +512,7 @@ export default function VolcanoPlot({
     // Zero line
     const zeroPt = getExportScreenCoords(0, 0);
     ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(zeroPt.x, pad.top);
     ctx.lineTo(zeroPt.x, pad.top + plotH);
@@ -510,8 +521,8 @@ export default function VolcanoPlot({
     // Significance threshold line
     const threshY = -Math.log10(0.05);
     const threshPt = getExportScreenCoords(0, threshY);
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+    ctx.lineWidth = 3.5;
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
     ctx.moveTo(pad.left, threshPt.y);
@@ -520,16 +531,16 @@ export default function VolcanoPlot({
     ctx.setLineDash([]);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = "bold 26px sans-serif";
+    ctx.font = "bold 30px monospace";
     ctx.textAlign = "left";
-    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 15, threshPt.y - 12);
+    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 20, threshPt.y - 14);
 
     // Fold change threshold lines
     if (fcThreshold > 0) {
       const rPt = getExportScreenCoords(fcThreshold, 0);
       const lPt = getExportScreenCoords(-fcThreshold, 0);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(rPt.x, pad.top);
@@ -550,7 +561,7 @@ export default function VolcanoPlot({
     sortedPoints.forEach((p) => {
       const scr = getExportScreenCoords(p.x, p.y);
       let color = isLight ? "rgba(148, 163, 184, 0.45)" : "rgba(148, 163, 184, 0.25)";
-      let radius = 6.5;
+      let radius = 8;
 
       const isSig = isTcgaGtex
         ? (p.gene.qval !== undefined && p.gene.qval < 0.05)
@@ -559,10 +570,10 @@ export default function VolcanoPlot({
 
       if (isSig && passesFC) {
         color = p.x > 0 ? "#dc2626" : "#2563eb";
-        radius = 9.5;
+        radius = 12;
       } else if (isSig) {
         color = isLight ? "rgba(148, 163, 184, 0.65)" : "rgba(148, 163, 184, 0.4)";
-        radius = 7.5;
+        radius = 9;
       }
 
       ctx.beginPath();
@@ -577,59 +588,59 @@ export default function VolcanoPlot({
       if (p) {
         const scr = getExportScreenCoords(p.x, p.y);
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 22, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 26, 0, 2 * Math.PI);
         ctx.strokeStyle = "#d97706";
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 6;
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 10, 0, 2 * Math.PI);
+        ctx.arc(scr.x, scr.y, 12, 0, 2 * Math.PI);
         ctx.fillStyle = "#d97706";
         ctx.fill();
 
         // Label
         ctx.fillStyle = isLight ? "#0f172a" : "#ffffff";
-        ctx.font = "bold 32px sans-serif";
+        ctx.font = "bold 38px sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(selectedGene, scr.x + 28, scr.y + 10);
+        ctx.fillText(selectedGene, scr.x + 32, scr.y + 12);
       }
     }
 
     // Outer Axis Frame
-    ctx.strokeStyle = isLight ? "#334155" : "#475569";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+    ctx.lineWidth = 4;
     ctx.strokeRect(pad.left, pad.top, plotW, plotH);
 
     // Axis Ticks & Numbers
-    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
-    ctx.font = "bold 28px sans-serif";
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 36px monospace";
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const pt = getExportScreenCoords(x, 0);
       if (pt.x >= pad.left - 5 && pt.x <= pad.left + plotW + 5) {
         ctx.textAlign = "center";
-        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 42);
+        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 46);
       }
     }
     for (let y = 0; y <= bounds.maxY; y += yStep) {
       const pt = getExportScreenCoords(0, y);
       if (pt.y >= pad.top - 5 && pt.y <= pad.top + plotH + 5) {
         ctx.textAlign = "right";
-        ctx.fillText(y.toString(), pad.left - 18, pt.y + 10);
+        ctx.fillText(y.toString(), pad.left - 24, pt.y + 12);
       }
     }
 
     // Axis Titles
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 36px sans-serif";
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
       isTcgaGtex ? "Wilcoxon log₂(Fold Change)" : "DESeq2 log₂(Fold Change)",
       pad.left + plotW / 2,
-      pad.top + plotH + 110
+      pad.top + plotH + 115
     );
 
     ctx.save();
-    ctx.translate(65, pad.top + plotH / 2);
+    ctx.translate(pad.left - 120, pad.top + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(isTcgaGtex ? "−log₁₀(Wilcoxon FDR)" : "−log₁₀(p-value)", 0, 0);
     ctx.restore();

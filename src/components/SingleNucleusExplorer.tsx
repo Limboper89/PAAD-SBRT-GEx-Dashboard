@@ -567,12 +567,12 @@ export default function SingleNucleusExplorer() {
 
     // 2. Title and Subtitle Header (Large Bold Publication Typography)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("Single-Nucleus Transcriptomic Atlas (GSE202051)", 80, 85);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
+    ctx.font = "bold 30px monospace";
     let sub = "";
     if (colorMode === "broad") {
       sub = `Broad Cell Lineages · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
@@ -583,20 +583,18 @@ export default function SingleNucleusExplorer() {
     } else {
       sub = `Target Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max Log-Expr: ${exprActualMax.toFixed(2)}`;
     }
-    ctx.fillText(sub, 80, 132);
+    ctx.fillText(sub, 80, 136);
 
     // 3. Coordinate Layout
-    // Main UMAP area on the left: x: 90 to 1640 (width 1550), y: 170 to 2320 (height 2150)
-    // Legend panel on the right: x: 1680 to 2320 (width 640)
     const padLeft = 90;
-    const padTop = 170;
-    const plotW = 1550;
-    const plotH = 2150;
+    const padTop = 180;
+    const plotW = 1520;
+    const plotH = 2140;
 
-    const legendLeft = 1670;
-    const legendTop = 170;
-    const legendW = 650;
-    const legendH = 2150;
+    const legendLeft = 1650;
+    const legendTop = 180;
+    const legendW = 670;
+    const legendH = 2140;
 
     // Coordinate mapping helper
     const mapX = (x: number) => {
@@ -639,7 +637,7 @@ export default function SingleNucleusExplorer() {
       }
 
       const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0) : 0;
-      const radius = (colorMode === "expression" && exprVal > 0) ? 6.5 : 5.0;
+      const radius = (colorMode === "expression" && exprVal > 0) ? 7.0 : 5.5;
 
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -650,10 +648,10 @@ export default function SingleNucleusExplorer() {
     // 5. Draw Prominent UMAP Coordinate Axes (Bottom-Left of Plot)
     const axisX = padLeft + 60;
     const axisY = padTop + plotH - 60;
-    const axisLen = 180;
+    const axisLen = 220;
 
     ctx.strokeStyle = isLight ? "#0f172a" : "#94a3b8";
-    ctx.lineWidth = 4.5;
+    ctx.lineWidth = 6;
 
     // X Axis (UMAP_1)
     ctx.beginPath();
@@ -663,9 +661,9 @@ export default function SingleNucleusExplorer() {
 
     // X Arrow
     ctx.beginPath();
-    ctx.moveTo(axisX + axisLen, axisY - 8);
-    ctx.lineTo(axisX + axisLen + 14, axisY);
-    ctx.lineTo(axisX + axisLen, axisY + 8);
+    ctx.moveTo(axisX + axisLen, axisY - 10);
+    ctx.lineTo(axisX + axisLen + 18, axisY);
+    ctx.lineTo(axisX + axisLen, axisY + 10);
     ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
     ctx.fill();
 
@@ -677,20 +675,20 @@ export default function SingleNucleusExplorer() {
 
     // Y Arrow
     ctx.beginPath();
-    ctx.moveTo(axisX - 8, axisY - axisLen);
-    ctx.lineTo(axisX, axisY - axisLen - 14);
-    ctx.lineTo(axisX + 8, axisY - axisLen);
+    ctx.moveTo(axisX - 10, axisY - axisLen);
+    ctx.lineTo(axisX, axisY - axisLen - 18);
+    ctx.lineTo(axisX + 10, axisY - axisLen);
     ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
     ctx.fill();
 
     // Axis Labels (Bold Large)
-    ctx.font = "bold 28px sans-serif";
+    ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-    ctx.fillText("UMAP_1", axisX + 20, axisY + 36);
+    ctx.fillText("UMAP_1", axisX + 24, axisY + 48);
 
     ctx.save();
-    ctx.translate(axisX - 32, axisY - 20);
+    ctx.translate(axisX - 42, axisY - 24);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText("UMAP_2", 0, 0);
     ctx.restore();
@@ -699,15 +697,15 @@ export default function SingleNucleusExplorer() {
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.fillRect(legendLeft, legendTop, legendW, legendH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
 
     if (colorMode === "broad") {
       // Broad Lineage Legend
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Cell Lineages", legendLeft + 36, legendTop + 55);
+      ctx.fillText("Cell Lineages", legendLeft + 36, legendTop + 65);
 
       // Count frequencies
       const counts: Record<string, number> = {};
@@ -720,7 +718,7 @@ export default function SingleNucleusExplorer() {
         .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
 
       broadEntries.forEach((key, idx) => {
-        const itemY = legendTop + 130 + idx * 88;
+        const itemY = legendTop + 145 + idx * 95;
         const color = BROAD_COLORS[key] || "#64748b";
         const count = counts[key] || 0;
         const pct = ((count / activeCells.length) * 100).toFixed(1);
@@ -728,31 +726,31 @@ export default function SingleNucleusExplorer() {
         // Color dot (Prominent)
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(legendLeft + 56, itemY, 20, 0, Math.PI * 2);
+        ctx.arc(legendLeft + 56, itemY, 22, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         // Label (Large Bold)
         ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(key, legendLeft + 94, itemY + 10);
+        ctx.fillText(key, legendLeft + 96, itemY + 12);
 
         // Count / %
         ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-        ctx.font = "bold 24px monospace";
+        ctx.font = "bold 28px monospace";
         ctx.textAlign = "right";
-        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 36, itemY + 10);
+        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 32, itemY + 12);
       });
 
     } else if (colorMode === "level2") {
       // Detailed Sub-Lineages (Large Clean 1-Column Format)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Cell Sub-Lineages", legendLeft + 36, legendTop + 55);
+      ctx.fillText("Cell Sub-Lineages", legendLeft + 36, legendTop + 65);
 
       const counts: Record<string, number> = {};
       activeCells.forEach(c => {
@@ -763,11 +761,11 @@ export default function SingleNucleusExplorer() {
         .filter(k => (counts[k] || 0) > 0)
         .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
 
-      const maxShow = 26;
+      const maxShow = 24;
       const displayEntries = level2Entries.slice(0, maxShow);
 
       displayEntries.forEach((key, idx) => {
-        const itemY = legendTop + 115 + idx * 74;
+        const itemY = legendTop + 130 + idx * 80;
         const color = LEVEL2_COLORS[key] || "#64748b";
         const count = counts[key] || 0;
         const pct = ((count / activeCells.length) * 100).toFixed(1);
@@ -775,33 +773,33 @@ export default function SingleNucleusExplorer() {
         // Color dot
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(legendLeft + 52, itemY, 15, 0, Math.PI * 2);
+        ctx.arc(legendLeft + 52, itemY, 18, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.stroke();
 
         // Label (Large Bold)
         ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "left";
-        const maxLen = 18;
+        const maxLen = 17;
         const dispName = key.length > maxLen ? key.slice(0, maxLen - 2) + "..." : key;
-        ctx.fillText(dispName, legendLeft + 82, itemY + 8);
+        ctx.fillText(dispName, legendLeft + 84, itemY + 10);
 
         // Count / % (Large Bold Monospace)
         ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-        ctx.font = "bold 22px monospace";
+        ctx.font = "bold 26px monospace";
         ctx.textAlign = "right";
-        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 32, itemY + 8);
+        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 28, itemY + 10);
       });
 
     } else if (colorMode === "treatment") {
       // Treatment Group
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Treatment Group", legendLeft + 36, legendTop + 55);
+      ctx.fillText("Treatment Group", legendLeft + 36, legendTop + 65);
 
       const counts: Record<string, number> = {};
       activeCells.forEach(c => {
@@ -811,42 +809,42 @@ export default function SingleNucleusExplorer() {
       const treatmentEntries = Object.keys(TREATMENT_COLORS).filter(k => (counts[k] || 0) > 0);
 
       treatmentEntries.forEach((key, idx) => {
-        const itemY = legendTop + 140 + idx * 130;
+        const itemY = legendTop + 160 + idx * 150;
         const color = TREATMENT_COLORS[key] || "#64748b";
         const count = counts[key] || 0;
         const pct = ((count / activeCells.length) * 100).toFixed(1);
 
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(legendLeft + 60, itemY, 24, 0, Math.PI * 2);
+        ctx.arc(legendLeft + 65, itemY, 28, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 3.5;
         ctx.stroke();
 
         ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(key, legendLeft + 102, itemY + 10);
+        ctx.fillText(key, legendLeft + 115, itemY + 10);
 
         ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-        ctx.font = "bold 26px monospace";
+        ctx.font = "bold 30px monospace";
         ctx.textAlign = "left";
-        ctx.fillText(`${count.toLocaleString()} nuclei (${pct}%)`, legendLeft + 102, itemY + 48);
+        ctx.fillText(`${count.toLocaleString()} nuclei (${pct}%)`, legendLeft + 115, itemY + 54);
       });
 
     } else if (colorMode === "expression" && activeGene && exprVec) {
       // Expression Colorbar Legend
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(`Expression: ${activeGene}`, legendLeft + 36, legendTop + 55);
+      ctx.fillText(`Expression: ${activeGene}`, legendLeft + 36, legendTop + 65);
 
       // Color Bar (Large)
       const barX = legendLeft + 40;
-      const barY = legendTop + 120;
+      const barY = legendTop + 130;
       const barW = legendW - 80;
-      const barH = 44;
+      const barH = 52;
 
       const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
       grad.addColorStop(0, "rgb(20, 184, 166)");    // Teal
@@ -856,17 +854,17 @@ export default function SingleNucleusExplorer() {
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(barX, barY, barW, barH);
 
       // Ticks & Labels (Large Bold Monospace)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 26px monospace";
+      ctx.font = "bold 32px monospace";
       ctx.textAlign = "center";
 
-      ctx.fillText("0.0", barX + 10, barY + barH + 34);
-      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 34);
-      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 34);
+      ctx.fillText("0.0", barX + 10, barY + barH + 40);
+      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 40);
+      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 40);
 
       // Expression Statistics Summary Box
       let positiveCount = 0;
@@ -881,39 +879,39 @@ export default function SingleNucleusExplorer() {
       const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
       const pctPos = ((positiveCount / activeCells.length) * 100).toFixed(1);
 
-      const statsY = barY + barH + 110;
-      const statsH = 340;
+      const statsY = barY + barH + 130;
+      const statsH = 380;
       ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
       ctx.fillRect(barX, statsY, barW, statsH);
       ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(barX, statsY, barW, statsH);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Cohort Metrics", barX + 24, statsY + 45);
+      ctx.fillText("Cohort Metrics", barX + 28, statsY + 52);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Positive Nuclei:", barX + 24, statsY + 95);
+      ctx.fillText("Positive Nuclei:", barX + 28, statsY + 108);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${positiveCount.toLocaleString()} / ${activeCells.length.toLocaleString()} (${pctPos}%)`, barX + 24, statsY + 130);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${positiveCount.toLocaleString()} / ${activeCells.length.toLocaleString()} (${pctPos}%)`, barX + 28, statsY + 146);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Mean Log-Expr (Pos):", barX + 24, statsY + 185);
+      ctx.fillText("Mean Log-Expr (Pos):", barX + 28, statsY + 208);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${meanPos} log2(counts+1)`, barX + 24, statsY + 220);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${meanPos} log2(counts+1)`, barX + 28, statsY + 246);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Maximum Observed:", barX + 24, statsY + 275);
+      ctx.fillText("Maximum Observed:", barX + 28, statsY + 308);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${exprActualMax.toFixed(2)} log2(counts+1)`, barX + 24, statsY + 310);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${exprActualMax.toFixed(2)} log2(counts+1)`, barX + 28, statsY + 346);
     }
 
     return offscreen;

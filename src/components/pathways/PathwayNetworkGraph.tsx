@@ -9,25 +9,28 @@ import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/expor
 interface PathwayNetworkGraphProps {
   results: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
+  analysisMode?: "ORA" | "GSEA";
 }
 
-export default function PathwayNetworkGraph({ results, onSelectPathway }: PathwayNetworkGraphProps) {
+export default function PathwayNetworkGraph({ results, onSelectPathway, analysisMode }: PathwayNetworkGraphProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   if (!results || results.length === 0) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 text-center text-slate-500 font-mono text-xs">
-        No pathways available to construct leading-edge network.
+        No pathways available to construct network.
       </div>
     );
   }
+
+  const isGsea = analysisMode === "GSEA" || results[0]?.analysisMode === "GSEA";
 
   // Top 12 pathways for clear node graph rendering
   const topPathways = [...results]
     .sort((a, b) => a.adjPValue - b.adjPValue)
     .slice(0, 12);
 
-  // Compute shared leading-edge edges
+  // Compute shared leading-edge / overlap edges
   interface Edge {
     sourceId: string;
     targetId: string;
@@ -59,13 +62,16 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
   const centerX = 320;
   const centerY = 240;
 
-  const nodePositions = new Map<string, { x: number; y: number }>();
-  topPathways.forEach((p, idx) => {
+  const nodePositions = topPathways.map((p, idx) => {
     const angle = (idx / numNodes) * 2 * Math.PI - Math.PI / 2;
-    const x = centerX + radius * Math.cos(angle);
-    const y = centerY + radius * Math.sin(angle);
-    nodePositions.set(p.pathwayId, { x, y });
+    return {
+      pathway: p,
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+    };
   });
+
+  const nodeMap = new Map(nodePositions.map((n) => [n.pathway.pathwayId, n]));
 
   const generateHighResNetworkCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
     const offscreen = document.createElement("canvas");
@@ -82,36 +88,43 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Leading-Edge Pathway Network", 80, 80);
+    ctx.fillText(isGsea ? "Leading-Edge Pathway Crosstalk Network" : "Pathway Overlap Network (ORA)", 80, 80);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
-    ctx.fillText(`Top ${topPathways.length} Enriched Pathways • ${edges.length} Shared Leading-Edge Gene Edges`, 80, 118);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(
+      `Top ${topPathways.length} Enriched Pathways • ${edges.length} Inter-Pathway Shared Gene Connections`,
+      80,
+      130
+    );
 
     const cX = size / 2;
     const cY = size / 2 + 30;
-    const cRadius = 720;
+    const r = size * 0.34;
 
-    // Node positions scaled for 2400x2400
-    const exportPositions = new Map<string, { x: number; y: number }>();
-    topPathways.forEach((p, idx) => {
+    const posList = topPathways.map((p, idx) => {
       const angle = (idx / numNodes) * 2 * Math.PI - Math.PI / 2;
-      const x = cX + cRadius * Math.cos(angle);
-      const y = cY + cRadius * Math.sin(angle);
-      exportPositions.set(p.pathwayId, { x, y });
+      return {
+        pathway: p,
+        x: cX + r * Math.cos(angle),
+        y: cY + r * Math.sin(angle),
+        angle
+      };
     });
+
+    const highResNodeMap = new Map(posList.map((n) => [n.pathway.pathwayId, n]));
 
     // 1. Draw Edges
     edges.forEach((edge) => {
-      const p1 = exportPositions.get(edge.sourceId);
-      const p2 = exportPositions.get(edge.targetId);
+      const p1 = highResNodeMap.get(edge.sourceId);
+      const p2 = highResNodeMap.get(edge.targetId);
       if (!p1 || !p2) return;
 
-      const strokeW = Math.min(16, Math.max(3, edge.sharedGenes.length * 2.2));
-      ctx.strokeStyle = isLight ? "rgba(100, 116, 139, 0.45)" : "rgba(148, 163, 184, 0.35)";
-      ctx.lineWidth = strokeW;
+      const w = Math.min(18, Math.max(3, edge.sharedGenes.length * 2));
+      ctx.strokeStyle = isLight ? "rgba(99, 102, 241, 0.45)" : "rgba(129, 140, 248, 0.45)";
+      ctx.lineWidth = w;
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
@@ -119,36 +132,42 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
     });
 
     // 2. Draw Nodes
-    topPathways.forEach((p) => {
-      const pos = exportPositions.get(p.pathwayId);
-      if (!pos) return;
-
+    posList.forEach((pos) => {
+      const p = pos.pathway;
       const isUp = p.direction === "Upregulated" || (p.nes !== undefined && p.nes >= 0);
-      const logFdr = p.adjPValue > 0 ? -Math.log10(p.adjPValue) : 1;
-      const nodeR = Math.max(30, Math.min(65, 28 + logFdr * 6));
 
-      // Node Fill
+      // Outer circle
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, nodeR, 0, 2 * Math.PI);
+      ctx.arc(pos.x, pos.y, 32, 0, 2 * Math.PI);
       ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.9)" : "rgba(37, 99, 235, 0.9)";
       ctx.fill();
 
-      // Node Border
-      ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
+      ctx.strokeStyle = isUp ? "#991b1b" : "#1e40af";
       ctx.lineWidth = 4;
       ctx.stroke();
 
-      // Node Label
+      // Label text
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px sans-serif";
-      
-      const isBottomHalf = pos.y > cY;
-      const labelY = isBottomHalf ? pos.y + nodeR + 32 : pos.y - nodeR - 14;
-      
-      ctx.textAlign = "center";
+      ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+      const cosA = Math.cos(pos.angle);
+      const sinA = Math.sin(pos.angle);
+
+      let labelX = pos.x;
+      let labelY = pos.y;
+
+      if (Math.abs(cosA) > 0.3) {
+        ctx.textAlign = cosA > 0 ? "left" : "right";
+        labelX += cosA > 0 ? 44 : -44;
+        labelY += 8;
+      } else {
+        ctx.textAlign = "center";
+        labelY += sinA > 0 ? 56 : -44;
+      }
+
       const maxLen = 32;
       const displayLabel = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      ctx.fillText(displayLabel, pos.x, labelY);
+      ctx.fillText(displayLabel, labelX, labelY);
     });
 
     // 3. Legend at bottom
@@ -156,33 +175,39 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
     ctx.font = "bold 22px sans-serif";
     ctx.textAlign = "left";
 
-    // Red dot
-    ctx.beginPath();
-    ctx.arc(cX - 480, legY, 16, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
-    ctx.fill();
-    ctx.strokeStyle = "#991b1b";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    if (isGsea) {
+      // Red dot
+      ctx.beginPath();
+      ctx.arc(cX - 480, legY, 16, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#991b1b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-    ctx.fillText("Upregulated NES", cX - 450, legY + 8);
+      ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
+      ctx.fillText("Upregulated NES", cX - 450, legY + 8);
 
-    // Blue dot
-    ctx.beginPath();
-    ctx.arc(cX - 100, legY, 16, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-    ctx.fill();
-    ctx.strokeStyle = "#1e40af";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      // Blue dot
+      ctx.beginPath();
+      ctx.arc(cX - 100, legY, 16, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#1e40af";
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    ctx.fillText("Downregulated NES", cX - 70, legY + 8);
+      ctx.fillText("Downregulated NES", cX - 70, legY + 8);
+    }
 
     // Edge thickness text
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
     ctx.font = "20px monospace";
-    ctx.fillText("• Edge Width ∝ Shared Leading-Edge Genes", cX + 260, legY + 7);
+    ctx.fillText(
+      isGsea ? "• Edge Width ∝ Shared Leading-Edge Genes" : "• Edge Width ∝ Shared Overlapping DEGs",
+      isGsea ? cX + 260 : cX - 200,
+      legY + 7
+    );
 
     return offscreen;
   };
@@ -193,10 +218,10 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
         <div>
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Share2 className="w-4 h-4 text-teal-400" />
-            <span>Leading-Edge Pathway Network</span>
+            <span>{isGsea ? "Leading-Edge Pathway Network" : "Pathway Overlap Network"}</span>
           </h3>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Nodes: Top Pathways &bull; Edges: Shared Leading-Edge Genes &bull; Click node to inspect
+            Nodes: Top Pathways &bull; Edges: {isGsea ? "Shared Leading-Edge Genes" : "Shared Overlapping DEGs"} &bull; Click node to inspect
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -206,9 +231,10 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
           <ExportButton
             onExportCSV={() => {
               exportToCSV({
-                filename: "Pathway_LeadingEdge_Network_Edges.csv",
+                filename: isGsea ? "Pathway_LeadingEdge_Network_Edges.csv" : "Pathway_Overlap_Network_Edges.csv",
                 metadata: {
-                  module: "Pathway Leading Edge Network Graph",
+                  module: isGsea ? "Pathway Leading Edge Network Graph" : "Pathway Overlap Network Graph",
+                  mode: isGsea ? "GSEA" : "ORA",
                   totalNodes: String(topPathways.length),
                   totalEdges: String(edges.length),
                 },
@@ -220,7 +246,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
               const exportCanvas = generateHighResNetworkCanvas(theme, 2400);
               exportCanvasToPNG({
                 canvas: exportCanvas,
-                filename: "Pathway_LeadingEdge_Network.png",
+                filename: isGsea ? "Pathway_LeadingEdge_Network.png" : "Pathway_Overlap_Network.png",
                 theme,
               });
             }}
@@ -228,7 +254,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
               const exportCanvas = generateHighResNetworkCanvas(theme, 1200);
               exportCanvasToSVG({
                 canvas: exportCanvas,
-                filename: "Pathway_LeadingEdge_Network.svg",
+                filename: isGsea ? "Pathway_LeadingEdge_Network.svg" : "Pathway_Overlap_Network.svg",
                 theme,
               });
             }}
@@ -240,8 +266,8 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
         <svg className="w-full h-full" viewBox="0 0 640 480">
           {/* Render Edges */}
           {edges.map((edge, idx) => {
-            const pos1 = nodePositions.get(edge.sourceId);
-            const pos2 = nodePositions.get(edge.targetId);
+            const pos1 = nodeMap.get(edge.sourceId);
+            const pos2 = nodeMap.get(edge.targetId);
             if (!pos1 || !pos2) return null;
 
             const isSelected = selectedNodeId === edge.sourceId || selectedNodeId === edge.targetId;
@@ -264,7 +290,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway }: Pathwa
 
           {/* Render Nodes */}
           {topPathways.map((p) => {
-            const pos = nodePositions.get(p.pathwayId);
+            const pos = nodeMap.get(p.pathwayId);
             if (!pos) return null;
 
             const isSelected = selectedNodeId === p.pathwayId;

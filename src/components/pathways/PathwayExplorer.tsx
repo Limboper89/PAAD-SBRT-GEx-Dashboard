@@ -524,7 +524,15 @@ export default function PathwayExplorer({
   const filteredResults = useMemo(() => {
     const afterFdr = rawActiveResults.filter(r => r.adjPValue <= fdrThreshold);
     const afterOverlap = afterFdr.filter(r => analysisMode === "ORA" ? (r.overlapCount ?? 0) >= minOverlap : true);
-    const afterDb = afterOverlap.filter(r => dbFilter === "All" || r.database === dbFilter);
+    const afterDb = afterOverlap.filter(r => {
+      if (dbFilter === "All") return true;
+      if (dbFilter === "Hallmark") return r.database === "Hallmark" || r.pathwayName.startsWith("Hallmark");
+      if (dbFilter === "Reactome") return r.database === "Reactome" || r.pathwayName.startsWith("Reactome");
+      if (dbFilter === "GO_BP" || dbFilter === "GO Biological Process") {
+        return r.database === "GO_BP" || r.database === "GO Biological Process" || r.pathwayName.startsWith("GO BP");
+      }
+      return r.database === dbFilter;
+    });
     const afterDir = afterDb.filter(r => {
       if (directionFilter === "Upregulated") return r.direction === "Upregulated";
       if (directionFilter === "Downregulated") return r.direction === "Downregulated";
@@ -1044,14 +1052,14 @@ export default function PathwayExplorer({
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition ${activeView === "bubble" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
         >
           <Layers className="w-4 h-4" />
-          GSEA Summary Dot Plot
+          {analysisMode === "ORA" ? "ORA Summary Dot Plot" : "GSEA Summary Dot Plot"}
         </button>
         <button
           onClick={() => setActiveView("curve")}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition ${activeView === "curve" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
         >
           <Zap className="w-4 h-4 text-amber-400" />
-          Enrichment Curve
+          {analysisMode === "ORA" ? "Enrichment Curve (GSEA)" : "Enrichment Curve"}
         </button>
         <button
           onClick={() => setActiveView("table")}
@@ -1065,21 +1073,21 @@ export default function PathwayExplorer({
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition ${activeView === "matrix" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
         >
           <Grid className="w-4 h-4" />
-          Leading-Edge Matrix
+          {analysisMode === "ORA" ? "Gene Overlap Matrix" : "Leading-Edge Matrix"}
         </button>
         <button
           onClick={() => setActiveView("network")}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition ${activeView === "network" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
         >
           <Share2 className="w-4 h-4 text-indigo-400" />
-          Leading-Edge Network
+          {analysisMode === "ORA" ? "Pathway Overlap Network" : "Leading-Edge Network"}
         </button>
         <button
           onClick={() => setActiveView("bar")}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition ${activeView === "bar" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow" : "text-slate-400 hover:text-white"}`}
         >
           <BarChart2 className="w-4 h-4 text-slate-400" />
-          NES Ranking (Secondary)
+          {analysisMode === "ORA" ? "Fold Enrichment Ranking" : "NES Ranking (Secondary)"}
         </button>
         <button
           onClick={() => setActiveView("compare")}
@@ -1224,6 +1232,7 @@ export default function PathwayExplorer({
                   setActiveView("curve");
                 }}
                 onSelectGene={onSelectGene}
+                analysisMode={analysisMode}
               />
             )}
             {activeView === "network" && (
@@ -1233,6 +1242,7 @@ export default function PathwayExplorer({
                   setSelectedPathway(p);
                   setActiveView("curve");
                 }}
+                analysisMode={analysisMode}
               />
             )}
             {activeView === "compare" && (

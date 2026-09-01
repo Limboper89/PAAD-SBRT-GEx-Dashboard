@@ -378,8 +378,8 @@ export function CustomGeneInput({
   useEffect(() => {
     async function loadHgnc() {
       try {
-        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-        const res = await fetch(`${basePath}/data/pathways/hgnc_human_genes.json`);
+        const bp = basePath || process.env.NEXT_PUBLIC_BASE_PATH || (typeof window !== "undefined" && window.location.pathname.includes("/PAAD-SBRT-GEx-Dashboard") ? "/PAAD-SBRT-GEx-Dashboard" : "");
+        const res = await fetch(`${bp}/data/pathways/hgnc_human_genes.json`);
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.genes)) {
@@ -391,7 +391,7 @@ export function CustomGeneInput({
       }
     }
     loadHgnc();
-  }, []);
+  }, [basePath]);
 
   // Build full unique gene universe set & array for client-side autocomplete & mapping
   const { universeSet, sortedUniverseArray } = useMemo(() => {

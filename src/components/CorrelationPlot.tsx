@@ -267,20 +267,20 @@ export default function CorrelationPlot({
 
     // 2. Title & Subtitle Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`Gene-Gene Co-Expression: ${gene1Name} vs ${gene2Name}`, 120, 85);
+    ctx.fillText(`Gene-Gene Co-Expression: ${gene1Name} vs. ${gene2Name}`, 100, 85);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
+    ctx.font = "bold 30px monospace";
     const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
-    ctx.fillText(`${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho}`, 120, 132);
+    ctx.fillText(`${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho}`, 100, 136);
 
     // 3. Layout Dimensions
-    const padLeft = 200;
+    const padLeft = 240;
     const padRight = 100;
-    const padTop = 200;
-    const padBottom = 220;
+    const padTop = 240;
+    const padBottom = 240;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -293,7 +293,7 @@ export default function CorrelationPlot({
     const mapY = (y: number) => padTop + plotH - ((y - minY) / (maxY - minY)) * plotH;
 
     // 4. Grid Lines
-    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.8)" : "rgba(30, 41, 59, 0.6)";
+    ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
     ctx.lineWidth = 1.5;
 
     const numTicks = 6;
@@ -307,10 +307,10 @@ export default function CorrelationPlot({
       ctx.stroke();
 
       // Tick label Y
-      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.font = "bold 22px monospace";
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = "bold 36px monospace";
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 20, py + 7);
+      ctx.fillText(yVal.toFixed(1), padLeft - 24, py + 12);
 
       // Vertical grid
       const xVal = minX + (i / numTicks) * (maxX - minX);
@@ -322,22 +322,22 @@ export default function CorrelationPlot({
 
       // Tick label X
       ctx.textAlign = "center";
-      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 40);
+      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 46);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Axis Titles (Bold Large)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`${gene1Name} Expression [log2(TPM + 0.001)]`, padLeft + plotW / 2, padTop + plotH + 110);
+    ctx.fillText(`${gene1Name} Expression [log2(TPM + 0.001)]`, padLeft + plotW / 2, padTop + plotH + 115);
 
     ctx.save();
-    ctx.translate(padLeft - 100, padTop + plotH / 2);
+    ctx.translate(padLeft - 120, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(`${gene2Name} Expression [log2(TPM + 0.001)]`, 0, 0);
     ctx.restore();
@@ -349,7 +349,7 @@ export default function CorrelationPlot({
     const trendY2 = m * trendX2 + b;
 
     ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b"; // Amber-600 / 500
-    ctx.lineWidth = 4.5;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(mapX(trendX1), mapY(trendY1));
     ctx.lineTo(mapX(trendX2), mapY(trendY2));
@@ -362,41 +362,41 @@ export default function CorrelationPlot({
       const py = mapY(p.y);
 
       ctx.beginPath();
-      ctx.arc(px, py, 11, 0, Math.PI * 2);
+      ctx.arc(px, py, 14, 0, Math.PI * 2);
       ctx.fillStyle = ptColor;
       ctx.globalAlpha = 0.85;
       ctx.fill();
       ctx.globalAlpha = 1.0;
-      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.3)" : "rgba(255,255,255,0.4)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.35)" : "rgba(255,255,255,0.45)";
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     });
 
     // 8. Statistics Summary Card (Top-Left inside plot)
     const cardX = padLeft + 40;
     const cardY = padTop + 40;
-    const cardW = 560;
-    const cardH = 220;
+    const cardW = 660;
+    const cardH = 260;
 
-    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.95)" : "rgba(11, 19, 41, 0.95)";
+    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Correlation Statistics", cardX + 24, cardY + 45);
+    ctx.fillText("Correlation Statistics", cardX + 32, cardY + 54);
 
-    ctx.font = "bold 22px monospace";
+    ctx.font = "bold 30px monospace";
     ctx.fillStyle = isLight ? "#0d9488" : "#2dd4bf"; // Teal
-    ctx.fillText(`Pearson r  = ${r}`, cardX + 24, cardY + 92);
-    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 24, cardY + 132);
+    ctx.fillText(`Pearson r  = ${r}`, cardX + 32, cardY + 110);
+    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 32, cardY + 158);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "20px monospace";
-    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 24, cardY + 180);
+    ctx.font = "bold 26px monospace";
+    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 32, cardY + 214);
 
     return offscreen;
   };

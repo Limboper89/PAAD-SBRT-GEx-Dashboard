@@ -1,6 +1,6 @@
 // pathway.ts - Comprehensive TypeScript definitions for Pathway Explorer Module
 
-export type PathwayDatabaseType = "Hallmark" | "Reactome" | "GO_BP" | "KEGG_External";
+export type PathwayDatabaseType = "Hallmark" | "Reactome" | "GO_BP" | "GO Biological Process" | "KEGG_External";
 
 export interface DatabaseProvenance {
   database: string;

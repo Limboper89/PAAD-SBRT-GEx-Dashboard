@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Layers, Info, Sliders, HelpCircle, User, Bot, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from "lucide-react";
+import { Search, Layers, Info, Sliders, HelpCircle, User, Bot, ZoomIn, ZoomOut, RotateCcw, Maximize2, Download, Sparkles } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
+import SpatialCrossPatientPlot, { PatientSpatialMetric } from "./SpatialCrossPatientPlot";
 
 
 interface Spot {
@@ -108,6 +109,8 @@ export default function SpatialPrototypeView() {
   const [exprVec, setExprVec] = useState<Float32Array | null>(null);
   const [exprCap, setExprCap] = useState<number>(1);
   const [loadingGene, setLoadingGene] = useState<boolean>(false);
+  const [cohortMetrics, setCohortMetrics] = useState<PatientSpatialMetric[]>([]);
+  const [loadingCohort, setLoadingCohort] = useState<boolean>(false);
 
   // Zoom & Pan state
   const [zoom, setZoom] = useState<number>(1.0);
@@ -205,14 +208,7 @@ export default function SpatialPrototypeView() {
       try {
         setLoading(true);
         setMetadata(null);
-        setExprVec(null);
-        setActiveGene(null);
-        setSelectedGeneInfo(null);
         setHoveredSpot(null);
-        setSearchQuery("");
-        setSuggestions([]);
-        setShowSuggestions(false);
-        setSearchError(null);
         
         chunkCacheRef.current.clear();
         
@@ -231,8 +227,50 @@ export default function SpatialPrototypeView() {
         setMetadata(meta);
         setPatientGenesIndex(index);
         
-        // Reset view mode if we don't have expression loaded yet
-        setViewMode("he_spots");
+        // If an active gene was already chosen, automatically reload its spatial expression for the new patient
+        if (selectedGeneInfo && index[selectedGeneInfo.e]) {
+          const gInfo = index[selectedGeneInfo.e];
+          if (gInfo.c !== undefined && gInfo.o !== undefined && gInfo.l !== undefined) {
+            const chunkFilename = `chunk_${gInfo.c.toString().padStart(3, "0")}.bin`;
+            const chunkRes = await fetch(`${basePath}/data/gse274103/${selectedPatient}/expression_chunks/${chunkFilename}`);
+            if (chunkRes.ok) {
+              const chunkBuf = await chunkRes.arrayBuffer();
+              const slice = chunkBuf.slice(gInfo.o, gInfo.o + gInfo.l);
+              const dv = new DataView(slice);
+              const n_nz = dv.getUint32(0, true);
+              const idxArr = new Uint16Array(slice, 4, n_nz);
+              const valU16 = new Uint16Array(slice, 4 + n_nz * 2, n_nz);
+              const totalSpots = meta.spots.length;
+              const parsedExpr = new Float32Array(totalSpots);
+              let maxVal = 0.0;
+
+              for (let i = 0; i < n_nz; i++) {
+                const spotIdx = idxArr[i];
+                if (spotIdx < totalSpots) {
+                  const valF32 = f16ToF32(valU16[i]);
+                  parsedExpr[spotIdx] = valF32;
+                  if (valF32 > maxVal) maxVal = valF32;
+                }
+              }
+
+              const nonZeroVals = Array.from(parsedExpr).filter(v => v > 0).sort((a, b) => a - b);
+              let cap = maxVal;
+              if (nonZeroVals.length > 0) {
+                const p99idx = Math.max(0, Math.ceil(nonZeroVals.length * 0.99) - 1);
+                cap = nonZeroVals[p99idx];
+              }
+              if (cap <= 0) cap = 1.0;
+
+              setExprVec(parsedExpr);
+              setExprCap(cap);
+              setViewMode("expression");
+            }
+          }
+        } else if (!selectedGeneInfo) {
+          setExprVec(null);
+          setActiveGene(null);
+          setViewMode("he_spots");
+        }
       } catch (e: any) {
         console.error("Error loading patient data:", e);
       } finally {
@@ -433,13 +471,102 @@ export default function SpatialPrototypeView() {
       setActiveGene(displayName);
       setSelectedGeneInfo(gene);
       setViewMode("expression");
+
+      // Trigger asynchronous cohort cross-patient calculation
+      loadCohortMetrics(gene);
     } catch (e: any) {
       console.error(e);
       setSearchError(`Failed to load expression data: ${e.message}`);
     } finally {
       setLoadingGene(false);
     }
-  }, [metadata, selectedPatient]);
+  }, [metadata, selectedPatient, patientGenesIndex]);
+
+  // Load Cross-Patient Quantitative Metrics across all 5 patients
+  const loadCohortMetrics = useCallback(async (gene: MasterGene) => {
+    if (!patientsList || patientsList.length === 0) return;
+    try {
+      setLoadingCohort(true);
+      const results: PatientSpatialMetric[] = await Promise.all(
+        patientsList.map(async (p) => {
+          try {
+            const [metaRes, indexRes] = await Promise.all([
+              fetch(`${basePath}/data/gse274103/${p.id}/metadata.json`),
+              fetch(`${basePath}/data/gse274103/${p.id}/genes_index_chunked.json`),
+            ]);
+            if (!metaRes.ok || !indexRes.ok) throw new Error("Fetch failed");
+            const pMeta: Metadata = await metaRes.json();
+            const pIndex = await indexRes.json();
+            const gInfo = pIndex[gene.e];
+
+            if (!gInfo || gInfo.c === undefined || gInfo.o === undefined || gInfo.l === undefined) {
+              return {
+                patientId: p.id,
+                gsm: p.gsm,
+                totalSpots: pMeta.spots?.length || p.spots_count,
+                positiveSpots: 0,
+                pctPositive: 0,
+                meanPositiveExpr: 0,
+                pseudobulkExpr: 0,
+                maxExpr: 0,
+              };
+            }
+
+            const chunkFilename = `chunk_${gInfo.c.toString().padStart(3, "0")}.bin`;
+            const chunkRes = await fetch(`${basePath}/data/gse274103/${p.id}/expression_chunks/${chunkFilename}`);
+            if (!chunkRes.ok) throw new Error("Chunk fetch failed");
+            const chunkBuf = await chunkRes.arrayBuffer();
+            const slice = chunkBuf.slice(gInfo.o, gInfo.o + gInfo.l);
+            const dv = new DataView(slice);
+            const n_nz = dv.getUint32(0, true);
+            const valU16 = new Uint16Array(slice, 4 + n_nz * 2, n_nz);
+
+            let posCount = 0;
+            let sumExpr = 0;
+            let maxExpr = 0;
+
+            for (let i = 0; i < n_nz; i++) {
+              const valF32 = f16ToF32(valU16[i]);
+              if (valF32 > 0) {
+                posCount++;
+                sumExpr += valF32;
+                if (valF32 > maxExpr) maxExpr = valF32;
+              }
+            }
+
+            const totalSpots = pMeta.spots?.length || p.spots_count;
+            return {
+              patientId: p.id,
+              gsm: p.gsm,
+              totalSpots,
+              positiveSpots: posCount,
+              pctPositive: Number(((posCount / totalSpots) * 100).toFixed(1)),
+              meanPositiveExpr: posCount > 0 ? Number((sumExpr / posCount).toFixed(3)) : 0,
+              pseudobulkExpr: Number((sumExpr / totalSpots).toFixed(3)),
+              maxExpr: Number(maxExpr.toFixed(3)),
+            };
+          } catch (err) {
+            console.error(`Error loading metrics for ${p.id}:`, err);
+            return {
+              patientId: p.id,
+              gsm: p.gsm,
+              totalSpots: p.spots_count || 4500,
+              positiveSpots: 0,
+              pctPositive: 0,
+              meanPositiveExpr: 0,
+              pseudobulkExpr: 0,
+              maxExpr: 0,
+            };
+          }
+        })
+      );
+      setCohortMetrics(results);
+    } catch (err) {
+      console.error("Failed to load cohort metrics:", err);
+    } finally {
+      setLoadingCohort(false);
+    }
+  }, [patientsList]);
 
   // Render Canvas with H&E image and Spot Overlays (Unified World Coordinates + Zoom/Pan Transform)
   useEffect(() => {
@@ -630,7 +757,19 @@ export default function SpatialPrototypeView() {
     }
   };
 
-  const generateHighResSpatialCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+  interface SpatialExportOptions {
+    theme?: "light" | "dark";
+    size?: number;
+    layer?: "overlay" | "he_only" | "spots_only";
+    viewScope?: "full" | "zoomed";
+  }
+
+  const generateHighResSpatialCanvas = ({
+    theme = "light",
+    size = 2400,
+    layer = "overlay",
+    viewScope = "full"
+  }: SpatialExportOptions = {}): HTMLCanvasElement => {
     const offscreen = document.createElement("canvas");
     offscreen.width = size;
     offscreen.height = size;
@@ -638,6 +777,7 @@ export default function SpatialPrototypeView() {
     if (!ctx || !metadata) return offscreen;
 
     const isLight = theme === "light";
+    const isZoomed = viewScope === "zoomed" && zoom > 1.0;
 
     // 1. Background Fill
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
@@ -647,108 +787,168 @@ export default function SpatialPrototypeView() {
 
     // 2. Title & Subtitle Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Spatial Transcriptomics Atlas (10x Visium · GSE274103)", 80, 85);
+    const layerTitle = layer === "he_only" 
+      ? "H&E Tissue Histology Slide" 
+      : layer === "spots_only" 
+        ? "Spatial Gene Expression Spot Map" 
+        : "Spatial Transcriptomics Atlas (10x Visium)";
+    ctx.fillText(layerTitle, 80, 85);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    const sub = `Sample: ${selectedPatient} · ${metadata.spots.length.toLocaleString()} Spots · Target Gene: ${activeGene || "None"} (Max Log-Expr: ${exprActualMax.toFixed(2)})`;
-    ctx.fillText(sub, 80, 132);
+    ctx.font = "bold 30px monospace";
+    const zoomText = isZoomed ? ` · Region of Interest (${Math.round(zoom * 100)}% Zoom ROI)` : " · Full Slide Overview (1x)";
+    const sub = `Sample: ${selectedPatient} · ${metadata.spots.length.toLocaleString()} Spots · Gene: ${activeGene || "None"}${zoomText}`;
+    ctx.fillText(sub, 80, 136);
 
     // 3. Layout Dimensions
     const padLeft = 90;
-    const padTop = 170;
-    const plotW = 1550;
-    const plotH = 2150;
+    const padTop = 180;
+    const plotW = 1520;
+    const plotH = 2140;
 
-    const legendLeft = 1670;
-    const legendTop = 170;
-    const legendW = 650;
-    const legendH = 2150;
+    const legendLeft = 1650;
+    const legendTop = 180;
+    const legendW = 670;
+    const legendH = 2140;
 
     const imgW = metadata.image_size[0] || 578;
     const imgH = metadata.image_size[1] || 600;
 
-    // Coordinate mapping into spatial box maintaining aspect ratio
-    const scale = Math.min(plotW / imgW, plotH / imgH);
-    const offsetX = padLeft + (plotW - imgW * scale) / 2;
-    const offsetY = padTop + (plotH - imgH * scale) / 2;
+    // Visible ROI coordinates in world space
+    let minWorldX = 0;
+    let minWorldY = 0;
+    let roiW = imgW;
+    let roiH = imgH;
 
-    // 4. Draw H&E Tissue Background
-    const activeImg = hiresLoaded && hiresImgRef.current ? hiresImgRef.current : lowresImgRef.current;
-    if (activeImg) {
-      ctx.drawImage(activeImg, offsetX, offsetY, imgW * scale, imgH * scale);
-    } else {
-      ctx.fillStyle = isLight ? "#f1f5f9" : "#0f172a";
-      ctx.fillRect(offsetX, offsetY, imgW * scale, imgH * scale);
+    if (isZoomed) {
+      minWorldX = Math.max(0, -pan.x / zoom);
+      minWorldY = Math.max(0, -pan.y / zoom);
+      roiW = Math.min(imgW - minWorldX, imgW / zoom);
+      roiH = Math.min(imgH - minWorldY, imgH / zoom);
     }
 
-    // 5. Draw Visium Spots
-    const spotRadius = (metadata.spot_diameter_lowres / 2) * scale;
-    metadata.spots.forEach((spot, idx) => {
-      const px = offsetX + spot.x * scale;
-      const py = offsetY + spot.y * scale;
+    // Coordinate mapping into spatial box maintaining aspect ratio
+    const scale = Math.min(plotW / roiW, plotH / roiH);
+    const offsetX = padLeft + (plotW - roiW * scale) / 2;
+    const offsetY = padTop + (plotH - roiH * scale) / 2;
 
-      ctx.beginPath();
-      ctx.arc(px, py, spotRadius, 0, 2 * Math.PI);
-
-      if (viewMode === "expression" && exprVec) {
-        const val = exprVec[idx] || 0.0;
-        ctx.fillStyle = getExpressionColor(val, exprCap, spotOpacity);
-        ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.15)" : "rgba(255,255,255,0.2)";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+    // 4. Draw H&E Tissue Background (if not spots_only)
+    if (layer !== "spots_only") {
+      const activeImg = hiresLoaded && hiresImgRef.current ? hiresImgRef.current : lowresImgRef.current;
+      if (activeImg) {
+        if (isZoomed) {
+          const srcScaleX = activeImg.naturalWidth / imgW;
+          const srcScaleY = activeImg.naturalHeight / imgH;
+          ctx.drawImage(
+            activeImg,
+            minWorldX * srcScaleX,
+            minWorldY * srcScaleY,
+            roiW * srcScaleX,
+            roiH * srcScaleY,
+            offsetX,
+            offsetY,
+            roiW * scale,
+            roiH * scale
+          );
+        } else {
+          ctx.drawImage(activeImg, offsetX, offsetY, imgW * scale, imgH * scale);
+        }
       } else {
-        ctx.strokeStyle = `rgba(244, 63, 94, ${spotOpacity})`;
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-        ctx.fillStyle = `rgba(244, 63, 94, ${spotOpacity * 0.25})`;
-        ctx.fill();
+        ctx.fillStyle = isLight ? "#f1f5f9" : "#0f172a";
+        ctx.fillRect(offsetX, offsetY, roiW * scale, roiH * scale);
       }
-    });
+    } else {
+      ctx.fillStyle = isLight ? "#f8fafc" : "#020617";
+      ctx.fillRect(offsetX, offsetY, roiW * scale, roiH * scale);
+      ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(offsetX, offsetY, roiW * scale, roiH * scale);
+    }
+
+    // 5. Draw Visium Spots (if not he_only)
+    if (layer !== "he_only") {
+      const spotRadius = (metadata.spot_diameter_lowres / 2) * scale;
+      metadata.spots.forEach((spot, idx) => {
+        if (isZoomed) {
+          if (
+            spot.x < minWorldX - metadata.spot_diameter_lowres ||
+            spot.x > minWorldX + roiW + metadata.spot_diameter_lowres ||
+            spot.y < minWorldY - metadata.spot_diameter_lowres ||
+            spot.y > minWorldY + roiH + metadata.spot_diameter_lowres
+          ) {
+            return;
+          }
+        }
+
+        const px = offsetX + (spot.x - minWorldX) * scale;
+        const py = offsetY + (spot.y - minWorldY) * scale;
+
+        ctx.beginPath();
+        ctx.arc(px, py, spotRadius, 0, 2 * Math.PI);
+
+        if (viewMode === "expression" && exprVec) {
+          const val = exprVec[idx] || 0.0;
+          ctx.fillStyle = getExpressionColor(val, exprCap, spotOpacity);
+          ctx.fill();
+          ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.25)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = `rgba(244, 63, 94, ${spotOpacity})`;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = `rgba(244, 63, 94, ${spotOpacity * 0.25})`;
+          ctx.fill();
+        }
+      });
+    }
 
     // 6. Draw Dedicated Legend Panel on the Right
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.fillRect(legendLeft, legendTop, legendW, legendH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Spatial Expression Key", legendLeft + 36, legendTop + 55);
+    ctx.fillText("Spatial Expression Key", legendLeft + 36, legendTop + 65);
 
-    if (viewMode === "expression" && activeGene && exprVec) {
+    if (viewMode === "expression" && activeGene && exprVec && layer !== "he_only") {
       // Color Bar (Large Plasma Gradient)
       const barX = legendLeft + 40;
-      const barY = legendTop + 120;
+      const barY = legendTop + 130;
       const barW = legendW - 80;
-      const barH = 44;
+      const barH = 52;
 
       const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-      grad.addColorStop(0, "rgb(13, 8, 135)");     // Dark Blue
+      grad.addColorStop(0, "rgb(13, 8, 135)");     // Dark Blue (Min)
       grad.addColorStop(0.25, "rgb(76, 12, 50)");  // Purple
-      grad.addColorStop(0.5, "rgb(182, 54, 121)"); // Magenta/Orange
+      grad.addColorStop(0.5, "rgb(182, 54, 121)"); // Magenta/Orange (Mid)
       grad.addColorStop(0.75, "rgb(241, 136, 18)");// Orange
-      grad.addColorStop(1, "rgb(252, 253, 191)");  // Yellow
+      grad.addColorStop(1, "rgb(252, 253, 191)");  // Yellow (Max)
 
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(barX, barY, barW, barH);
 
       // Ticks & Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 26px monospace";
+      ctx.font = "bold 32px monospace";
       ctx.textAlign = "center";
 
-      ctx.fillText("0.0", barX + 10, barY + barH + 34);
-      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 34);
-      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 34);
+      ctx.fillText("0.00 (Min)", barX + 50, barY + barH + 42);
+      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 42);
+      ctx.fillText(`${exprCap.toFixed(2)} (Max)`, barX + barW - 60, barY + barH + 42);
+
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = "bold 24px monospace";
+      ctx.fillText("log1p(Normalized UMI / 10K)", barX + barW / 2, barY + barH + 82);
 
       // Positive Spot Metrics Box
       let positiveCount = 0;
@@ -762,75 +962,76 @@ export default function SpatialPrototypeView() {
       const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
       const pctPos = ((positiveCount / metadata.spots.length) * 100).toFixed(1);
 
-      const statsY = barY + barH + 110;
-      const statsH = 340;
+      const statsY = barY + barH + 120;
+      const statsH = 390;
       ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
       ctx.fillRect(barX, statsY, barW, statsH);
       ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(barX, statsY, barW, statsH);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Spot Expression Metrics", barX + 24, statsY + 45);
+      ctx.fillText("Spot Expression Metrics", barX + 28, statsY + 52);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Positive Spots:", barX + 24, statsY + 95);
+      ctx.fillText("Positive Spots:", barX + 28, statsY + 108);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${positiveCount.toLocaleString()} / ${metadata.spots.length.toLocaleString()} (${pctPos}%)`, barX + 24, statsY + 130);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${positiveCount.toLocaleString()} / ${metadata.spots.length.toLocaleString()} (${pctPos}%)`, barX + 28, statsY + 146);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Mean Log-Expr (Pos):", barX + 24, statsY + 185);
+      ctx.fillText("Mean Log-Expr (Pos):", barX + 28, statsY + 208);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${meanPos} log1p(Float16)`, barX + 24, statsY + 220);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${meanPos} log1p(Float16)`, barX + 28, statsY + 246);
 
-      ctx.font = "bold 22px sans-serif";
+      ctx.font = "bold 26px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Maximum Observed:", barX + 24, statsY + 275);
+      ctx.fillText("Maximum Observed:", barX + 28, statsY + 308);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText(`${exprActualMax.toFixed(2)} log1p(Float16)`, barX + 24, statsY + 310);
+      ctx.font = "bold 28px monospace";
+      ctx.fillText(`${exprActualMax.toFixed(2)} log1p(Float16)`, barX + 28, statsY + 346);
     }
 
     // Sample Metadata Info Card (Bottom of legend panel)
-    const cardY = legendTop + (viewMode === "expression" && activeGene ? 600 : 120);
-    const cardH = 340;
+    const cardY = legendTop + (viewMode === "expression" && activeGene && layer !== "he_only" ? 690 : 130);
+    const cardH = 420;
     const barX = legendLeft + 40;
     const barW = legendW - 80;
 
     ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
     ctx.fillRect(barX, cardY, barW, cardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(barX, cardY, barW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Sample Metadata", barX + 24, cardY + 45);
+    ctx.fillText("Sample Metadata", barX + 28, cardY + 52);
 
     const metaRows = [
       ["Sample ID:", selectedPatient],
       ["Pathology:", "Pancreatic Ductal Adenocarcinoma"],
-      ["Platform:", "10x Genomics Visium Spatial"],
-      ["Total Spots:", `${metadata.spots.length.toLocaleString()} in-tissue spots`],
-      ["Spot Diameter:", `${metadata.spot_diameter_lowres.toFixed(1)} px (low-res grid)`]
+      ["Platform:", "10x Genomics Visium Spatial (FFPE)"],
+      ["Layer Rendered:", layer === "he_only" ? "H&E Histology Only" : layer === "spots_only" ? "Spatial Spots Only" : "Full Histology + Spots Overlay"],
+      ["View Scope:", isZoomed ? `Zoomed ROI (${Math.round(zoom * 100)}%)` : "Full Slide Overview (1x)"],
+      ["Total Spots:", `${metadata.spots.length.toLocaleString()} in-tissue spots`]
     ];
 
     metaRows.forEach(([k, v], i) => {
-      const rowY = cardY + 88 + i * 48;
-      ctx.font = "bold 18px sans-serif";
+      const rowY = cardY + 98 + i * 52;
+      ctx.font = "bold 20px sans-serif";
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText(k, barX + 24, rowY);
+      ctx.fillText(k, barX + 28, rowY);
 
-      ctx.font = "bold 18px monospace";
+      ctx.font = "bold 20px monospace";
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.fillText(v, barX + 24, rowY + 22);
+      ctx.fillText(v, barX + 28, rowY + 24);
     });
 
     return offscreen;
@@ -876,10 +1077,68 @@ export default function SpatialPrototypeView() {
         <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between items-center shadow-lg relative min-h-[500px]" ref={containerRef}>
           <div className="w-full flex items-center justify-between mb-3 text-xs text-slate-400 border-b border-slate-800/60 pb-2 font-mono">
             <span className="flex items-center gap-1.5"><Layers className="h-3.5 w-3.5 text-rose-500" /> Interactive Spatial View (10x Visium)</span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-slate-500">Sample: <strong className="text-teal-400">{selectedPatient}</strong></span>
+              
+              {/* Quick Layer / ROI Export Dropdown */}
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 font-mono text-xxs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const canvas = generateHighResSpatialCanvas({ layer: "overlay", viewScope: "full", theme: "light" });
+                    exportCanvasToPNG({ canvas, filename: `Spatial_${selectedPatient}_${activeGene || "spots"}_Overlay.png` });
+                  }}
+                  title="Download Full Slide with H&E and Spatial Spot Overlay"
+                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-teal-300 rounded border border-slate-750 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Download className="w-3 h-3 text-teal-400" />
+                  <span>Overlay</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const canvas = generateHighResSpatialCanvas({ layer: "he_only", viewScope: "full", theme: "light" });
+                    exportCanvasToPNG({ canvas, filename: `Histology_${selectedPatient}_HnE_Only.png` });
+                  }}
+                  title="Download Clean High-Resolution H&E Tissue Histology (No Spots)"
+                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-750 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Layers className="w-3 h-3 text-rose-400" />
+                  <span>H&amp;E Only</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const canvas = generateHighResSpatialCanvas({ layer: "spots_only", viewScope: "full", theme: "light" });
+                    exportCanvasToPNG({ canvas, filename: `SpatialSpots_${selectedPatient}_${activeGene || "grid"}_Only.png` });
+                  }}
+                  title="Download Pure Spatial Expression Spots (No H&E Background)"
+                  className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-750 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <span>Spots Only</span>
+                </button>
+
+                {zoom > 1.0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const canvas = generateHighResSpatialCanvas({ layer: "overlay", viewScope: "zoomed", theme: "light" });
+                      exportCanvasToPNG({ canvas, filename: `SpatialROI_${selectedPatient}_${activeGene || "zoom"}_${Math.round(zoom * 100)}pct.png` });
+                    }}
+                    title="Download Cropped High-Resolution Zoomed Region of Interest (ROI)"
+                    className="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 rounded border border-rose-700/60 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <ZoomIn className="w-3 h-3 text-rose-400" />
+                    <span>Zoomed ROI ({Math.round(zoom * 100)}%)</span>
+                  </button>
+                )}
+              </div>
+
               <ExportButton
-                label="Export Spatial"
+                label="Full Export"
                 disabled={!metadata}
                 onExportCSV={() => {
                   if (!metadata) return;
@@ -904,7 +1163,7 @@ export default function SpatialPrototypeView() {
                   });
                 }}
                 onExportPNG={({ theme = "light" } = {}) => {
-                  const exportCanvas = generateHighResSpatialCanvas(theme, 2400);
+                  const exportCanvas = generateHighResSpatialCanvas({ theme, size: 2400, layer: "overlay", viewScope: zoom > 1.0 ? "zoomed" : "full" });
                   exportCanvasToPNG({
                     canvas: exportCanvas,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.png`,
@@ -912,7 +1171,7 @@ export default function SpatialPrototypeView() {
                   });
                 }}
                 onExportSVG={({ theme = "light" } = {}) => {
-                  const exportCanvas = generateHighResSpatialCanvas(theme, 1200);
+                  const exportCanvas = generateHighResSpatialCanvas({ theme, size: 1200, layer: "overlay", viewScope: zoom > 1.0 ? "zoomed" : "full" });
                   exportCanvasToSVG({
                     canvas: exportCanvas,
                     filename: `Spatial_${selectedPatient}_${activeGene || viewMode}.svg`,
@@ -964,6 +1223,21 @@ export default function SpatialPrototypeView() {
                 <span className="text-xxs px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
                   {zoom > 1.25 && hiresLoaded ? "H&E Hires Native (1926px)" : "H&E Overview"}
                 </span>
+
+                {zoom > 1.0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const canvas = generateHighResSpatialCanvas({ layer: "overlay", viewScope: "zoomed", theme: "light" });
+                      exportCanvasToPNG({ canvas, filename: `SpatialROI_${selectedPatient}_${activeGene || "zoom"}_${Math.round(zoom * 100)}pct.png` });
+                    }}
+                    title="Quick Download Current Zoomed View"
+                    className="ml-1 px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xxs font-bold transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Save ROI</span>
+                  </button>
+                )}
               </div>
 
               <canvas
@@ -1218,6 +1492,20 @@ export default function SpatialPrototypeView() {
 
         </div>
       </div>
+
+      {/* Quantitative Cross-Patient Spatial Comparison Section */}
+      {activeGene && selectedGeneInfo && (
+        <div className="px-6 pb-8">
+          <SpatialCrossPatientPlot
+            geneSymbol={activeGene}
+            ensemblId={selectedGeneInfo.e}
+            metrics={cohortMetrics}
+            selectedPatient={selectedPatient}
+            onSelectPatient={(pId) => setSelectedPatient(pId)}
+            isLoading={loadingCohort}
+          />
+        </div>
+      )}
     </div>
   );
 }

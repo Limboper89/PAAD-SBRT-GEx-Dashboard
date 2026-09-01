@@ -1,0 +1,865 @@
+import os
+import subprocess
+from PIL import Image
+
+WIDTH = 3800
+HEIGHT = 2250
+
+svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <defs>
+    <style>
+      .main-title {{ font-size: 54px; font-weight: 800; fill: #0f172a; letter-spacing: -0.5px; }}
+      .sec-num {{ font-size: 20px; font-weight: 800; fill: #1e293b; letter-spacing: 0.5px; text-anchor: middle; }}
+      .sec-sub {{ font-size: 16px; font-weight: 700; fill: #475569; letter-spacing: 0.3px; text-anchor: middle; }}
+      
+      .card-header-title {{ font-size: 24px; font-weight: 700; fill: #0f172a; }}
+      .badge-label {{ font-size: 15px; font-weight: 700; text-anchor: middle; }}
+      .bullet-lead {{ font-size: 17.5px; font-weight: 700; fill: #1e293b; }}
+      .bullet-body {{ font-size: 17.5px; font-weight: 400; fill: #475569; }}
+      
+      .flow-node-title {{ font-size: 18.5px; font-weight: 700; fill: #0f172a; text-anchor: middle; }}
+      .flow-node-desc {{ font-size: 15px; font-weight: 500; fill: #64748b; text-anchor: middle; }}
+      
+      .module-header-title {{ font-size: 21px; font-weight: 700; fill: #0f172a; text-anchor: middle; }}
+      .module-bullet-lead {{ font-size: 17px; font-weight: 700; fill: #0f172a; }}
+      .module-bullet-body {{ font-size: 16.5px; font-weight: 400; fill: #475569; }}
+      
+      .ai-header-title {{ font-size: 26px; font-weight: 800; fill: #9a3412; text-anchor: middle; }}
+      .ai-header-sub {{ font-size: 18px; font-weight: 700; fill: #c2410c; text-anchor: middle; }}
+      .ai-card-title {{ font-size: 20.5px; font-weight: 800; fill: #9a3412; }}
+      .ai-card-bullet {{ font-size: 16.5px; font-weight: 500; fill: #7c2d12; }}
+      .ai-card-bullet-bold {{ font-size: 17px; font-weight: 700; fill: #9a3412; }}
+      
+      .verify-title {{ font-size: 26px; font-weight: 800; fill: #9f1239; }}
+      .verify-desc {{ font-size: 19px; font-weight: 600; fill: #881337; }}
+      .verify-bullet {{ font-size: 17.5px; font-weight: 500; fill: #9f1239; }}
+      
+      .principle-title {{ font-size: 20px; font-weight: 800; fill: #1e3a8a; letter-spacing: 0.8px; text-anchor: middle; }}
+      .principle-item {{ font-size: 17.5px; font-weight: 700; fill: #1e40af; }}
+      
+      .legend-title {{ font-size: 19px; font-weight: 800; fill: #0f172a; letter-spacing: 0.8px; text-anchor: middle; }}
+      .legend-text {{ font-size: 17.5px; font-weight: 600; fill: #334155; }}
+    </style>
+
+    <!-- Gradients -->
+    <linearGradient id="procGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f0fdf4" />
+      <stop offset="100%" stop-color="#f0f9ff" />
+    </linearGradient>
+
+    <!-- Filters / Shadows -->
+    <filter id="cardShadow" x="-2%" y="-2%" width="104%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.05"/>
+    </filter>
+    <filter id="boxShadow" x="-2%" y="-2%" width="104%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.07"/>
+    </filter>
+    
+    <!-- Markers -->
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0284c7"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#ea580c"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#e11d48"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#16a34a"/>
+    </marker>
+  </defs>
+
+  <!-- ==================== HEADER ==================== -->
+  <g transform="translate(1900, 68)" text-anchor="middle">
+    <text class="main-title" y="0">PDAC-BioPortal: System Architecture</text>
+  </g>
+
+  <!-- ==================== TOP RIGHT: DATA TYPES LEGEND ==================== -->
+  <g transform="translate(3060, 105)">
+    <rect width="660" height="215" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,6" filter="url(#cardShadow)"/>
+    <text class="legend-title" x="330" y="34">DATA TYPES</text>
+    
+    <!-- Item 1: Bulk RNA-seq -->
+    <g transform="translate(40, 56)">
+      <rect width="42" height="42" rx="9" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.8"/>
+      <path d="M11 29 L17 21 L23 26 L31 13" fill="none" stroke="#0369a1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="31" cy="13" r="2.5" fill="#0369a1"/>
+      <text class="legend-text" x="60" y="27">Bulk RNA-seq (Tumor / Normal / SBRT)</text>
+    </g>
+
+    <!-- Item 2: snRNA-seq -->
+    <g transform="translate(40, 108)">
+      <rect width="42" height="42" rx="9" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.8"/>
+      <circle cx="15" cy="17" r="4" fill="#a855f7"/>
+      <circle cx="27" cy="14" r="3.2" fill="#c084fc"/>
+      <circle cx="19" cy="29" r="4.5" fill="#7e22ce"/>
+      <circle cx="29" cy="27" r="3.8" fill="#9333ea"/>
+      <text class="legend-text" x="60" y="27">Single-nucleus RNA-seq (snRNA-seq)</text>
+    </g>
+
+    <!-- Item 3: Spatial Transcriptomics -->
+    <g transform="translate(40, 160)">
+      <rect width="42" height="42" rx="9" fill="#fce7f3" stroke="#db2777" stroke-width="1.8"/>
+      <rect x="10" y="10" width="9.5" height="9.5" rx="2" fill="#ec4899"/>
+      <rect x="22.5" y="10" width="9.5" height="9.5" rx="2" fill="#f472b6"/>
+      <rect x="10" y="22.5" width="9.5" height="9.5" rx="2" fill="#db2777"/>
+      <rect x="22.5" y="22.5" width="9.5" height="9.5" rx="2" fill="#be185d"/>
+      <text class="legend-text" x="60" y="27">Spatial Transcriptomics (10x Visium)</text>
+    </g>
+  </g>
+
+  <!-- ==================== SECTION 1: PUBLIC DATASETS ==================== -->
+  <g transform="translate(75, 205)">
+    <text class="sec-num" x="90" y="0">1. PUBLIC</text>
+    <text class="sec-num" x="90" y="25">TRANSCRIPTOMIC</text>
+    <text class="sec-num" x="90" y="50">DATASETS</text>
+  </g>
+
+  <!-- Dataset Cards Container (4 cards evenly sized) -->
+  <g transform="translate(280, 105)">
+    
+    <!-- Card 1: TCGA-PAAD vs GTEx -->
+    <g transform="translate(0, 0)">
+      <rect width="650" height="215" rx="14" fill="#ffffff" stroke="#0284c7" stroke-width="2.2" filter="url(#cardShadow)"/>
+      <rect width="650" height="44" rx="14" fill="#f0f9ff"/>
+      <rect y="28" width="650" height="16" fill="#f0f9ff"/>
+      <line x1="0" y1="44" x2="650" y2="44" stroke="#bae6fd" stroke-width="1.5"/>
+      <text class="card-header-title" x="22" y="31">TCGA-PAAD vs GTEx</text>
+      <rect x="500" y="9" width="130" height="26" rx="6" fill="#e0f2fe"/>
+      <text class="badge-label" x="565" y="27" fill="#0369a1">Bulk RNA-seq</text>
+
+      <!-- DB Icon -->
+      <g transform="translate(24, 68)">
+        <rect width="50" height="50" rx="10" fill="#e0f2fe"/>
+        <path d="M14 17 C14 14 36 14 36 17 C36 20 14 20 14 17 Z M14 17 L14 33 C14 36 36 36 36 33 L36 17 M14 25 C14 28 36 28 36 25" fill="none" stroke="#0284c7" stroke-width="2.6" stroke-linecap="round"/>
+      </g>
+
+      <!-- Bullets -->
+      <g transform="translate(90, 74)">
+        <text y="0"><tspan class="bullet-lead">• Bulk RNA-seq:</tspan> <tspan class="bullet-body">178 tumors vs 171 normal reference</tspan></text>
+        <text y="28"><tspan class="bullet-lead">• Tumor vs Normal:</tspan> <tspan class="bullet-body">Differential expression (DEGs)</tspan></text>
+        <text y="56"><tspan class="bullet-lead">• Concordance:</tspan> <tspan class="bullet-body">Wilcoxon rank-sum &amp; limma-voom</tspan></text>
+        <text y="84"><tspan class="bullet-lead">• Reprocessing:</tspan> <tspan class="bullet-body">UCSC Xena Toil unified pipeline</tspan></text>
+      </g>
+    </g>
+
+    <!-- Card 2: GSE225767 (SBRT) -->
+    <g transform="translate(680, 0)">
+      <rect width="650" height="215" rx="14" fill="#ffffff" stroke="#0284c7" stroke-width="2.2" filter="url(#cardShadow)"/>
+      <rect width="650" height="44" rx="14" fill="#f0f9ff"/>
+      <rect y="28" width="650" height="16" fill="#f0f9ff"/>
+      <line x1="0" y1="44" x2="650" y2="44" stroke="#bae6fd" stroke-width="1.5"/>
+      <text class="card-header-title" x="22" y="31">GSE225767 (SBRT)</text>
+      <rect x="500" y="9" width="130" height="26" rx="6" fill="#e0f2fe"/>
+      <text class="badge-label" x="565" y="27" fill="#0369a1">Bulk RNA-seq</text>
+
+      <!-- Patient Icon -->
+      <g transform="translate(24, 68)">
+        <rect width="50" height="50" rx="10" fill="#e0f2fe"/>
+        <circle cx="25" cy="17" r="6" fill="#0284c7"/>
+        <path d="M15 36 C15 28 35 28 35 36" fill="none" stroke="#0284c7" stroke-width="3" stroke-linecap="round"/>
+        <path d="M34 13 L40 19 M40 13 L34 19" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+
+      <!-- Bullets -->
+      <g transform="translate(90, 74)">
+        <text y="0"><tspan class="bullet-lead">• Neoadjuvant SBRT:</tspan> <tspan class="bullet-body">55 bulk RNA-seq samples</tspan></text>
+        <text y="28"><tspan class="bullet-lead">• Study Design:</tspan> <tspan class="bullet-body">26 pre-tx FNA vs 29 post-tx resection</tspan></text>
+        <text y="56"><tspan class="bullet-lead">• Response Analysis:</tspan> <tspan class="bullet-body">Responders vs Non-responders</tspan></text>
+        <text y="84"><tspan class="bullet-lead">• Radioresistance:</tspan> <tspan class="bullet-body">DEGs and pathway alterations</tspan></text>
+      </g>
+    </g>
+
+    <!-- Card 3: GSE202051 -->
+    <g transform="translate(1360, 0)">
+      <rect width="670" height="215" rx="14" fill="#ffffff" stroke="#9333ea" stroke-width="2.2" filter="url(#cardShadow)"/>
+      <rect width="670" height="44" rx="14" fill="#faf5ff"/>
+      <rect y="28" width="670" height="16" fill="#faf5ff"/>
+      <line x1="0" y1="44" x2="670" y2="44" stroke="#f3e8ff" stroke-width="1.5"/>
+      <text class="card-header-title" x="22" y="31">GSE202051</text>
+      <rect x="520" y="9" width="130" height="26" rx="6" fill="#f3e8ff"/>
+      <text class="badge-label" x="585" y="27" fill="#7e22ce">snRNA-seq</text>
+
+      <!-- snRNA Icon -->
+      <g transform="translate(24, 68)">
+        <rect width="50" height="50" rx="10" fill="#f3e8ff"/>
+        <circle cx="17" cy="19" r="4.8" fill="#a855f7"/>
+        <circle cx="31" cy="16" r="3.8" fill="#c084fc"/>
+        <circle cx="21" cy="32" r="5.2" fill="#7e22ce"/>
+        <circle cx="35" cy="30" r="4.2" fill="#9333ea"/>
+      </g>
+
+      <!-- Bullets -->
+      <g transform="translate(90, 74)">
+        <text y="0"><tspan class="bullet-lead">• Single-nucleus RNA-seq:</tspan> <tspan class="bullet-body">43 clinical specimens</tspan></text>
+        <text y="28"><tspan class="bullet-lead">• Atlas Scale:</tspan> <tspan class="bullet-body">224,988 profiled single nuclei</tspan></text>
+        <text y="56"><tspan class="bullet-lead">• Cell Lineages:</tspan> <tspan class="bullet-body">Ductal, acinar, stroma &amp; immune</tspan></text>
+        <text y="84"><tspan class="bullet-lead">• Cell Atlas:</tspan> <tspan class="bullet-body">Stratified 20k cell fast interactive viewer</tspan></text>
+      </g>
+    </g>
+
+    <!-- Card 4: GSE274103 -->
+    <g transform="translate(2060, 0)">
+      <rect width="660" height="215" rx="14" fill="#ffffff" stroke="#db2777" stroke-width="2.2" filter="url(#cardShadow)"/>
+      <rect width="660" height="44" rx="14" fill="#fdf2f8"/>
+      <rect y="28" width="660" height="16" fill="#fdf2f8"/>
+      <line x1="0" y1="44" x2="660" y2="44" stroke="#fce7f3" stroke-width="1.5"/>
+      <text class="card-header-title" x="22" y="31">GSE274103</text>
+      <rect x="510" y="9" width="130" height="26" rx="6" fill="#fce7f3"/>
+      <text class="badge-label" x="575" y="27" fill="#be185d">Spatial Visium</text>
+
+      <!-- Spatial Icon -->
+      <g transform="translate(24, 68)">
+        <rect width="50" height="50" rx="10" fill="#fce7f3"/>
+        <circle cx="17" cy="17" r="4.8" fill="#ec4899"/>
+        <circle cx="33" cy="17" r="4.8" fill="#f472b6"/>
+        <circle cx="17" cy="33" r="4.8" fill="#db2777"/>
+        <circle cx="33" cy="33" r="4.8" fill="#9d174d"/>
+      </g>
+
+      <!-- Bullets -->
+      <g transform="translate(90, 74)">
+        <text y="0"><tspan class="bullet-lead">• Spatial Transcriptomics:</tspan> <tspan class="bullet-body">10x Visium array</tspan></text>
+        <text y="28"><tspan class="bullet-lead">• Cohort Scale:</tspan> <tspan class="bullet-body">5 patients (23,436 spatial spots)</tspan></text>
+        <text y="56"><tspan class="bullet-lead">• Histology Alignment:</tspan> <tspan class="bullet-body">Tissue-level H&amp;E co-registration</tspan></text>
+        <text y="84"><tspan class="bullet-lead">• Microenvironment:</tspan> <tspan class="bullet-body">Tumor-stroma niche patterns</tspan></text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Connective Arrows 1 -> 2 (Aligned with card centers) -->
+  <g stroke="#0284c7" stroke-width="3" fill="none">
+    <path d="M 605 320 L 605 355" marker-end="url(#arr-blue)"/>
+    <path d="M 1285 320 L 1285 355" marker-end="url(#arr-blue)"/>
+    <path d="M 1975 320 L 1975 355" marker-end="url(#arr-blue)"/>
+    <path d="M 2670 320 L 2670 355" marker-end="url(#arr-blue)"/>
+  </g>
+
+  <!-- ==================== SECTION 2: DATA PROCESSING & STORAGE ==================== -->
+  <g transform="translate(75, 410)">
+    <text class="sec-num" x="90" y="0">2. DATA</text>
+    <text class="sec-num" x="90" y="25">PROCESSING</text>
+    <text class="sec-num" x="90" y="50">&amp; STORAGE</text>
+  </g>
+
+  <!-- Pipeline Container (Evenly distributed 6 stages) -->
+  <g transform="translate(280, 355)">
+    <rect width="2720" height="135" rx="14" fill="url(#procGrad)" stroke="#0284c7" stroke-width="2.2" filter="url(#cardShadow)"/>
+
+    <!-- Step 1: QC (Center: x=190) -->
+    <g transform="translate(190, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <path d="M-9 35 L-2 42 L11 28" fill="none" stroke="#0284c7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <text class="flow-node-title" x="0" y="84">Quality Control</text>
+      <text class="flow-node-desc" x="0" y="103">&amp; Filtering</text>
+    </g>
+
+    <!-- Arrow 1-2 -->
+    <line x1="330" y1="55" x2="490" y2="55" stroke="#0284c7" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+    <!-- Step 2: Normalization (Center: x=650) -->
+    <g transform="translate(650, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <path d="M-15 43 C-8 26 1 26 7 43 C12 34 17 34 20 43" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round"/>
+      <text class="flow-node-title" x="0" y="84">Normalization &amp; Scaling</text>
+      <text class="flow-node-desc" x="0" y="103">log2(TPM+0.001) / log1p CP10k</text>
+    </g>
+
+    <!-- Arrow 2-3 -->
+    <line x1="810" y1="55" x2="970" y2="55" stroke="#0284c7" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+    <!-- Step 3: Gene Annotation (Center: x=1130) -->
+    <g transform="translate(1130, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <path d="M-13 24 C0 29 0 41 13 46 M13 24 C0 29 0 41 -13 46" fill="none" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="-8" y1="28" x2="8" y2="28" stroke="#0284c7" stroke-width="1.8"/>
+      <line x1="-8" y1="42" x2="8" y2="42" stroke="#0284c7" stroke-width="1.8"/>
+      <text class="flow-node-title" x="0" y="84">Gene Harmonization</text>
+      <text class="flow-node-desc" x="0" y="103">GENCODE v23 / Ensembl v81</text>
+    </g>
+
+    <!-- Arrow 3-4 -->
+    <line x1="1290" y1="55" x2="1450" y2="55" stroke="#0284c7" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+    <!-- Step 4: Binary Conversion (Center: x=1610) -->
+    <g transform="translate(1610, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <text x="0" y="32" font-size="12" font-weight="800" fill="#0284c7" text-anchor="middle" font-family="monospace">10101</text>
+      <text x="0" y="44" font-size="12" font-weight="800" fill="#0284c7" text-anchor="middle" font-family="monospace">01010</text>
+      <text class="flow-node-title" x="0" y="84">Binary Chunk Compression</text>
+      <text class="flow-node-desc" x="0" y="103">Chunked Float16 / Float32</text>
+    </g>
+
+    <!-- Arrow 4-5 -->
+    <line x1="1770" y1="55" x2="1930" y2="55" stroke="#0284c7" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+    <!-- Step 5: Web Store (Center: x=2090) -->
+    <g transform="translate(2090, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <path d="M-12 42 L12 42 C17 42 21 38 21 34 C21 30 17 26 13 26 C12 21 7 18 1 18 C-4 18 -9 21 -10 25 C-15 25 -19 29 -19 34 C-19 38 -15 42 -12 42 Z" fill="none" stroke="#0284c7" stroke-width="2.2"/>
+      <text class="flow-node-title" x="0" y="84">Web-Optimized Store</text>
+      <text class="flow-node-desc" x="0" y="103">567 Sparse Binary Chunks</text>
+    </g>
+
+    <!-- Arrow 5-6 -->
+    <line x1="2250" y1="55" x2="2410" y2="55" stroke="#0284c7" stroke-width="3" marker-end="url(#arr-blue)"/>
+
+    <!-- Step 6: Client Streaming (Center: x=2550) -->
+    <g transform="translate(2550, 20)">
+      <circle cx="0" cy="35" r="28" fill="#ffffff" stroke="#0284c7" stroke-width="2.2"/>
+      <circle cx="0" cy="35" r="14" fill="none" stroke="#0284c7" stroke-width="2.2"/>
+      <line x1="0" y1="35" x2="8" y2="27" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round"/>
+      <text class="flow-node-title" x="0" y="84">Rapid Client Streaming</text>
+      <text class="flow-node-desc" x="0" y="103">Zero-Copy ArrayBuffer (&lt;5 ms)</text>
+    </g>
+  </g>
+
+  <!-- Connective Arrow 2 -> 3 -->
+  <path d="M 1640 490 L 1640 530" stroke="#16a34a" stroke-width="3" fill="none" marker-end="url(#arr-green)"/>
+
+  <!-- ==================== SECTION 3: CORE ANALYTICAL PLATFORM ==================== -->
+  <g transform="translate(75, 940)">
+    <text class="sec-num" x="90" y="0">3. PDAC-BioPortal</text>
+    <text class="sec-sub" x="90" y="24">(Next.js Web Interface)</text>
+    <text class="sec-num" x="90" y="52">CORE ANALYTICAL</text>
+    <text class="sec-num" x="90" y="76">PLATFORM</text>
+  </g>
+
+  <!-- Main Platform Container (Green) -->
+  <g transform="translate(280, 530)">
+    <rect width="2360" height="910" rx="18" fill="#ffffff" stroke="#16a34a" stroke-width="2.8" filter="url(#boxShadow)"/>
+    
+    <!-- Platform Banner Header -->
+    <rect width="2360" height="48" rx="18" fill="#f0fdf4"/>
+    <rect y="30" width="2360" height="18" fill="#f0fdf4"/>
+    <line x1="0" y1="48" x2="2360" y2="48" stroke="#bbf7d0" stroke-width="1.8"/>
+    <text x="1180" y="33" font-size="23" font-weight="800" fill="#166534" text-anchor="middle" letter-spacing="0.3px">
+      Integrated Exploration Across Five Analytical Modules
+    </text>
+
+    <!-- FIVE MODULES ROW (Each width: 448px, Gap: 17px) -->
+    <g transform="translate(20, 65)">
+      
+      <!-- Module 1: TCGA/GTEx Explorer -->
+      <g transform="translate(0, 0)">
+        <rect width="448" height="625" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <rect width="448" height="68" rx="12" fill="#f8fafc"/>
+        <rect y="45" width="448" height="23" fill="#f8fafc"/>
+        <line x1="0" y1="68" x2="448" y2="68" stroke="#e2e8f0" stroke-width="1.5"/>
+        
+        <g transform="translate(18, 14)">
+          <rect width="40" height="40" rx="8" fill="#dcfce7"/>
+          <path d="M10 30 L10 21 M20 30 L20 12 M30 30 L30 18" stroke="#16a34a" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <text class="module-header-title" x="254" y="42">TCGA/GTEx Explorer</text>
+
+        <!-- Module Content -->
+        <g transform="translate(20, 95)">
+          <text y="0"><tspan class="module-bullet-lead">• DEGs &amp; Volcano Plots:</tspan></text>
+          <text class="module-bullet-body" x="12" y="23">Interactive Volcano &amp; MA plots</text>
+          
+          <text y="58"><tspan class="module-bullet-lead">• Expression Profiling:</tspan></text>
+          <text class="module-bullet-body" x="12" y="81">Heatmaps &amp; multi-gene boxplots</text>
+          <text class="module-bullet-body" x="12" y="103">with log2(TPM) violin plots</text>
+
+          <text y="138"><tspan class="module-bullet-lead">• Correlation Analysis:</tspan></text>
+          <text class="module-bullet-body" x="12" y="161">Spearman / Pearson correlation</text>
+          <text class="module-bullet-body" x="12" y="183">with strict cohort isolation</text>
+
+          <text y="218"><tspan class="module-bullet-lead">• Statistical Testing:</tspan></text>
+          <text class="module-bullet-body" x="12" y="241">Empirical Bayes limma-voom &amp;</text>
+          <text class="module-bullet-body" x="12" y="263">Benjamini-Hochberg FDR control</text>
+
+          <text y="298"><tspan class="module-bullet-lead">• Tumor vs Normal Contrast:</tspan></text>
+          <text class="module-bullet-body" x="12" y="321">Normal pancreas baseline resolution</text>
+          <text class="module-bullet-body" x="12" y="343">accounting for acinar dominance</text>
+        </g>
+      </g>
+
+      <!-- Module 2: SBRT Explorer -->
+      <g transform="translate(468, 0)">
+        <rect width="448" height="625" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <rect width="448" height="68" rx="12" fill="#f8fafc"/>
+        <rect y="45" width="448" height="23" fill="#f8fafc"/>
+        <line x1="0" y1="68" x2="448" y2="68" stroke="#e2e8f0" stroke-width="1.5"/>
+        
+        <g transform="translate(18, 14)">
+          <rect width="40" height="40" rx="8" fill="#dbeafe"/>
+          <path d="M8 28 L17 18 L25 23 L32 11" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text class="module-header-title" x="254" y="42">SBRT Explorer</text>
+
+        <!-- Module Content -->
+        <g transform="translate(20, 95)">
+          <text y="0"><tspan class="module-bullet-lead">• Pre/Post SBRT DEGs:</tspan></text>
+          <text class="module-bullet-body" x="12" y="23">Pre-treatment vs post-resection</text>
+          
+          <text y="58"><tspan class="module-bullet-lead">• Treatment Response:</tspan></text>
+          <text class="module-bullet-body" x="12" y="81">Pathologic regression grading</text>
+          <text class="module-bullet-body" x="12" y="103">(Responders vs Non-responders)</text>
+
+          <text y="138"><tspan class="module-bullet-lead">• Heatmaps &amp; Correlation:</tspan></text>
+          <text class="module-bullet-body" x="12" y="161">Hierarchically clustered gene sets</text>
+          <text class="module-bullet-body" x="12" y="183">and co-expression networks</text>
+
+          <text y="218"><tspan class="module-bullet-lead">• Radioresistance Signatures:</tspan></text>
+          <text class="module-bullet-body" x="12" y="241">NRF2 antioxidant, DNA repair &amp;</text>
+          <text class="module-bullet-body" x="12" y="263">hypoxic adaptation markers</text>
+
+          <text y="298"><tspan class="module-bullet-lead">• Unpaired Cohort Model:</tspan></text>
+          <text class="module-bullet-body" x="12" y="321">Rigorous statistical evaluation of</text>
+          <text class="module-bullet-body" x="12" y="343">independent patient cohorts</text>
+        </g>
+      </g>
+
+      <!-- Module 3: Single-nucleus Atlas -->
+      <g transform="translate(936, 0)">
+        <rect width="448" height="625" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <rect width="448" height="68" rx="12" fill="#f8fafc"/>
+        <rect y="45" width="448" height="23" fill="#f8fafc"/>
+        <line x1="0" y1="68" x2="448" y2="68" stroke="#e2e8f0" stroke-width="1.5"/>
+        
+        <g transform="translate(18, 14)">
+          <rect width="40" height="40" rx="8" fill="#f3e8ff"/>
+          <circle cx="14" cy="18" r="4" fill="#9333ea"/>
+          <circle cx="25" cy="14" r="3" fill="#c084fc"/>
+          <circle cx="19" cy="28" r="4.5" fill="#7e22ce"/>
+          <circle cx="30" cy="26" r="3.5" fill="#a855f7"/>
+        </g>
+        <text class="module-header-title" x="254" y="42">Single-nucleus Atlas</text>
+
+        <!-- Module Content -->
+        <g transform="translate(20, 95)">
+          <text y="0"><tspan class="module-bullet-lead">• UMAP Visualization:</tspan></text>
+          <text class="module-bullet-body" x="12" y="23">High-speed 2D cell projections</text>
+          
+          <text y="58"><tspan class="module-bullet-lead">• Cell Type Clustering:</tspan></text>
+          <text class="module-bullet-body" x="12" y="81">Ductal 1/2, acinar, PSC, fibroblasts,</text>
+          <text class="module-bullet-body" x="12" y="103">endothelial, &amp; immune subsets</text>
+
+          <text y="138"><tspan class="module-bullet-lead">• Annotation &amp; Marker Genes:</tspan></text>
+          <text class="module-bullet-body" x="12" y="161">Continuous expression overlays &amp;</text>
+          <text class="module-bullet-body" x="12" y="183">single-nucleus distribution plots</text>
+
+          <text y="218"><tspan class="module-bullet-lead">• Cell Lineage Exploration:</tspan></text>
+          <text class="module-bullet-body" x="12" y="241">Acinar-to-ductal metaplasia (ADM)</text>
+          <text class="module-bullet-body" x="12" y="263">&amp; malignant epithelial transitions</text>
+
+          <text y="298"><tspan class="module-bullet-lead">• Subcluster Profiling:</tspan></text>
+          <text class="module-bullet-body" x="12" y="321">Stratified 20k nuclei sampling with</text>
+          <text class="module-bullet-body" x="12" y="343">accurate proportion calculations</text>
+        </g>
+      </g>
+
+      <!-- Module 4: Spatial Explorer -->
+      <g transform="translate(1404, 0)">
+        <rect width="448" height="625" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <rect width="448" height="68" rx="12" fill="#f8fafc"/>
+        <rect y="45" width="448" height="23" fill="#f8fafc"/>
+        <line x1="0" y1="68" x2="448" y2="68" stroke="#e2e8f0" stroke-width="1.5"/>
+        
+        <g transform="translate(18, 14)">
+          <rect width="40" height="40" rx="8" fill="#fce7f3"/>
+          <circle cx="15" cy="15" r="4" fill="#db2777"/>
+          <circle cx="26" cy="15" r="4" fill="#f472b6"/>
+          <circle cx="15" cy="26" r="4" fill="#ec4899"/>
+          <circle cx="26" cy="26" r="4" fill="#9d174d"/>
+        </g>
+        <text class="module-header-title" x="254" y="42">Spatial Explorer</text>
+
+        <!-- Module Content -->
+        <g transform="translate(20, 95)">
+          <text y="0"><tspan class="module-bullet-lead">• Spot-Level Expression:</tspan></text>
+          <text class="module-bullet-body" x="12" y="23">Continuous plasma gradient maps</text>
+          
+          <text y="58"><tspan class="module-bullet-lead">• H&amp;E Image Overlay:</tspan></text>
+          <text class="module-bullet-body" x="12" y="81">Full-resolution histological image</text>
+          <text class="module-bullet-body" x="12" y="103">co-registration &amp; alpha blending</text>
+
+          <text y="138"><tspan class="module-bullet-lead">• Spatial Neighborhoods:</tspan></text>
+          <text class="module-bullet-body" x="12" y="161">Tumor-stroma microenvironment</text>
+          <text class="module-bullet-body" x="12" y="183">niches &amp; spatial clustering</text>
+
+          <text y="218"><tspan class="module-bullet-lead">• Real-Time Hit Testing:</tspan></text>
+          <text class="module-bullet-body" x="12" y="241">Instantaneous hover inspection &amp;</text>
+          <text class="module-bullet-body" x="12" y="263">spot-level count reconstruction</text>
+
+          <text y="298"><tspan class="module-bullet-lead">• Multi-Patient Pancreas:</tspan></text>
+          <text class="module-bullet-body" x="12" y="321">5 PDAC patient tumor sections</text>
+          <text class="module-bullet-body" x="12" y="343">spanning 23,436 spatial spots</text>
+        </g>
+      </g>
+
+      <!-- Module 5: Functional / Pathway Analysis -->
+      <g transform="translate(1872, 0)">
+        <rect width="448" height="625" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <rect width="448" height="68" rx="12" fill="#f8fafc"/>
+        <rect y="45" width="448" height="23" fill="#f8fafc"/>
+        <line x1="0" y1="68" x2="448" y2="68" stroke="#e2e8f0" stroke-width="1.5"/>
+        
+        <g transform="translate(18, 14)">
+          <rect width="40" height="40" rx="8" fill="#fef3c7"/>
+          <circle cx="14" cy="20" r="3.5" fill="#d97706"/>
+          <circle cx="28" cy="13" r="3.5" fill="#d97706"/>
+          <circle cx="28" cy="27" r="3.5" fill="#d97706"/>
+          <line x1="14" y1="20" x2="28" y2="13" stroke="#d97706" stroke-width="2.2"/>
+          <line x1="14" y1="20" x2="28" y2="27" stroke="#d97706" stroke-width="2.2"/>
+        </g>
+        <text class="module-header-title" x="254" y="42">Functional / Pathway Analysis</text>
+
+        <!-- Module Content -->
+        <g transform="translate(20, 95)">
+          <text y="0"><tspan class="module-bullet-lead">• ORA (Over-Representation):</tspan></text>
+          <text class="module-bullet-body" x="12" y="23">Hypergeometric testing on DEGs</text>
+          
+          <text y="58"><tspan class="module-bullet-lead">• GSEA (Gene Set Enrichment):</tspan></text>
+          <text class="module-bullet-body" x="12" y="81">Preranked enrichment scores &amp;</text>
+          <text class="module-bullet-body" x="12" y="103">leading-edge gene identification</text>
+
+          <text y="138"><tspan class="module-bullet-lead">• Pathway Libraries:</tspan></text>
+          <text class="module-bullet-body" x="12" y="161">MSigDB Hallmark, KEGG &amp; Reactome</text>
+          <text class="module-bullet-body" x="12" y="183">oncology &amp; metabolic signatures</text>
+
+          <text y="218"><tspan class="module-bullet-lead">• Cross-Dataset Enrichment:</tspan></text>
+          <text class="module-bullet-body" x="12" y="241">Synchronized pathway exploration</text>
+          <text class="module-bullet-body" x="12" y="263">across bulk, single-cell &amp; spatial</text>
+
+          <text y="298"><tspan class="module-bullet-lead">• Interactive Visualizers:</tspan></text>
+          <text class="module-bullet-body" x="12" y="321">Enrichment bubble charts, bar plots</text>
+          <text class="module-bullet-body" x="12" y="343">&amp; pathway overlap networks</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- UNIFIED DATA ACCESS FOUNDATION BAR -->
+    <g transform="translate(20, 710)">
+      <rect width="2320" height="175" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+      
+      <!-- Database Icon -->
+      <g transform="translate(35, 50)">
+        <rect width="65" height="65" rx="14" fill="#e2e8f0"/>
+        <path d="M18 24 C18 19 47 19 47 24 C47 29 18 29 18 24 Z M18 24 L18 41 C18 46 47 46 47 41 L47 24 M18 33 C18 38 47 38 47 33" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+      </g>
+
+      <!-- Foundation Title & Content -->
+      <g transform="translate(130, 36)">
+        <text font-size="22" font-weight="800" fill="#0f172a">Unified Data Access &amp; Cross-Dataset Integration</text>
+        <g transform="translate(0, 32)">
+          <text y="0"><tspan class="bullet-lead">• Consistent Gene Annotation:</tspan> <tspan class="bullet-body">Standardized Ensembl ID / HGNC gene symbol resolver with automatic alias resolution</tspan></text>
+          <text y="26"><tspan class="bullet-lead">• Harmonized Metadata:</tspan> <tspan class="bullet-body">Standardized clinical annotations (TNM stage, survival status, histologic grade, response)</tspan></text>
+          <text y="52"><tspan class="bullet-lead">• Synchronized Visualization &amp; Querying:</tspan> <tspan class="bullet-body">One-click cross-module sync across TCGA, SBRT, snRNA, and Spatial tabs</tspan></text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== SECTION 4: PDACOPILOT AI ASSISTANT ==================== -->
+  <g transform="translate(2680, 530)">
+    <rect width="1040" height="910" rx="18" fill="#fffaf5" stroke="#ea580c" stroke-width="2.8" filter="url(#boxShadow)"/>
+    
+    <!-- AI Header -->
+    <rect width="1040" height="68" rx="18" fill="#ffedd5"/>
+    <rect y="40" width="1040" height="28" fill="#ffedd5"/>
+    <line x1="0" y1="68" x2="1040" y2="68" stroke="#fed7aa" stroke-width="1.8"/>
+    
+    <text class="ai-header-title" x="520" y="38">4. PDACopilot AI Assistant</text>
+    <text class="ai-header-sub" x="520" y="59">(Decoupled Grounded Layer)</text>
+
+    <!-- AI Architecture Step Cards -->
+    <g transform="translate(35, 85)">
+      
+      <!-- Box 1: User Query & Active Context -->
+      <g transform="translate(0, 0)">
+        <rect width="970" height="125" rx="12" fill="#ffffff" stroke="#fdba74" stroke-width="1.8" filter="url(#cardShadow)"/>
+        <!-- Chat Icon -->
+        <g transform="translate(20, 25)">
+          <rect width="70" height="70" rx="12" fill="#ffedd5"/>
+          <path d="M20 28 C20 22 50 22 50 28 L50 42 C50 48 20 48 20 42 Z M20 42 L20 52 L30 42 Z" fill="#ea580c"/>
+          <circle cx="28" cy="35" r="2.5" fill="#ffffff"/>
+          <circle cx="35" cy="35" r="2.5" fill="#ffffff"/>
+          <circle cx="42" cy="35" r="2.5" fill="#ffffff"/>
+        </g>
+        <g transform="translate(115, 36)">
+          <text class="ai-card-title">User Query &amp; Active Context</text>
+          <text class="ai-card-bullet" y="27">• Natural language question paired with live portal state</text>
+          <text class="ai-card-bullet" y="51">• Captures active dataset, selected gene, filters, and cohort contrast</text>
+        </g>
+      </g>
+
+      <!-- Arrow 1 -> 2 -->
+      <line x1="485" y1="125" x2="485" y2="155" stroke="#ea580c" stroke-width="2.8" marker-end="url(#arr-amber)"/>
+
+      <!-- Box 2: Structured Context Retrieval -->
+      <g transform="translate(0, 155)">
+        <rect width="970" height="125" rx="12" fill="#ffffff" stroke="#fdba74" stroke-width="1.8" filter="url(#cardShadow)"/>
+        <!-- Doc Icon -->
+        <g transform="translate(20, 25)">
+          <rect width="70" height="70" rx="12" fill="#ffedd5"/>
+          <path d="M24 20 L42 20 L50 28 L50 50 L24 50 Z" fill="none" stroke="#ea580c" stroke-width="2.8"/>
+          <line x1="30" y1="31" x2="42" y2="31" stroke="#ea580c" stroke-width="2.2"/>
+          <line x1="30" y1="39" x2="44" y2="39" stroke="#ea580c" stroke-width="2.2"/>
+        </g>
+        <g transform="translate(115, 36)">
+          <text class="ai-card-title">Structured Context Retrieval</text>
+          <text class="ai-card-bullet" y="27">• Deterministic retrieval of relevant tables, metadata, and DEG results</text>
+          <text class="ai-card-bullet" y="51">• Zero-latency extraction of exact log2FC, FDR values, and cell proportions</text>
+        </g>
+      </g>
+
+      <!-- Arrow 2 -> 3 -->
+      <line x1="485" y1="280" x2="485" y2="310" stroke="#ea580c" stroke-width="2.8" marker-end="url(#arr-amber)"/>
+
+      <!-- Box 3: Reasoning Engine (Corrected Gemini 2.0 Flash) -->
+      <g transform="translate(0, 310)">
+        <rect width="970" height="135" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="2.5" filter="url(#cardShadow)"/>
+        <!-- Brain / AI Icon -->
+        <g transform="translate(20, 30)">
+          <rect width="70" height="70" rx="12" fill="#ea580c"/>
+          <circle cx="35" cy="35" r="15" fill="none" stroke="#ffffff" stroke-width="2.8"/>
+          <path d="M35 20 L35 50 M20 35 L50 35" stroke="#ffffff" stroke-width="2.2"/>
+        </g>
+        <g transform="translate(115, 34)">
+          <text font-size="21.5" font-weight="800" fill="#c2410c">PDACopilot Reasoning Engine</text>
+          <text class="ai-card-bullet-bold" y="27">• Google Gemini 2.0 Flash (or pluggable LLaMA 3.3 / GPT-4o)</text>
+          <text class="ai-card-bullet" y="52">• Grounded analytical reasoning strictly over retrieved context only</text>
+          <text class="ai-card-bullet" y="74">• Guardrail locks prevent ungrounded extrapolation or hallucination</text>
+        </g>
+      </g>
+
+      <!-- Arrow 3 -> 4 -->
+      <line x1="485" y1="445" x2="485" y2="475" stroke="#ea580c" stroke-width="2.8" marker-end="url(#arr-amber)"/>
+
+      <!-- Box 4: Evidence-Tagged Response -->
+      <g transform="translate(0, 475)">
+        <rect width="970" height="125" rx="12" fill="#ffffff" stroke="#fdba74" stroke-width="1.8" filter="url(#cardShadow)"/>
+        <!-- Checkmark Badge Icon -->
+        <g transform="translate(20, 25)">
+          <rect width="70" height="70" rx="12" fill="#ffedd5"/>
+          <path d="M24 35 L32 43 L47 26" fill="none" stroke="#ea580c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <g transform="translate(115, 36)">
+          <text class="ai-card-title">Evidence-Tagged Response</text>
+          <text class="ai-card-bullet" y="27">• Bioinformatic answer synthesized with exact numeric citations</text>
+          <text class="ai-card-bullet" y="51">• Evidence checklist verification tags and confidence indicators</text>
+        </g>
+      </g>
+
+      <!-- Arrow 4 -> 5 -->
+      <line x1="485" y1="600" x2="485" y2="630" stroke="#ea580c" stroke-width="2.8" marker-end="url(#arr-amber)"/>
+
+      <!-- Box 5: Reproducible Export -->
+      <g transform="translate(0, 630)">
+        <rect width="970" height="135" rx="12" fill="#ffffff" stroke="#fdba74" stroke-width="1.8" filter="url(#cardShadow)"/>
+        <!-- Download Icon -->
+        <g transform="translate(20, 30)">
+          <rect width="70" height="70" rx="12" fill="#ffedd5"/>
+          <path d="M35 22 L35 43 M28 35 L35 43 L42 35 M22 48 L48 48" fill="none" stroke="#ea580c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <g transform="translate(115, 36)">
+          <text class="ai-card-title">Reproducible Summary Export</text>
+          <text class="ai-card-bullet" y="27">• Export answers, retrieved evidence tables, and query audit trail</text>
+          <text class="ai-card-bullet" y="51">• Ensures full manuscript transparency and scientific reproducibility</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Connective Arrows: Portal <-> AI -->
+  <g fill="none">
+    <path d="M 2640 700 C 2660 700, 2660 670, 2680 670" stroke="#ea580c" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arr-amber)"/>
+    <path d="M 2640 1020 C 2660 1020, 2660 1020, 2680 1020" stroke="#0284c7" stroke-width="3" stroke-dasharray="7,5" marker-end="url(#arr-blue)"/>
+  </g>
+
+  <!-- ==================== SECTION 5: HUMAN-IN-THE-LOOP USER VERIFICATION ==================== -->
+  <g transform="translate(75, 1545)">
+    <text class="sec-num" x="90" y="0">5. USER</text>
+    <text class="sec-num" x="90" y="25">VERIFICATION</text>
+    <text class="sec-sub" x="90" y="50">(Human-in-the-Loop)</text>
+  </g>
+
+  <!-- Human in the Loop Box -->
+  <g transform="translate(280, 1475)">
+    <rect width="2360" height="200" rx="16" fill="#fff1f2" stroke="#e11d48" stroke-width="2.5" filter="url(#boxShadow)"/>
+    
+    <!-- User Icon & Monitor -->
+    <g transform="translate(45, 50)">
+      <rect width="90" height="90" rx="16" fill="#ffe4e6"/>
+      <circle cx="34" cy="38" r="12" fill="#e11d48"/>
+      <path d="M16 70 C16 58 52 58 52 70" fill="none" stroke="#e11d48" stroke-width="4.5" stroke-linecap="round"/>
+      <rect x="52" y="30" width="30" height="22" rx="3" fill="none" stroke="#e11d48" stroke-width="2.5"/>
+      <line x1="67" y1="52" x2="67" y2="60" stroke="#e11d48" stroke-width="2.5"/>
+      <line x1="59" y1="60" x2="75" y2="60" stroke="#e11d48" stroke-width="2.5"/>
+    </g>
+
+    <!-- Verification Text -->
+    <g transform="translate(170, 42)">
+      <text class="verify-title">Cross-checking &amp; Verification</text>
+      <text class="verify-desc" y="36">
+        Users validate AI responses by cross-checking across interactive portal visualizations and underlying data. Ensures transparency, accuracy, and trust.
+      </text>
+      <text class="verify-bullet" y="70">
+        • Direct verification against Volcano plots, Heatmaps, Boxplots, UMAP cell clusters, and Visium spatial overlays
+      </text>
+      <text class="verify-bullet" y="96">
+        • Dual human-in-the-loop validation loop provides full empirical traceability for scientific manuscript reporting
+      </text>
+    </g>
+  </g>
+
+  <!-- Bidirectional Validation Arrows: Core Portal <-> User Verification -->
+  <g fill="none" stroke-width="3">
+    <path d="M 1440 1440 L 1440 1475" stroke="#16a34a" marker-end="url(#arr-green)"/>
+    <path d="M 1500 1475 L 1500 1440" stroke="#e11d48" stroke-dasharray="6,4" marker-end="url(#arr-red)"/>
+  </g>
+
+  <!-- Feedback Loop Arrow: User Verification to AI Assistant -->
+  <g fill="none" stroke-width="3">
+    <path d="M 2640 1575 C 2850 1575, 2920 1515, 2920 1440" stroke="#e11d48" stroke-dasharray="7,5" marker-end="url(#arr-red)"/>
+  </g>
+
+  <!-- ==================== BOTTOM RIGHT: DESIGN PRINCIPLES ==================== -->
+  <g transform="translate(2680, 1475)">
+    <rect width="1040" height="200" rx="16" fill="#eff6ff" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="6,6" filter="url(#cardShadow)"/>
+    <text class="principle-title" x="520" y="36">DESIGN PRINCIPLES</text>
+
+    <!-- Grid of 4 principles -->
+    <g transform="translate(50, 68)">
+      <!-- Principle 1 -->
+      <g transform="translate(0, 0)">
+        <circle cx="14" cy="14" r="12" fill="#dbeafe"/>
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="principle-item" x="36" y="19">Modular &amp; Scalable</text>
+      </g>
+
+      <!-- Principle 2 -->
+      <g transform="translate(480, 0)">
+        <circle cx="14" cy="14" r="12" fill="#dbeafe"/>
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="principle-item" x="36" y="19">Data Integrity &amp; Reproducibility</text>
+      </g>
+
+      <!-- Principle 3 -->
+      <g transform="translate(0, 60)">
+        <circle cx="14" cy="14" r="12" fill="#dbeafe"/>
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="principle-item" x="36" y="19">Transparent &amp; Evidence-Driven</text>
+      </g>
+
+      <!-- Principle 4 -->
+      <g transform="translate(480, 60)">
+        <circle cx="14" cy="14" r="12" fill="#dbeafe"/>
+        <path d="M9 14 L12 17 L19 10" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text class="principle-item" x="36" y="19">Decoupled AI for Reliability</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ==================== BOTTOM LEGEND BAR ==================== -->
+  <g transform="translate(280, 1720)">
+    <rect width="3440" height="75" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8" filter="url(#cardShadow)"/>
+    
+    <g transform="translate(60, 44)">
+      <!-- Item 1: Core Portal -->
+      <g transform="translate(0, 0)">
+        <rect y="-15" width="26" height="26" rx="5" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.2"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="36" y="4">Core Portal</text>
+      </g>
+
+      <!-- Item 2: AI Assistant -->
+      <g transform="translate(320, 0)">
+        <rect y="-15" width="26" height="26" rx="5" fill="#fffaf5" stroke="#ea580c" stroke-width="2.2"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="36" y="4">AI Assistant</text>
+      </g>
+
+      <!-- Item 3: User Verification -->
+      <g transform="translate(640, 0)">
+        <rect y="-15" width="26" height="26" rx="5" fill="#fff1f2" stroke="#e11d48" stroke-width="2.2"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="36" y="4">User Verification</text>
+      </g>
+
+      <!-- Item 4: Data Flow -->
+      <g transform="translate(1120, 0)">
+        <line x1="0" y1="0" x2="50" y2="0" stroke="#0284c7" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="65" y="4">Data Flow</text>
+      </g>
+
+      <!-- Item 5: Context Flow to AI -->
+      <g transform="translate(1580, 0)">
+        <line x1="0" y1="0" x2="50" y2="0" stroke="#ea580c" stroke-width="3.5" stroke-dasharray="7,5" marker-end="url(#arr-amber)"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="65" y="4">Context Flow (to AI)</text>
+      </g>
+
+      <!-- Item 6: Feedback Loop -->
+      <g transform="translate(2080, 0)">
+        <line x1="0" y1="0" x2="50" y2="0" stroke="#e11d48" stroke-width="3.5" stroke-dasharray="7,5" marker-end="url(#arr-red)"/>
+        <text font-size="18" font-weight="700" fill="#1e293b" x="65" y="4">Human Feedback Loop</text>
+      </g>
+    </g>
+  </g>
+
+</svg>
+'''
+
+output_dir = "d:/DATA/PDAC_BioPortal/Figures"
+os.makedirs(output_dir, exist_ok=True)
+
+svg_path = os.path.join(output_dir, "PDAC_BioPortal_System_Architecture.svg")
+html_path = os.path.join(output_dir, "render_figure.html")
+
+with open(svg_path, "w", encoding="utf-8") as f:
+    f.write(svg_content)
+
+html_content = f'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  html, body {{ background: #ffffff; width: {WIDTH}px; height: {HEIGHT}px; overflow: hidden; }}
+  svg {{ width: {WIDTH}px; height: {HEIGHT}px; display: block; }}
+</style>
+</head>
+<body>
+{svg_content}
+</body>
+</html>
+'''
+
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+# Screenshot with Chrome at ultra-high resolution
+raw_png = os.path.join(output_dir, "screenshot_raw.png")
+cmd = [
+    'C:/Program Files/Google/Chrome/Application/chrome.exe',
+    '--headless=new',
+    '--disable-gpu',
+    '--no-sandbox',
+    '--hide-scrollbars',
+    f'--window-size={WIDTH},{HEIGHT}',
+    f'--screenshot={raw_png}',
+    f'file:///{html_path.replace(chr(92), "/")}'
+]
+subprocess.run(cmd, check=True)
+
+img = Image.open(raw_png)
+
+# Save 300 DPI high-res figure PNG
+target_300dpi_png = os.path.join(output_dir, "PDAC_BioPortal_Architecture_300DPI.png")
+img.save(target_300dpi_png, dpi=(300, 300), optimize=True)
+
+# Save Fig1.png for repo / manuscript figure 1 replacement
+fig1_png = os.path.join(output_dir, "Fig1.png")
+img.save(fig1_png, dpi=(300, 300), optimize=True)
+
+# Save PDF version
+fig1_pdf = os.path.join(output_dir, "PDAC_BioPortal_Architecture.pdf")
+img.convert("RGB").save(fig1_pdf, "PDF", resolution=300.0)
+
+# Clean temporary file
+if os.path.exists(raw_png):
+    os.remove(raw_png)
+
+print("Generated all files successfully at 300 DPI.")

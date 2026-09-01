@@ -10,12 +10,14 @@ interface PathwayGeneMatrixProps {
   results: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
   onSelectGene?: (gene: string) => void;
+  analysisMode?: "ORA" | "GSEA";
 }
 
 export default function PathwayGeneMatrix({
   results,
   onSelectPathway,
-  onSelectGene
+  onSelectGene,
+  analysisMode
 }: PathwayGeneMatrixProps) {
   const matrixRef = useRef<HTMLDivElement>(null);
 
@@ -26,6 +28,8 @@ export default function PathwayGeneMatrix({
       </div>
     );
   }
+
+  const isGsea = analysisMode === "GSEA" || results[0]?.analysisMode === "GSEA";
 
   // Top 10 pathways
   const topPathways = [...results]
@@ -65,17 +69,21 @@ export default function PathwayGeneMatrix({
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Leading-Edge Gene Overlap Matrix", 80, 80);
+    ctx.fillText(isGsea ? "Leading-Edge Gene Overlap Matrix" : "Gene Overlap Matrix (ORA)", 80, 80);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText(`Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} Leading-Edge Genes`, 80, 122);
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(
+      `Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} ${isGsea ? "Leading-Edge Genes" : "Overlapping Genes"}`,
+      80,
+      130
+    );
 
-    const padLeft = 840;
+    const padLeft = 880;
     const padRight = 80;
-    const padTop = 320;
+    const padTop = 340;
     const padBottom = 100;
 
     const matrixW = size - padLeft - padRight;
@@ -88,10 +96,10 @@ export default function PathwayGeneMatrix({
     topGenes.forEach((gene, cIdx) => {
       const x = padLeft + cIdx * cellW + cellW / 2;
       ctx.save();
-      ctx.translate(x, padTop - 20);
+      ctx.translate(x, padTop - 24);
       ctx.rotate(-Math.PI / 3);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px monospace";
+      ctx.font = "bold 32px monospace";
       ctx.textAlign = "left";
       ctx.fillText(gene, 0, 0);
       ctx.restore();
@@ -104,13 +112,13 @@ export default function PathwayGeneMatrix({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(32, Math.max(18, Math.round(rowH * 0.48)));
+      const fontSize = Math.min(38, Math.max(22, Math.round(rowH * 0.52)));
       ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
       ctx.textAlign = "right";
 
       const maxLen = 42;
       const displayName = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      ctx.fillText(displayName, padLeft - 24, y + rowH * 0.65);
+      ctx.fillText(displayName, padLeft - 26, y + rowH * 0.68);
 
       // Cells
       topGenes.forEach((gene, cIdx) => {
@@ -152,19 +160,20 @@ export default function PathwayGeneMatrix({
         <div>
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             <Layers className="w-4 h-4 text-teal-400" />
-            <span>Leading-Edge Gene Matrix</span>
+            <span>{isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"}</span>
           </h3>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Top {topPathways.length} Enriched Pathways &bull; Top {topGenes.length} Leading-Edge Core Genes
+            Top {topPathways.length} Enriched Pathways &bull; Top {topGenes.length} {isGsea ? "Leading-Edge Core Genes" : "Overlapping DEGs"}
           </p>
         </div>
 
         <ExportButton
           onExportCSV={() => {
             exportToCSV({
-              filename: "Pathway_LeadingEdge_Gene_Matrix.csv",
+              filename: isGsea ? "Pathway_LeadingEdge_Gene_Matrix.csv" : "Pathway_Gene_Overlap_Matrix.csv",
               metadata: {
-                module: "Pathway Leading Edge Matrix",
+                module: isGsea ? "Pathway Leading Edge Matrix" : "Pathway Gene Overlap Matrix",
+                mode: isGsea ? "GSEA" : "ORA",
                 topPathways: String(topPathways.length),
                 topGenes: String(topGenes.length),
               },

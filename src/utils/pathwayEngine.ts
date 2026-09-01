@@ -363,8 +363,9 @@ export function runGSEA(
       }
     }
 
+    // 1. Observed Kolmogorov-Smirnov Enrichment Score (ES)
     const es = Math.abs(maxES) >= Math.abs(minES) ? maxES : minES;
-    const isPositive = es > 0;
+    const isPositive = es >= 0;
 
     // Determine leading edge genes
     const leadingEdge: string[] = [];
@@ -382,46 +383,25 @@ export function runGSEA(
       }
     }
 
-    // NES (Normalized Enrichment Score): computed from Mann-Whitney U / Wilcoxon rank-sum test.
-    // The test asks: are gene-set members significantly shifted toward the top or bottom
-    // of the ranked list? This approach yields calibrated p-values without permutations.
-    //
-    // Ranks: gene at position i in the sorted list has rank i+1 (1-indexed).
-    // U_obs = sum of ranks of all gene-set members present in ranked list.
-    // Under null: E[U] = S * (N+1) / 2, Var[U] = S * (N-S) * (N+1) / 12.
-    // z = (E[U] - U_obs) / sqrt(Var[U])  [positive z = gene-set shifted to top]
-    // NES = z / sqrt(S_size)  → normalizes for gene-set size, producing a score in ~1-3 range.
+    // 2. Statistical Significance and Standardized NES (Mann-Whitney U rank-sum z-score):
     let uSum = 0.0;
-    let meanMetric = 0.0;
     presentGenes.forEach(g => {
       const idx = geneIndexMap.get(g)!;
       uSum += (idx + 1); // 1-indexed rank
-      const expr = expressionLookup[g];
-      meanMetric += expr ? (expr.log2FC ?? sorted[idx].rankMetric ?? 0) : (sorted[idx].rankMetric ?? 0);
     });
-    if (presentGenes.length > 0) {
-      meanMetric = meanMetric / presentGenes.length;
-    }
 
     const euNull = S_size * (N + 1) / 2.0;
     const varU = S_size * (N - S_size) * (N + 1) / 12.0;
     const zScore = varU > 0 ? (euNull - uSum) / Math.sqrt(varU) : 0.0;
+    const nes = zScore;
 
-    // NES & Direction:
-    // Align NES sign and direction with net biological fold-change metric of pathway genes.
-    // If mean fold change >= 0, NES is positive and direction is Upregulated.
-    // If mean fold change < 0, NES is negative and direction is Downregulated.
-    const nes = meanMetric >= 0 ? Math.abs(zScore) : -Math.abs(zScore);
-
-    // P-value: one-sided normal survival function P = Phi(-|NES|).
-    // Abramowitz & Stegun 7.1.26 polynomial approximation (accurate to 7.5e-8).
-    const absNes = Math.abs(nes);
-    const aT = 1.0 / (1.0 + 0.2316419 * absNes);
+    const absZ = Math.abs(zScore);
+    const aT = 1.0 / (1.0 + 0.2316419 * absZ);
     const poly = aT * (0.319381530 + aT * (-0.356563782 + aT * (1.781477937 + aT * (-1.821255978 + aT * 1.330274429))));
-    const normalPdf = Math.exp(-0.5 * absNes * absNes) / Math.sqrt(2.0 * Math.PI);
+    const normalPdf = Math.exp(-0.5 * absZ * absZ) / Math.sqrt(2.0 * Math.PI);
     const pValue = Math.max(1e-6, Math.min(1.0, normalPdf * poly));
 
-    const direction = nes >= 0 ? "Upregulated" : "Downregulated";
+    const direction: "Upregulated" | "Downregulated" = nes >= 0 ? "Upregulated" : "Downregulated";
 
     rawResults.push({
       pathway,

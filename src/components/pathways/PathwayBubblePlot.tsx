@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Cell, ReferenceLine } from "recharts";
 import { PathwayEnrichmentResult } from "@/types/pathway";
 import ExportButton from "@/components/ExportButton";
@@ -79,13 +79,45 @@ export default function PathwayBubblePlot({
 
   const isGsea = analysisMode === "GSEA";
 
-  // Sort by FDR ascending, then absolute NES descending
-  const displayResults = [...results]
-    .sort((a, b) => {
-      if (a.adjPValue !== b.adjPValue) return a.adjPValue - b.adjPValue;
-      return Math.abs(b.nes || 0) - Math.abs(a.nes || 0);
-    })
-    .slice(0, topCount);
+  // Balance top Upregulated and top Downregulated pathways in GSEA All-Directions mode
+  const displayResults = useMemo(() => {
+    if (!isGsea) {
+      return [...results]
+        .sort((a, b) => {
+          if (a.adjPValue !== b.adjPValue) return a.adjPValue - b.adjPValue;
+          return (b.foldEnrichment || 0) - (a.foldEnrichment || 0);
+        })
+        .slice(0, topCount);
+    }
+
+    const upList = results
+      .filter((r) => r.direction === "Upregulated" || (r.nes !== undefined && r.nes > 0))
+      .sort((a, b) => {
+        if (a.adjPValue !== b.adjPValue) return a.adjPValue - b.adjPValue;
+        return (b.nes || 0) - (a.nes || 0);
+      });
+
+    const downList = results
+      .filter((r) => r.direction === "Downregulated" || (r.nes !== undefined && r.nes < 0))
+      .sort((a, b) => {
+        if (a.adjPValue !== b.adjPValue) return a.adjPValue - b.adjPValue;
+        return (a.nes || 0) - (b.nes || 0); // Most negative first
+      });
+
+    if (upList.length > 0 && downList.length > 0) {
+      const half = Math.floor(topCount / 2);
+      const topUp = upList.slice(0, half);
+      const topDown = downList.slice(0, topCount - topUp.length);
+      return [...topUp, ...topDown].sort((a, b) => (b.nes || 0) - (a.nes || 0));
+    }
+
+    return [...results]
+      .sort((a, b) => {
+        if (a.adjPValue !== b.adjPValue) return a.adjPValue - b.adjPValue;
+        return Math.abs(b.nes || 0) - Math.abs(a.nes || 0);
+      })
+      .slice(0, topCount);
+  }, [results, isGsea, topCount]);
 
   const chartData = displayResults.map((r, idx) => {
     const rawX = isGsea ? (r.nes ?? 0) : (r.foldEnrichment ?? 1.0);
@@ -126,25 +158,27 @@ export default function PathwayBubblePlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 46px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("GSEA Pathway Enrichment Summary", 80, 80);
+    ctx.fillText(isGsea ? "GSEA Pathway Enrichment Summary" : "Pathway Over-Representation Analysis (ORA)", 80, 80);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 122);
+    ctx.font = "bold 30px monospace";
+    ctx.fillText(
+      `Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`,
+      80,
+      130
+    );
 
-    const padLeft = 840; // Generous space for pathway names on the left
+    const padLeft = 880;
     const padRight = 100;
-    const padTop = 180;
-    const padBottom = 220;
+    const padTop = 200;
+    const padBottom = 240;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
-    // Calculate X-axis bounds
     const xValues = chartData.map((d) => d.xValue);
     let minX = Math.min(...xValues);
     let maxX = Math.max(...xValues);
@@ -164,11 +198,9 @@ export default function PathwayBubblePlot({
 
     const rowH = plotH / displayResults.length;
 
-    // Draw Grid Lines
     ctx.strokeStyle = isLight ? "#f1f5f9" : "rgba(148, 163, 184, 0.08)";
     ctx.lineWidth = 1.5;
 
-    // Horizontal Row Lines
     for (let i = 0; i < displayResults.length; i++) {
       const y = padTop + i * rowH + rowH / 2;
       ctx.beginPath();
@@ -177,55 +209,48 @@ export default function PathwayBubblePlot({
       ctx.stroke();
     }
 
-    // Zero / baseline line if GSEA
     if (isGsea) {
       const zeroX = getXCoord(0);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(zeroX, padTop);
       ctx.lineTo(zeroX, padTop + plotH);
       ctx.stroke();
     }
 
-    // Draw Pathway Names and Bubbles
     chartData.forEach((d, idx) => {
       const y = padTop + idx * rowH + rowH / 2;
       const x = getXCoord(d.xValue);
 
-      // Pathway name text (Bold Dark Slate/Black in Light Mode)
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(32, Math.max(18, Math.round(rowH * 0.48)));
+      const fontSize = Math.min(38, Math.max(22, Math.round(rowH * 0.52)));
       ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
       ctx.textAlign = "right";
 
       const maxLen = 42;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      ctx.fillText(displayName, padLeft - 24, y + fontSize * 0.35);
+      ctx.fillText(displayName, padLeft - 26, y + fontSize * 0.35);
 
-      // Bubble size
       const maxCount = Math.max(...chartData.map((cd) => cd.size), 20);
       const minCount = Math.min(...chartData.map((cd) => cd.size), 1);
       const normalizedSize = (d.size - minCount) / Math.max(1, maxCount - minCount);
-      const radius = 14 + normalizedSize * 26;
+      const radius = 16 + normalizedSize * 30;
 
       const isUp = d.direction === "Upregulated" || d.xValue >= 0;
 
-      // Bubble fill
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, 2 * Math.PI);
       ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.85)" : "rgba(37, 99, 235, 0.85)";
       ctx.fill();
 
-      // Bubble stroke
       ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.stroke();
     });
 
-    // Outer Axis Frame (X Axis)
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop + plotH);
     ctx.lineTo(padLeft + plotW, padTop + plotH);
@@ -233,12 +258,11 @@ export default function PathwayBubblePlot({
     ctx.lineTo(padLeft, padTop + plotH);
     ctx.stroke();
 
-    // X-Axis Ticks & Labels
     const numXTicks = 8;
     const xStep = (maxX - minX) / numXTicks;
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 26px monospace";
+    ctx.font = "bold 34px monospace";
     ctx.textAlign = "center";
 
     for (let i = 0; i <= numXTicks; i++) {
@@ -246,74 +270,74 @@ export default function PathwayBubblePlot({
       const xPos = getXCoord(val);
       ctx.beginPath();
       ctx.moveTo(xPos, padTop + plotH);
-      ctx.lineTo(xPos, padTop + plotH + 8);
+      ctx.lineTo(xPos, padTop + plotH + 10);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 38);
+      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 46);
     }
 
-    // X-Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
       isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
       padLeft + plotW / 2,
-      padTop + plotH + 95
+      padTop + plotH + 106
     );
 
-    // Bottom Legend
-    const legY = size - 70;
-    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.textAlign = "left";
+    if (isGsea) {
+      ctx.beginPath();
+      ctx.arc(padLeft + 40, padTop + plotH + 128, 14, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#991b1b";
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    // Red dot for Upregulated
-    ctx.beginPath();
-    ctx.arc(padLeft + 40, legY, 14, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(220, 38, 38, 0.85)";
-    ctx.fill();
-    ctx.strokeStyle = "#991b1b";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 26px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Upregulated in Phenotype", padLeft + 64, padTop + plotH + 135);
 
-    ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-    ctx.fillText("Upregulated in Phenotype", padLeft + 65, legY + 8);
+      ctx.beginPath();
+      ctx.arc(padLeft + 450, padTop + plotH + 128, 14, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#1e40af";
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    // Blue dot for Downregulated
-    ctx.beginPath();
-    ctx.arc(padLeft + 420, legY, 14, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(37, 99, 235, 0.85)";
-    ctx.fill();
-    ctx.strokeStyle = "#1e40af";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+      ctx.fillText("Downregulated in Phenotype", padLeft + 474, padTop + plotH + 135);
+    }
 
-    ctx.fillText("Downregulated in Phenotype", padLeft + 445, legY + 7);
-
-    // Bubble size text
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "18px monospace";
-    ctx.fillText("• Bubble Area ∝ Leading-Edge Gene Count", padLeft + 800, legY + 6);
+    ctx.font = "24px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(
+      isGsea ? "• Bubble Area ∝ Leading-Edge Gene Count" : "• Bubble Area ∝ Overlapping Gene Count",
+      isGsea ? padLeft + 900 : padLeft + 40,
+      padTop + plotH + 135
+    );
 
     return offscreen;
   };
 
   return (
     <div ref={chartRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[520px] shadow-xl font-sans">
-      {/* Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-slate-800 pb-4">
         <div>
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <span>GSEA Enrichment Summary</span>
+            <span>{isGsea ? "GSEA Enrichment Summary" : "ORA Enrichment Summary"}</span>
             <span className="text-xxs font-mono text-slate-400 font-normal">
               (Top {displayResults.length} Enriched Pathways)
             </span>
           </h3>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Normalized Enrichment Score (NES) &bull; Statistical Significance &bull; Leading-Edge Genes
+            {isGsea
+              ? "Normalized Enrichment Score (NES) • Statistical Significance • Leading-Edge Genes"
+              : "Fold Enrichment • Hypergeometric Significance (BH FDR) • Overlapping DEGs"}
           </p>
         </div>
 
-        {/* Top Count Selector and Export */}
         <div className="flex items-center gap-3 font-mono text-xs">
           <div className="flex items-center gap-2">
             <span className="text-slate-400">Display:</span>
