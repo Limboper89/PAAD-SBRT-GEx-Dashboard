@@ -5,20 +5,21 @@ import React, {
 } from "react";
 import {
   Search, Info, AlertTriangle, ChevronDown,
-  TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download, Bot
+  TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download, Bot,
+  BarChart3, GitCompare, Table, ShieldAlert, Sparkles, Filter
 } from "lucide-react";
 
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
+import { 
+  computePatientPseudobulk, 
+  PatientPseudobulkResult, 
+  CellMeta 
+} from "@/utils/singleNucleusStats";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-interface CellMetadata {
-  id: string; x: number; y: number;
-  pid: string; broad_celltype: string;
-  level1: string; level2: string; level3: string;
-  treatment: string; treatment_group: string; response: string;
-}
+interface CellMetadata extends CellMeta {}
 interface GeneEntry { s: string; k: string; i: number; c?: number; o?: number; l?: number; }
 interface GeneIndex {
   n_genes: number; n_indexed: number; n_duplicates: number;
@@ -94,6 +95,22 @@ function cacheSet(key: string, vec: Float32Array) {
   exprCache.set(key, vec);
 }
 
+export type CohortFilter = 
+  | "ALL" 
+  | "NAIVE" 
+  | "TREATED" 
+  | "CRT" 
+  | "CRTl" 
+  | "CRTn" 
+  | "CRTx" 
+  | "GART" 
+  | "RT"
+  | "RESP_MOD" 
+  | "RESP_MIN" 
+  | "RESP_POOR";
+
+export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table";
+
 export default function SingleNucleusExplorer() {
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const DATA = `${basePath}/data/gse202051`;
@@ -118,7 +135,11 @@ export default function SingleNucleusExplorer() {
   // UI state
   type ColorMode = "broad" | "level2" | "expression" | "treatment";
   const [colorMode, setColorMode] = useState<ColorMode>("broad");
+  const [selectedCohort, setSelectedCohort] = useState<CohortFilter>("ALL");
   const [selectedPid, setSelectedPid] = useState("ALL");
+  const [activeTab, setActiveTab] = useState<AnalysisTab>("atlas");
+  const [comparisonLevel, setComparisonLevel] = useState<"broad" | "level2">("broad");
+
   const [query, setQuery]         = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggest, setShowSuggest] = useState(false);
@@ -183,14 +204,14 @@ export default function SingleNucleusExplorer() {
       module: "Single Nucleus",
       gene: activeGene,
       dataset: "GSE202051: PDAC Single-Nucleus Reference Atlas",
-      currentFigure: "Single-Nucleus UMAP Atlas",
+      currentFigure: activeTab === "atlas" ? "Single-Nucleus UMAP Atlas" : "Treatment-Stratified Comparison",
       singleNucleusStats: {
-        selectedCellType: selectedBroadInspect !== "ALL" ? selectedBroadInspect : "All Cell Types",
+        selectedCellType: `${selectedBroadInspect !== "ALL" ? selectedBroadInspect : "All Cell Types"} (${selectedCohort})`,
         totalNuclei: "224,988",
-        markerGenes: activeGene ? [activeGene, "NFE2L2", "PHGDH", "S100P"] : ["NFE2L2", "PHGDH", "S100P"]
+        markerGenes: activeGene ? [activeGene, "NFE2L2", "COL1A1", "EPCAM", "CD8A"] : ["NFE2L2", "COL1A1", "EPCAM", "CD8A"]
       }
     });
-  }, [activeGene, selectedBroadInspect, registerModuleContext]);
+  }, [activeGene, selectedCohort, selectedBroadInspect, activeTab, registerModuleContext]);
 
   // Autocomplete searches
   useEffect(() => {
@@ -266,14 +287,37 @@ export default function SingleNucleusExplorer() {
     setColorMode("expression");
   }
 
-  // Active subset cells filtered by patient selection
+  // Active subset cells filtered by Cohort & Patient selection
   const { activeCells, activeOrigIdx } = useMemo(() => {
-    if (selectedPid === "ALL") {
-      return { activeCells: cells, activeOrigIdx: cells.map((_, i) => i) };
-    }
-    const filtered = cells.map((c, i) => ({ c, i })).filter(x => x.c.pid === selectedPid);
-    return { activeCells: filtered.map(x => x.c), activeOrigIdx: filtered.map(x => x.i) };
-  }, [cells, selectedPid]);
+    return cells.reduce<{ activeCells: CellMetadata[]; activeOrigIdx: number[] }>(
+      (acc, c, i) => {
+        // 1. Patient ID Filter
+        if (selectedPid !== "ALL" && c.pid !== selectedPid) return acc;
+
+        // 2. Cohort Filter
+        const isNaive = (c.treatment_group || "").toLowerCase().includes("na");
+        const isTreated = (c.treatment_group || "").toLowerCase().includes("treat");
+
+        if (selectedCohort === "NAIVE" && !isNaive) return acc;
+        if (selectedCohort === "TREATED" && !isTreated) return acc;
+
+        // Regimen Subgroup Filters
+        if (["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT"].includes(selectedCohort)) {
+          if (!isTreated || c.treatment !== selectedCohort) return acc;
+        }
+
+        // Response Subgroup Filters
+        if (selectedCohort === "RESP_MOD" && !c.response?.toLowerCase().includes("moderate")) return acc;
+        if (selectedCohort === "RESP_MIN" && !c.response?.toLowerCase().includes("minimal")) return acc;
+        if (selectedCohort === "RESP_POOR" && !c.response?.toLowerCase().includes("poor")) return acc;
+
+        acc.activeCells.push(c);
+        acc.activeOrigIdx.push(i);
+        return acc;
+      },
+      { activeCells: [], activeOrigIdx: [] }
+    );
+  }, [cells, selectedPid, selectedCohort]);
 
   // Coordinate boundaries
   const bounds = useMemo(() => {
@@ -306,9 +350,8 @@ export default function SingleNucleusExplorer() {
 
   // Cell coloring with Broad-type subcategory inspector support
   const getCellColor = useCallback((cell: CellMetadata, origIdx: number): string => {
-    // Hierarchical cell-type display check
     if (selectedBroadInspect !== "ALL" && cell.broad_celltype !== selectedBroadInspect) {
-      return "rgba(51, 65, 85, 0.08)"; // Grey out cells of other broad categories
+      return "rgba(51, 65, 85, 0.08)";
     }
 
     if (colorMode === "broad")      return BROAD_COLORS[cell.broad_celltype] ?? "#64748b";
@@ -385,11 +428,10 @@ export default function SingleNucleusExplorer() {
     setZoom(z => Math.max(0.25, Math.min(z * (e.deltaY < 0 ? 1.15 : 0.87), 30)));
   }, []);
 
-  // ── Cell-type expression summary data — PRIMARY SCIENTIFIC METRIC CORRECTION ────────────────
+  // ── Cell-type expression summary data (Exploratory Nucleus Level) ───────────
   const dotData = useMemo(() => {
     if (!activeGene || !exprVec || activeCells.length === 0) return [];
     
-    // Group expressions by Level 2 subtype
     const groups: Record<string, number[]> = {};
     activeCells.forEach((c, i) => {
       const v = exprVec[activeOrigIdx[i]] ?? 0;
@@ -399,8 +441,8 @@ export default function SingleNucleusExplorer() {
 
     return Object.entries(groups).map(([ct, vals]) => {
       const exp = vals.filter(v => v > 0);
-      const meanAll = vals.reduce((a, b) => a + b, 0) / vals.length; // PRIMARY METRIC: Mean across all nuclei
-      const meanPos = exp.length ? exp.reduce((a, b) => a + b, 0) / exp.length : 0; // SECONDARY METRIC: Mean among expressing
+      const meanAll = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const meanPos = exp.length ? exp.reduce((a, b) => a + b, 0) / exp.length : 0;
       
       return {
         cellType: ct,
@@ -410,938 +452,824 @@ export default function SingleNucleusExplorer() {
         meanPos:  meanPos,
         tooSmall: vals.length < 10,
       };
-    }).filter(r => r.pct > 0).sort((a, b) => b.meanAll - a.meanAll); // Primary sorting: Mean across ALL nuclei
+    }).filter(r => r.pct > 0).sort((a, b) => b.meanAll - a.meanAll);
   }, [activeCells, activeOrigIdx, exprVec, activeGene]);
 
-  // CSV Download handler for Cell-Type Expression Summary
-  const handleDownloadCSV = useCallback(() => {
-    if (!activeGene || dotData.length === 0) return;
+  // ── Patient-Aware Pseudobulk Statistics (Confirmatory Patient Level) ─────────
+  const pseudobulkResults = useMemo(() => {
+    if (!activeGene || !exprVec || cells.length === 0) return [];
+    const subFilter = ["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT"].includes(selectedCohort) ? selectedCohort : undefined;
+    const key = comparisonLevel === "broad" ? "broad_celltype" : "level2";
+    return computePatientPseudobulk(exprVec, cells, key, subFilter);
+  }, [activeGene, exprVec, cells, comparisonLevel, selectedCohort]);
 
-    const now = new Date();
-    const dateStr = now.toLocaleString();
-
-    // Determine treatment text for metadata
-    const treatmentText = selectedPid !== "ALL" && patients[selectedPid]
-      ? patients[selectedPid].treatment_status
-      : "ALL";
-
-    // Build Metadata Header lines
-    const metaLines = [
-      `Dataset: GSE202051`,
-      `Gene: ${activeGene}`,
-      `Patient Filter: ${selectedPid}`,
-      `Cell Type Filter: ${selectedBroadInspect}`,
-      `Treatment Filter: ${treatmentText}`,
-      `Export Date: ${dateStr}`,
-      ``,
-    ];
-
-    const headerRow = ["Subtype (Level 2)", "N", "Expr %", "Mean (All)", "Mean (Pos)"];
-    
-    const dataRows = dotData.map((row) => [
-      `"${row.cellType.replace(/"/g, '""')}"`,
-      row.total,
-      row.pct.toFixed(2),
-      row.meanAll.toFixed(4),
-      row.meanPos.toFixed(4),
-    ]);
-
-    const csvContent = [
-      ...metaLines,
-      headerRow.join(","),
-      ...dataRows.map((r) => r.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `GSE202051_${activeGene}_CellTypeSummary.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [activeGene, dotData, selectedPid, selectedBroadInspect, patients]);
-
-  // Filtered Cell Metadata export callback
-  const handleExportCellMetadata = useCallback(() => {
-    if (!activeCells || activeCells.length === 0) return;
-    const headers = [
-      "Cell Barcode",
-      "Patient ID",
-      "Broad Cell Type",
-      "Subtype (Level 2)",
-      "Treatment Status",
-      "UMAP1",
-      "UMAP2",
-      activeGene ? `${activeGene} Expression (log1p Float16)` : "Gene Expression",
-    ];
-
-    const rows = activeCells.map((c, i) => {
-      const origIdx = activeOrigIdx[i];
-      const exprVal = exprVec && origIdx !== undefined ? f16ToF32(exprVec[origIdx]) : 0;
-      return [
-        c.id,
-        c.pid,
-        c.broad_celltype,
-        c.level2,
-        c.treatment,
-        c.x.toFixed(4),
-        c.y.toFixed(4),
-        exprVal.toFixed(4),
-      ];
-    });
+  // CSV Download handler for Patient Pseudobulk Table
+  const handleDownloadPseudobulkCSV = useCallback(() => {
+    if (!activeGene || pseudobulkResults.length === 0) return;
 
     exportToCSV({
-      filename: `GSE202051_FilteredCells_${activeGene || "All"}.csv`,
+      filename: `GSE202051_${activeGene}_Patient_Pseudobulk_Treatment_Comparison.csv`,
       metadata: {
-        dataset: "GSE202051 Single-Nucleus Atlas",
-        module: "Single-Nucleus Cell Metadata Explorer",
-        selectedGene: activeGene || "None",
-        filters: `Patient: ${selectedPid}, Lineage: ${selectedBroadInspect}, Total Cells: ${activeCells.length}`,
-      },
-      headers,
-      rows,
-    });
-  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedBroadInspect]);
-
-  // Filtered Expression Matrix export callback
-  const handleExportExpressionMatrix = useCallback(() => {
-    if (!activeCells || activeCells.length === 0 || !activeGene || !exprVec) return;
-    const headers = ["Cell Barcode", "Patient ID", "Cell Type", activeGene];
-    const rows = activeCells.map((c, i) => {
-      const origIdx = activeOrigIdx[i];
-      const exprVal = origIdx !== undefined ? f16ToF32(exprVec[origIdx]) : 0;
-      return [c.id, c.pid, c.level2, exprVal.toFixed(4)];
-    });
-
-    exportToCSV({
-      filename: `GSE202051_ExpressionMatrix_${activeGene}.csv`,
-      metadata: {
-        dataset: "GSE202051 Single-Nucleus Atlas",
-        module: "Filtered Single-Nucleus Expression Matrix",
+        dataset: "GSE202051 Single-Nucleus Reference Atlas",
+        module: "Patient-Aware Pseudobulk Treatment Comparison",
         selectedGene: activeGene,
-        filters: `Patient: ${selectedPid}, Lineage: ${selectedBroadInspect}, Total Cells: ${activeCells.length}`,
+        cohort: "Treatment-Naïve (n=18) vs Neoadjuvant-Treated (n=25, 100% RT/CRT)",
+        statisticalUnit: "Patient (Biological Replicate)",
       },
-      headers,
-      rows,
+      headers: [
+        "Cell Lineage / Subtype",
+        "Naïve Patients (n)",
+        "Treated Patients (n)",
+        "Naïve Nuclei",
+        "Treated Nuclei",
+        "Naïve % Pos",
+        "Treated % Pos",
+        "Naïve Mean (Pseudobulk)",
+        "Naïve SE",
+        "Treated Mean (Pseudobulk)",
+        "Treated SE",
+        "Delta Pseudobulk",
+        "log2FC",
+        "Cohen's d",
+        "95% CI Lower",
+        "95% CI Upper",
+        "Welch t p-value",
+        "Mann-Whitney U p-value",
+        "FDR q-value",
+        "Status"
+      ],
+      rows: pseudobulkResults.map((r) => [
+        r.cellType,
+        r.naivePatientCount,
+        r.treatedPatientCount,
+        r.naiveNucleusCount,
+        r.treatedNucleusCount,
+        r.naivePctExpressing.toFixed(2),
+        r.treatedPctExpressing.toFixed(2),
+        r.naiveMean.toFixed(4),
+        r.naiveSE.toFixed(4),
+        r.treatedMean.toFixed(4),
+        r.treatedSE.toFixed(4),
+        r.deltaPseudobulk.toFixed(4),
+        r.log2FC.toFixed(4),
+        r.cohensD.toFixed(3),
+        r.ci95Lower.toFixed(4),
+        r.ci95Upper.toFixed(4),
+        r.pValueWelch.toExponential(4),
+        r.pValueMannWhitney.toExponential(4),
+        r.qValue.toExponential(4),
+        r.direction
+      ]),
     });
-  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedBroadInspect]);
+  }, [activeGene, pseudobulkResults]);
 
-  const legendEntries = useMemo((): [string, string][] => {
-    if (colorMode === "broad")     return Object.entries(BROAD_COLORS);
-    if (colorMode === "level2")    return Object.entries(LEVEL2_COLORS).slice(0, 18);
-    if (colorMode === "treatment") return Object.entries(TREATMENT_COLORS);
-    return [];
-  }, [colorMode]);
-
-  const selPatientInfo = selectedPid !== "ALL" ? patients[selectedPid] : null;
-
-  let aiCtx: any = null;
-  try {
-    aiCtx = useAIContext();
-  } catch (e) {}
-
-  const handleAskCopilotSN = () => {
-    if (aiCtx) {
-      const q = activeGene
-        ? `Which cell populations express ${activeGene} in the single-nucleus PDAC dataset?`
-        : "What cell populations are represented in the single-nucleus PDAC dataset?";
-      aiCtx.sendMessage(q, "cell_type_lineage_expression");
-      aiCtx.setChatOpen(true);
-    }
-  };
-
-  const generateHighResSingleCellCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+  // High-Res Publication Canvas Generator for Treatment Comparison
+  const generateHighResComparisonCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
     const offscreen = document.createElement("canvas");
     offscreen.width = size;
-    offscreen.height = size;
+    offscreen.height = Math.round(size * 0.60); // 2400 x 1440 px
     const ctx = offscreen.getContext("2d");
     if (!ctx) return offscreen;
 
     const isLight = theme === "light";
+    const w = offscreen.width;
+    const h = offscreen.height;
 
-    // 1. Background Fill
+    // Background
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, w, h);
 
-    // 2. Title and Subtitle Header (Large Bold Publication Typography)
+    // Title & Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Single-Nucleus Transcriptomic Atlas (GSE202051)", 80, 85);
+    ctx.fillText(`Single-Nucleus Treatment-Stratified Comparison: ${activeGene || "Target Gene"}`, 80, 80);
 
-    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
-    let sub = "";
-    if (colorMode === "broad") {
-      sub = `Broad Cell Lineages · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
-    } else if (colorMode === "level2") {
-      sub = `Detailed Sub-Lineages · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
-    } else if (colorMode === "treatment") {
-      sub = `Treatment Cohort Distribution · ${activeCells.length.toLocaleString()} nuclei (Treatment-naïve vs NAT)`;
-    } else {
-      sub = `Target Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max Log-Expr: ${exprActualMax.toFixed(2)}`;
-    }
-    ctx.fillText(sub, 80, 136);
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(
+      `GSE202051 snRNA-seq · Patient Pseudobulk: Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)`,
+      80,
+      126
+    );
 
-    // 3. Coordinate Layout
-    const padLeft = 90;
-    const padTop = 180;
-    const plotW = 1520;
-    const plotH = 2140;
+    // Divider
+    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 155);
+    ctx.lineTo(w - 80, 155);
+    ctx.stroke();
 
-    const legendLeft = 1650;
-    const legendTop = 180;
-    const legendW = 670;
-    const legendH = 2140;
+    // Plot Dimensions
+    const padLeft = 160;
+    const padRight = 160;
+    const padTop = 230;
+    const padBottom = 260;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+    const plotBottom = padTop + plotH;
 
-    // Coordinate mapping helper
-    const mapX = (x: number) => {
-      const margin = 50;
-      return padLeft + margin + ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * (plotW - margin * 2);
-    };
+    const items = pseudobulkResults.slice(0, 8);
+    const maxVal = Math.max(...items.flatMap(r => [r.naiveMean + r.naiveSE, r.treatedMean + r.treatedSE]), 1.0);
+    const axisMax = Math.ceil(maxVal * 1.3 * 10) / 10;
 
-    const mapY = (y: number) => {
-      const margin = 50;
-      return padTop + plotH - margin - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * (plotH - margin * 2);
-    };
-
-    // 4. Draw Nuclei Points
-    const order = activeCells.map((_, i) => i);
-    if (colorMode === "expression" && exprVec) {
-      order.sort((a, b) => (exprVec[activeOrigIdx[a]] ?? 0) - (exprVec[activeOrigIdx[b]] ?? 0));
-    }
-
-    for (const i of order) {
-      const cell = activeCells[i];
-      const origIdx = activeOrigIdx[i];
-      const px = mapX(cell.x);
-      const py = mapY(cell.y);
-
-      // Hierarchical cell-type display check
-      let color = "#64748b";
-      if (selectedBroadInspect !== "ALL" && cell.broad_celltype !== selectedBroadInspect) {
-        color = isLight ? "rgba(203, 213, 225, 0.2)" : "rgba(51, 65, 85, 0.15)";
-      } else {
-        if (colorMode === "broad") color = BROAD_COLORS[cell.broad_celltype] ?? "#64748b";
-        else if (colorMode === "level2") color = LEVEL2_COLORS[cell.level2] ?? "#64748b";
-        else if (colorMode === "treatment") color = TREATMENT_COLORS[cell.treatment_group] ?? "#64748b";
-        else if (colorMode === "expression" && exprVec) {
-          const val = exprVec[origIdx] ?? 0;
-          color = exprColor(val, exprCap);
-          if (val <= 0 && isLight) {
-            color = "rgba(226, 232, 240, 0.6)";
-          }
-        }
-      }
-
-      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0) : 0;
-      const radius = (colorMode === "expression" && exprVal > 0) ? 7.0 : 5.5;
-
-      ctx.fillStyle = color;
+    // Grid
+    for (let i = 0; i <= 5; i++) {
+      const y = padTop + (plotH / 5) * i;
       ctx.beginPath();
-      ctx.arc(px, py, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(padLeft + plotW, y);
+      ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+      ctx.lineWidth = i === 5 ? 3 : 1.5;
+      ctx.stroke();
+
+      const val = ((axisMax * (5 - i)) / 5).toFixed(2);
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = "bold 24px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(val, padLeft - 20, y + 8);
     }
 
-    // 5. Draw Prominent UMAP Coordinate Axes (Bottom-Left of Plot)
-    const axisX = padLeft + 60;
-    const axisY = padTop + plotH - 60;
-    const axisLen = 220;
-
-    ctx.strokeStyle = isLight ? "#0f172a" : "#94a3b8";
-    ctx.lineWidth = 6;
-
-    // X Axis (UMAP_1)
-    ctx.beginPath();
-    ctx.moveTo(axisX, axisY);
-    ctx.lineTo(axisX + axisLen, axisY);
-    ctx.stroke();
-
-    // X Arrow
-    ctx.beginPath();
-    ctx.moveTo(axisX + axisLen, axisY - 10);
-    ctx.lineTo(axisX + axisLen + 18, axisY);
-    ctx.lineTo(axisX + axisLen, axisY + 10);
-    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
-    ctx.fill();
-
-    // Y Axis (UMAP_2)
-    ctx.beginPath();
-    ctx.moveTo(axisX, axisY);
-    ctx.lineTo(axisX, axisY - axisLen);
-    ctx.stroke();
-
-    // Y Arrow
-    ctx.beginPath();
-    ctx.moveTo(axisX - 10, axisY - axisLen);
-    ctx.lineTo(axisX, axisY - axisLen - 18);
-    ctx.lineTo(axisX + 10, axisY - axisLen);
-    ctx.fillStyle = isLight ? "#0f172a" : "#94a3b8";
-    ctx.fill();
-
-    // Axis Labels (Bold Large)
-    ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-    ctx.fillText("UMAP_1", axisX + 24, axisY + 48);
-
+    // Y-Axis Title
     ctx.save();
-    ctx.translate(axisX - 42, axisY - 24);
+    ctx.translate(55, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText("UMAP_2", 0, 0);
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Patient Pseudobulk Mean Expression (log1p ± SE)", 0, 0);
     ctx.restore();
 
-    // 6. Draw Dedicated Legend Panel on the Right
-    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
-    ctx.fillRect(legendLeft, legendTop, legendW, legendH);
-    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
+    // Bars
+    const n = items.length;
+    const slotW = plotW / n;
+    const groupW = Math.min(220, slotW * 0.70);
+    const barW = groupW * 0.45;
 
-    if (colorMode === "broad") {
-      // Broad Lineage Legend
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Cell Lineages", legendLeft + 36, legendTop + 65);
+    items.forEach((r, idx) => {
+      const cx = padLeft + slotW * idx + slotW / 2;
+      const xNaive = cx - groupW / 2;
+      const xTreated = cx + groupW / 2 - barW;
 
-      // Count frequencies
-      const counts: Record<string, number> = {};
-      activeCells.forEach(c => {
-        counts[c.broad_celltype] = (counts[c.broad_celltype] || 0) + 1;
-      });
+      // 1. Naïve Bar (Teal)
+      const hNaive = (r.naiveMean / axisMax) * plotH;
+      const yNaive = plotBottom - hNaive;
+      ctx.fillStyle = "#0d9488";
+      ctx.fillRect(xNaive, yNaive, barW, hNaive);
 
-      const broadEntries = Object.keys(BROAD_COLORS)
-        .filter(k => counts[k] > 0)
-        .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-
-      broadEntries.forEach((key, idx) => {
-        const itemY = legendTop + 145 + idx * 95;
-        const color = BROAD_COLORS[key] || "#64748b";
-        const count = counts[key] || 0;
-        const pct = ((count / activeCells.length) * 100).toFixed(1);
-
-        // Color dot (Prominent)
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(legendLeft + 56, itemY, 22, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.35)";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // Label (Large Bold)
-        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(key, legendLeft + 96, itemY + 12);
-
-        // Count / %
-        ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-        ctx.font = "bold 28px monospace";
-        ctx.textAlign = "right";
-        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 32, itemY + 12);
-      });
-
-    } else if (colorMode === "level2") {
-      // Detailed Sub-Lineages (Large Clean 1-Column Format)
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Cell Sub-Lineages", legendLeft + 36, legendTop + 65);
-
-      const counts: Record<string, number> = {};
-      activeCells.forEach(c => {
-        counts[c.level2] = (counts[c.level2] || 0) + 1;
-      });
-
-      const level2Entries = Object.keys(LEVEL2_COLORS)
-        .filter(k => (counts[k] || 0) > 0)
-        .sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-
-      const maxShow = 24;
-      const displayEntries = level2Entries.slice(0, maxShow);
-
-      displayEntries.forEach((key, idx) => {
-        const itemY = legendTop + 130 + idx * 80;
-        const color = LEVEL2_COLORS[key] || "#64748b";
-        const count = counts[key] || 0;
-        const pct = ((count / activeCells.length) * 100).toFixed(1);
-
-        // Color dot
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(legendLeft + 52, itemY, 18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.2)" : "rgba(255,255,255,0.3)";
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-
-        // Label (Large Bold)
-        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.textAlign = "left";
-        const maxLen = 17;
-        const dispName = key.length > maxLen ? key.slice(0, maxLen - 2) + "..." : key;
-        ctx.fillText(dispName, legendLeft + 84, itemY + 10);
-
-        // Count / % (Large Bold Monospace)
-        ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-        ctx.font = "bold 26px monospace";
-        ctx.textAlign = "right";
-        ctx.fillText(`${count.toLocaleString()} (${pct}%)`, legendLeft + legendW - 28, itemY + 10);
-      });
-
-    } else if (colorMode === "treatment") {
-      // Treatment Group
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Treatment Group", legendLeft + 36, legendTop + 65);
-
-      const counts: Record<string, number> = {};
-      activeCells.forEach(c => {
-        counts[c.treatment_group] = (counts[c.treatment_group] || 0) + 1;
-      });
-
-      const treatmentEntries = Object.keys(TREATMENT_COLORS).filter(k => (counts[k] || 0) > 0);
-
-      treatmentEntries.forEach((key, idx) => {
-        const itemY = legendTop + 160 + idx * 150;
-        const color = TREATMENT_COLORS[key] || "#64748b";
-        const count = counts[key] || 0;
-        const pct = ((count / activeCells.length) * 100).toFixed(1);
-
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(legendLeft + 65, itemY, 28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = isLight ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.35)";
-        ctx.lineWidth = 3.5;
-        ctx.stroke();
-
-        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-        ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(key, legendLeft + 115, itemY + 10);
-
-        ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-        ctx.font = "bold 30px monospace";
-        ctx.textAlign = "left";
-        ctx.fillText(`${count.toLocaleString()} nuclei (${pct}%)`, legendLeft + 115, itemY + 54);
-      });
-
-    } else if (colorMode === "expression" && activeGene && exprVec) {
-      // Expression Colorbar Legend
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText(`Expression: ${activeGene}`, legendLeft + 36, legendTop + 65);
-
-      // Color Bar (Large)
-      const barX = legendLeft + 40;
-      const barY = legendTop + 130;
-      const barW = legendW - 80;
-      const barH = 52;
-
-      const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-      grad.addColorStop(0, "rgb(20, 184, 166)");    // Teal
-      grad.addColorStop(0.5, "rgb(234, 179, 8)");   // Amber
-      grad.addColorStop(1, "rgb(244, 63, 94)");     // Rose
-
-      ctx.fillStyle = grad;
-      ctx.fillRect(barX, barY, barW, barH);
-      ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+      // Error bar Naïve
+      const errTopN = plotBottom - ((r.naiveMean + r.naiveSE) / axisMax) * plotH;
+      const errBotN = plotBottom - ((Math.max(0, r.naiveMean - r.naiveSE)) / axisMax) * plotH;
+      ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
       ctx.lineWidth = 3;
-      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.beginPath();
+      ctx.moveTo(xNaive + barW / 2, errTopN);
+      ctx.lineTo(xNaive + barW / 2, errBotN);
+      ctx.moveTo(xNaive + barW / 2 - 8, errTopN);
+      ctx.lineTo(xNaive + barW / 2 + 8, errTopN);
+      ctx.moveTo(xNaive + barW / 2 - 8, errBotN);
+      ctx.lineTo(xNaive + barW / 2 + 8, errBotN);
+      ctx.stroke();
 
-      // Ticks & Labels (Large Bold Monospace)
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 32px monospace";
+      // 2. Treated Bar (Orange)
+      const hTreated = (r.treatedMean / axisMax) * plotH;
+      const yTreated = plotBottom - hTreated;
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(xTreated, yTreated, barW, hTreated);
+
+      // Error bar Treated
+      const errTopT = plotBottom - ((r.treatedMean + r.treatedSE) / axisMax) * plotH;
+      const errBotT = plotBottom - ((Math.max(0, r.treatedMean - r.treatedSE)) / axisMax) * plotH;
+      ctx.beginPath();
+      ctx.moveTo(xTreated + barW / 2, errTopT);
+      ctx.lineTo(xTreated + barW / 2, errBotT);
+      ctx.moveTo(xTreated + barW / 2 - 8, errTopT);
+      ctx.lineTo(xTreated + barW / 2 + 8, errTopT);
+      ctx.moveTo(xTreated + barW / 2 - 8, errBotT);
+      ctx.lineTo(xTreated + barW / 2 + 8, errBotT);
+      ctx.stroke();
+
+      // Delta / Significance label above pair
+      const topY = Math.min(errTopN, errTopT) - 20;
+      const sigText = r.qValue < 0.05 ? `q=${r.qValue.toExponential(1)}*` : `p=${r.pValueWelch.toFixed(2)}`;
+      ctx.fillStyle = r.isSignificant ? "#f43f5e" : (isLight ? "#64748b" : "#94a3b8");
+      ctx.font = "bold 20px monospace";
       ctx.textAlign = "center";
+      ctx.fillText(sigText, cx, topY);
 
-      ctx.fillText("0.0", barX + 10, barY + barH + 40);
-      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 40);
-      ctx.fillText(exprCap.toFixed(2), barX + barW - 10, barY + barH + 40);
-
-      // Expression Statistics Summary Box
-      let positiveCount = 0;
-      let sumPositive = 0;
-      activeOrigIdx.forEach(origIdx => {
-        const val = exprVec[origIdx] ?? 0;
-        if (val > 0) {
-          positiveCount++;
-          sumPositive += val;
-        }
-      });
-      const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
-      const pctPos = ((positiveCount / activeCells.length) * 100).toFixed(1);
-
-      const statsY = barY + barH + 130;
-      const statsH = 380;
-      ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
-      ctx.fillRect(barX, statsY, barW, statsH);
-      ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(barX, statsY, barW, statsH);
-
+      // X-Axis Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Cohort Metrics", barX + 28, statsY + 52);
-
       ctx.font = "bold 26px sans-serif";
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Positive Nuclei:", barX + 28, statsY + 108);
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${positiveCount.toLocaleString()} / ${activeCells.length.toLocaleString()} (${pctPos}%)`, barX + 28, statsY + 146);
+      ctx.textAlign = "center";
+      ctx.fillText(r.cellType, cx, plotBottom + 45);
 
-      ctx.font = "bold 26px sans-serif";
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Mean Log-Expr (Pos):", barX + 28, statsY + 208);
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${meanPos} log2(counts+1)`, barX + 28, statsY + 246);
+      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
+      ctx.font = "bold 20px monospace";
+      ctx.fillText(`N:${r.naivePatientCount}p / T:${r.treatedPatientCount}p`, cx, plotBottom + 82);
+    });
 
-      ctx.font = "bold 26px sans-serif";
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Maximum Observed:", barX + 28, statsY + 308);
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${exprActualMax.toFixed(2)} log2(counts+1)`, barX + 28, statsY + 346);
-    }
+    // Legend
+    const legBoxW = 980;
+    const legBoxH = 64;
+    const legBoxX = (w - legBoxW) / 2;
+    const legBoxY = h - 90;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.fillRect(legBoxX, legBoxY, legBoxW, legBoxH);
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legBoxX, legBoxY, legBoxW, legBoxH);
+
+    // Item 1: Naïve
+    ctx.fillStyle = "#0d9488";
+    ctx.fillRect(legBoxX + 40, legBoxY + 20, 28, 24);
+    ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
+    ctx.font = "bold 22px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Treatment-Naïve Cohort (n=18)", legBoxX + 80, legBoxY + 39);
+
+    // Item 2: Treated
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(legBoxX + 530, legBoxY + 20, 28, 24);
+    ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
+    ctx.fillText("Neoadjuvant-Treated / RT-CRT (n=25)", legBoxX + 570, legBoxY + 39);
 
     return offscreen;
   };
 
   return (
-    <div className="flex flex-col gap-6 flex-1 w-full text-slate-300">
-      
-      {/* Disclaimer panel */}
-      <div className="bg-amber-950/30 border border-amber-900/60 rounded-xl p-4 flex gap-3 text-xs leading-relaxed text-amber-200">
-        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div>
-          <strong className="text-amber-100 block mb-0.5">Cross-Study Disclaimer & Scientific Limitations</strong>
-          GSE202051 (single-nucleus) and GSE225767 (bulk transcriptomics) represent completely independent cohorts of different patient populations. The single-nucleus data are provided here strictly as a complementary reference atlas to identify cell-type-specific localization of targets. It must not be interpreted as direct validation or co-expression verification of bulk RNA-seq treatment comparisons.
+    <div className="flex flex-col gap-6 text-slate-200">
+      {/* 1. Header with Title & Clinical Badges */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-3">
+            <Layers className="h-6 w-6 text-rose-500" />
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              Single-Nucleus Reference Atlas & Treatment Remodeling
+            </h1>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 font-mono">
+              GSE202051 · Hwang et al. (Nature Genetics 2022)
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 font-mono">
+            High-resolution single-nucleus dissection across 43 human PDAC patients (224,988 total nuclei; 20,000 stratified subset).
+          </p>
+        </div>
+
+        {/* Primary View Mode Switcher */}
+        <div className="flex items-center gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800 font-mono text-xs">
+          <button
+            onClick={() => setActiveTab("atlas")}
+            className={`px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "atlas" ? "bg-rose-500 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Cpu className="w-4 h-4" />
+            UMAP Atlas Explorer
+          </button>
+          <button
+            onClick={() => setActiveTab("treatment_comparison")}
+            className={`px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "treatment_comparison" ? "bg-teal-500 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <GitCompare className="w-4 h-4" />
+            Treatment Comparison (Pseudobulk)
+          </button>
+          <button
+            onClick={() => setActiveTab("pseudobulk_table")}
+            className={`px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "pseudobulk_table" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Table className="w-4 h-4" />
+            Sensitivity & Patient Tables
+          </button>
         </div>
       </div>
 
-      {/* Header controls & statistics */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div>
-          <h2 className="text-slate-100 font-bold text-lg flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-teal-400" />
-            PDAC Single-Nucleus Explorer — GSE202051
-          </h2>
-          <p className="text-xs text-slate-300 mt-1.5 font-medium">
-            Human PDAC single-nucleus transcriptomic atlas · 43 patients · 22,164 genes searchable
-          </p>
-          <p className="text-[10px] text-slate-500 mt-1">
-            GSE202051 · Hwang et al., Nature Genetics (2022)
-          </p>
-        </div>
+      {/* 2. Clinical Cohort Safeguard & Context Banner */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleAskCopilotSN}
-            className="bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 px-3 py-1.5 rounded-lg border border-cyan-700/60 transition font-medium text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
-            title="Ask PDACopilot about single-nucleus cell populations"
-          >
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Ask PDACopilot</span>
-          </button>
-          <div className="flex flex-wrap gap-2 text-[10px] uppercase font-mono tracking-wider">
-            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-              <span className="text-slate-500">Source Atlas</span>{" "}
-              <span className="text-slate-200 font-bold">224,988 nuclei</span>
+          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-slate-200 font-bold flex items-center gap-2">
+              <span>Patient-Aware Biological Replicate Standard</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-300">
+                18 Naïve vs. 25 Treated (100% Radiation/CRT-Exposed)
+              </span>
             </div>
-            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-              <span className="text-slate-500">Viz Subset</span>{" "}
-              <span className="text-teal-400 font-bold">20,000 nuclei</span>
-            </div>
-            <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">
-              <span className="text-slate-500">Patients</span>{" "}
-              <span className="text-slate-200 font-bold">43 cases</span>
-            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Comparisons use patient pseudobulk means (n=43 biological units) with Welch's t-test and Mann-Whitney U sensitivity testing. Treated cohorts represent independent resection specimens.
+            </p>
           </div>
         </div>
+
+        {/* Global Cohort Filter Selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 text-xs flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5 text-teal-400" />
+            Cohort Filter:
+          </span>
+          <select
+            value={selectedCohort}
+            onChange={(e) => setSelectedCohort(e.target.value as CohortFilter)}
+            className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-teal-500 cursor-pointer"
+          >
+            <option value="ALL">All Patients (n=43, 20,000 nuclei)</option>
+            <option value="NAIVE">Treatment-Naïve (n=18, 9,689 nuclei)</option>
+            <option value="TREATED">Neoadjuvant-Treated [100% RT/CRT] (n=25, 10,311 nuclei)</option>
+            <optgroup label="── Exploratory Regimen Subgroups ──">
+              <option value="CRT">Standard CRT (n=14, 6,455 nuclei)</option>
+              <option value="CRTl">CRT + Losartan [CRTl] (n=5, 1,647 nuclei)</option>
+              <option value="CRTn">CRT + Nivolumab [CRTn] (n=1, 502 nuclei)</option>
+              <option value="CRTx">CRTx [Other Regimen] (n=2, 1,037 nuclei)</option>
+              <option value="GART">GART [Gem/Abraxane+RT] (n=1, 245 nuclei)</option>
+              <option value="RT">Radiation Alone [RT] (n=1, 260 nuclei)</option>
+            </optgroup>
+            <optgroup label="── Exploratory Pathological Response ──">
+              <option value="RESP_MOD">Moderate Response (n=8)</option>
+              <option value="RESP_MIN">Minimal Response (n=11)</option>
+              <option value="RESP_POOR">Poor Response (n=6)</option>
+            </optgroup>
+          </select>
+        </div>
       </div>
 
-
-      {/* Main Grid */}
+      {/* 3. Main Content Views */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-slate-900 border border-slate-800 rounded-2xl">
-          <div className="w-10 h-10 border-2 border-t-teal-500 border-slate-700 rounded-full animate-spin" />
-          <span className="text-xs text-teal-400 font-mono">LOADING REFERENCE ATLAS...</span>
+        <div className="h-96 flex flex-col items-center justify-center bg-slate-900 border border-slate-800 rounded-2xl gap-3">
+          <div className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-mono text-slate-400">Loading GSE202051 Single-Nucleus Reference Atlas…</span>
         </div>
       ) : errorMsg ? (
-        <div className="flex items-center justify-center py-20 gap-2 text-red-400 bg-slate-900 border border-slate-800 rounded-2xl">
-          <AlertTriangle className="w-6 h-6" /><p className="text-xs">{errorMsg}</p>
+        <div className="p-6 bg-rose-950/20 border border-rose-800 rounded-2xl text-rose-400 text-xs font-mono flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5" />
+          <span>Error loading atlas: {errorMsg}</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-          
-          {/* UMAP Plot Panel */}
-          <div className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-            
-            {/* View selectors */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
-                {(["broad","level2","treatment","expression"] as ColorMode[]).map(m => (
-                  <button key={m}
-                    onClick={() => {
-                      if (m === "expression" && !activeGene) { alert("Search a gene in the sidebar to activate expression coloring."); return; }
-                      setColorMode(m);
+      ) : activeTab === "treatment_comparison" ? (
+        /* ─── TAB 2: TREATMENT-STRATIFIED COMPARISON (PSEUDOBULK) ─── */
+        <div className="flex flex-col gap-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl">
+            {/* Header with Search & Level Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-teal-400" />
+                  <h2 className="text-base font-bold text-white">
+                    Patient-Aware Treatment Comparison: <span className="text-teal-400 font-mono">{activeGene || "Select a Gene"}</span>
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400 font-mono mt-1">
+                  Lineage-specific pseudobulk expression across 18 Treatment-Naïve vs. 25 Neoadjuvant-Treated patients (100% RT/CRT).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Search Bar for Gene */}
+                <div className="relative w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={e => { setQuery(e.target.value); setShowSuggest(true); }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && suggestions.length > 0) { handleGene(suggestions[0]); setQuery(""); }
+                      if (e.key === "Escape") { setShowSuggest(false); setQuery(""); }
                     }}
-                    className={`px-3 py-1.5 text-[10px] font-semibold rounded transition-all ${colorMode === m ? "bg-teal-500 text-slate-950" : "text-slate-400 hover:text-slate-200"}`}>
-                    {m === "broad" ? "Broad Type" : m === "level2" ? "Detailed Subtype" : m === "expression" ? "Expression" : "Treatment Group"}
-                  </button>
-                ))}
-              </div>
-
-              {/* Patient select */}
-              <div className="relative">
-                <select value={selectedPid} onChange={e => setSelectedPid(e.target.value)}
-                  className="appearance-none bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-teal-500">
-                  <option value="ALL">All 43 Patients</option>
-                  {Object.keys(patients).sort().map(pid => (
-                    <option key={pid} value={pid}>
-                      {pid} ({patients[pid].treatment_group === "Treatment-naïve" ? "Naïve" : "NAT"} · {patients[pid].n_nuclei} cells)
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-              </div>
-
-              {/* Hierarchical Broad-type inspector */}
-              <div className="relative">
-                <select value={selectedBroadInspect} onChange={e => setSelectedBroadInspect(e.target.value)}
-                  className="appearance-none bg-slate-950 border border-slate-800 text-[10px] text-slate-300 rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-teal-500"
-                  title="Isolate specific lineages to view sub-annotations without visual clutter">
-                  <option value="ALL">All Cell Types</option>
-                  {Object.keys(BROAD_COLORS).map(b => (
-                    <option key={b} value={b}>Isolate {b}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-              </div>
-
-              <ExportButton
-                label="Export UMAP"
-                disabled={activeCells.length === 0}
-                onExportCSV={() => {
-                  if (activeCells.length === 0) return;
-                  exportToCSV({
-                    filename: `UMAP_GSE202051_${activeGene || colorMode}_Metadata.csv`,
-                    metadata: {
-                      dataset: "GSE202051 PDAC Single-Nucleus Atlas",
-                      module: "Single-Nucleus Explorer UMAP",
-                      colorMode: colorMode.toUpperCase(),
-                      selectedGene: activeGene || "None",
-                      patientFilter: selectedPid,
-                      lineageFilter: selectedBroadInspect,
-                      totalNuclei: String(activeCells.length),
-                    },
-                    headers: [
-                      "Cell ID",
-                      "Patient ID",
-                      "UMAP_1",
-                      "UMAP_2",
-                      "Broad Cell Type",
-                      "Sub-Lineage (Level 2)",
-                      "Treatment Group",
-                      "Treatment Regimen",
-                      "Response",
-                      ...(colorMode === "expression" && activeGene ? [`${activeGene} Log-Expression`] : []),
-                    ],
-                    rows: activeCells.map((c, i) => {
-                      const origIdx = activeOrigIdx[i];
-                      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0).toFixed(4) : "";
-                      return [
-                        c.id,
-                        c.pid,
-                        c.x.toFixed(4),
-                        c.y.toFixed(4),
-                        c.broad_celltype,
-                        c.level2,
-                        c.treatment_group,
-                        c.treatment,
-                        c.response,
-                        ...(colorMode === "expression" && activeGene ? [exprVal] : []),
-                      ];
-                    }),
-                  });
-                }}
-                onExportPNG={({ theme = "light" } = {}) => {
-                  const exportCanvas = generateHighResSingleCellCanvas(theme, 2400);
-                  exportCanvasToPNG({
-                    canvas: exportCanvas,
-                    filename: `UMAP_GSE202051_${activeGene || colorMode}.png`,
-                    theme,
-                  });
-                }}
-                onExportSVG={({ theme = "light" } = {}) => {
-                  const exportCanvas = generateHighResSingleCellCanvas(theme, 1200);
-                  exportCanvasToSVG({
-                    canvas: exportCanvas,
-                    filename: `UMAP_GSE202051_${activeGene || colorMode}.svg`,
-                    theme,
-                  });
-                }}
-              />
-
-              {selPatientInfo && (
-                <div className="text-[10px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-400 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="font-bold text-slate-200">{selectedPid}</span>
-                  {" · "}{selPatientInfo.n_nuclei} nuclei · 
-                  <span className={selPatientInfo.treatment_group === "Treatment-naïve" ? "text-teal-400" : "text-orange-400"}>
-                    {selPatientInfo.treatment_status}
-                  </span>
-                </div>
-              )}
-
-              <button onClick={() => { setZoom(1); setPanX(0); setPanY(0); }}
-                className="ml-auto text-[10px] px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors">
-                Reset Pan/Zoom
-              </button>
-            </div>
-
-            {/* Expression scale cap notice */}
-            {colorMode === "expression" && activeGene && (
-              <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2">
-                <span className="text-[10px] font-bold text-slate-200 font-mono">{activeGene}</span>
-                <div className="flex items-center gap-2 flex-1">
-                  <span className="text-[9px] text-slate-500">0.0</span>
-                  <div className="flex-1 h-2 rounded bg-gradient-to-r from-teal-500 via-amber-500 to-rose-500 opacity-80" />
-                  <span className="text-[9px] text-slate-500">{exprCap.toFixed(2)}</span>
-                </div>
-                {capped && (
-                  <span className="text-[9px] text-amber-400 bg-amber-950/30 border border-amber-900/40 rounded px-2 py-0.5 shrink-0">
-                    Color scale capped at 99th percentile of nonzero expression for visualization (Max: {exprActualMax.toFixed(2)})
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* General treatment warning */}
-            {colorMode === "treatment" && (
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] text-slate-400 leading-relaxed">
-                <span className="font-semibold text-slate-300">Treatment group terminology context:</span> Groups represent patients designated as Treatment-naïve (18 cases) versus Neoadjuvant-treated (25 cases). Regimens within the treated cohort were heterogeneous (combination regimens, radiotherapies, etc.). This UMAP is to display spatial clusters and is not designed to compare treatment specific efficacy.
-              </div>
-            )}
-
-            {/* UMAP Canvas container */}
-            <div ref={containerRef} className="flex-1 min-h-[440px] relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800/80">
-              <canvas ref={canvasRef}
-                onMouseMove={onMouseMove}
-                onMouseDown={e => { dragging.current = true; dragStart.current = { x: e.clientX, y: e.clientY }; }}
-                onMouseUp={() => { dragging.current = false; }}
-                onMouseLeave={() => { dragging.current = false; setHovered(null); }}
-                onWheel={onWheel}
-                className="w-full h-full cursor-grab active:cursor-grabbing" />
-
-              {/* Hover Tooltip */}
-              {hovered && (
-                <div className="absolute pointer-events-none bg-slate-950/95 border border-slate-700 rounded-xl p-3 shadow-2xl text-[10px] z-50 max-w-[240px]"
-                  style={{ left: Math.min(tipPos.x + 14, dims.w - 250), top: Math.max(tipPos.y - 92, 8) }}>
-                  <div className="font-bold text-teal-400 mb-1.5 pb-1 border-b border-slate-800 flex items-center gap-1.5 truncate">
-                    <span>{hovered.cell.pid}</span>
-                    <span className="text-slate-500">·</span>
-                    <span className="truncate">{hovered.cell.level2}</span>
-                  </div>
-                  <div className="text-slate-400"><span className="text-slate-500">Broad Type:</span> {hovered.cell.broad_celltype}</div>
-                  <div className="text-slate-400"><span className="text-slate-500">Treatment:</span> {hovered.cell.treatment}</div>
-                  <div className="text-slate-400"><span className="text-slate-500">Response:</span> {hovered.cell.response}</div>
-                  {colorMode === "expression" && activeGene && exprVec && (
-                    <div className="mt-1.5 pt-1.5 border-t border-slate-800 font-bold text-amber-400 font-mono">
-                      {activeGene} Log-Expr: {(exprVec[hovered.origIdx] ?? 0).toFixed(3)}
+                    placeholder="Search gene (e.g. NFE2L2, EPCAM)…"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-teal-500"
+                  />
+                  {showSuggest && suggestions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl max-h-48 overflow-y-auto">
+                      {suggestions.map((g) => (
+                        <button key={g} onClick={() => { handleGene(g); setQuery(""); setShowSuggest(false); }}
+                          className="w-full text-left px-3 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white">
+                          {g}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-              )}
+
+                {/* Level Switcher */}
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 font-mono text-xxs">
+                  <button
+                    onClick={() => setComparisonLevel("broad")}
+                    className={`px-2.5 py-1.5 rounded font-semibold transition cursor-pointer ${
+                      comparisonLevel === "broad" ? "bg-teal-500 text-white shadow" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Broad Lineages (n=6)
+                  </button>
+                  <button
+                    onClick={() => setComparisonLevel("level2")}
+                    className={`px-2.5 py-1.5 rounded font-semibold transition cursor-pointer ${
+                      comparisonLevel === "level2" ? "bg-teal-500 text-white shadow" : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Subtypes (Level 2)
+                  </button>
+                </div>
+
+                <ExportButton
+                  disabled={!activeGene || pseudobulkResults.length === 0}
+                  onExportCSV={handleDownloadPseudobulkCSV}
+                  onExportPNG={({ theme = "light" } = {}) => {
+                    const canvas = generateHighResComparisonCanvas(theme, 2400);
+                    exportCanvasToPNG({ canvas, filename: `GSE202051_${activeGene}_Pseudobulk_Comparison.png`, theme });
+                  }}
+                  onExportSVG={({ theme = "light" } = {}) => {
+                    const canvas = generateHighResComparisonCanvas(theme, 1200);
+                    exportCanvasToSVG({ canvas, filename: `GSE202051_${activeGene}_Pseudobulk_Comparison.svg`, theme });
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Legend display */}
-            {legendEntries.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-1">
-                {legendEntries.map(([label, color]) => (
-                  <div key={label} className="flex items-center gap-1.5 text-[9px] text-slate-400">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="truncate max-w-[120px]">{label}</span>
+            {/* Visual Comparative Cards & Bar Display */}
+            {activeGene && pseudobulkResults.length > 0 ? (
+              <div className="flex flex-col gap-6">
+                {/* Cohort Summary Badges */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
+                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treatment-Naïve Cohort</span>
+                    <span className="text-lg font-bold text-teal-400">18 Patients</span>
+                    <span className="text-xxs text-slate-500">9,689 in-tissue nuclei</span>
                   </div>
-                ))}
-                {colorMode === "level2" && (
-                  <span className="text-[9px] text-slate-600 italic">+{Object.keys(LEVEL2_COLORS).length - 18} more subtypes</span>
-                )}
+                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Neoadjuvant-Treated Cohort</span>
+                    <span className="text-lg font-bold text-orange-400">25 Patients</span>
+                    <span className="text-xxs text-slate-500">10,311 nuclei (100% RT/CRT)</span>
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Max Lineage Effect Size</span>
+                    <span className="text-lg font-bold text-rose-400">
+                      {pseudobulkResults[0]?.log2FC.toFixed(2)} log2FC
+                    </span>
+                    <span className="text-xxs text-slate-500">{pseudobulkResults[0]?.cellType}</span>
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Significant Lineages (FDR &lt; 0.05)</span>
+                    <span className="text-lg font-bold text-indigo-400">
+                      {pseudobulkResults.filter(r => r.isSignificant).length} / {pseudobulkResults.length}
+                    </span>
+                    <span className="text-xxs text-slate-500">Patient-level Welch test</span>
+                  </div>
+                </div>
+
+                {/* Lineage Comparison Bars */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col gap-4">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
+                    <span className="flex items-center gap-3">
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-teal-500"></span> Treatment-Naïve (n=18)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-500"></span> Neoadjuvant-Treated [RT/CRT] (n=25)</span>
+                    </span>
+                    <span className="text-xxs text-slate-500">Error bars represent ± Standard Error (SE) across patient means</span>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {pseudobulkResults.map((r) => {
+                      const maxBar = Math.max(...pseudobulkResults.map(x => Math.max(x.naiveMean + x.naiveSE, x.treatedMean + x.treatedSE)), 1.0);
+                      const naivePctWidth = Math.min(100, (r.naiveMean / maxBar) * 100);
+                      const treatPctWidth = Math.min(100, (r.treatedMean / maxBar) * 100);
+
+                      return (
+                        <div key={r.cellType} className="bg-slate-900/60 border border-slate-850 rounded-xl p-4 flex flex-col gap-2.5">
+                          <div className="flex items-center justify-between text-xs font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BROAD_COLORS[r.cellType] || LEVEL2_COLORS[r.cellType] || "#64748b" }} />
+                              <span className="font-bold text-slate-200 text-sm">{r.cellType}</span>
+                              <span className="text-xxs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                {r.naivePatientCount} Naïve pts · {r.treatedPatientCount} Treated pts
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className={`text-xs font-bold font-mono ${r.deltaPseudobulk > 0 ? "text-emerald-400" : (r.deltaPseudobulk < 0 ? "text-rose-400" : "text-slate-400")}`}>
+                                Δ {r.deltaPseudobulk > 0 ? `+${r.deltaPseudobulk.toFixed(3)}` : r.deltaPseudobulk.toFixed(3)} ({r.log2FC > 0 ? `+${r.log2FC.toFixed(2)}` : r.log2FC.toFixed(2)} log2FC)
+                              </span>
+                              <span className={`text-xxs px-2 py-0.5 rounded font-mono ${r.isSignificant ? "bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold" : "bg-slate-800 text-slate-500"}`}>
+                                {r.isSignificant ? `q = ${r.qValue.toExponential(1)}*` : `p = ${r.pValueWelch.toFixed(2)}`}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Dual Bars */}
+                          <div className="flex flex-col gap-1.5 font-mono text-xxs">
+                            {/* Naive Bar */}
+                            <div className="flex items-center gap-2">
+                              <span className="w-16 text-slate-400 shrink-0">Naïve</span>
+                              <div className="flex-1 bg-slate-950 rounded-full h-3.5 overflow-hidden flex items-center p-0.5">
+                                <div className="bg-teal-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(2, naivePctWidth)}%` }} />
+                              </div>
+                              <span className="w-24 text-right text-teal-400 font-bold">{r.naiveMean.toFixed(3)} ± {r.naiveSE.toFixed(3)}</span>
+                              <span className="w-16 text-right text-slate-500">({r.naivePctExpressing.toFixed(1)}%)</span>
+                            </div>
+
+                            {/* Treated Bar */}
+                            <div className="flex items-center gap-2">
+                              <span className="w-16 text-slate-400 shrink-0">Treated</span>
+                              <div className="flex-1 bg-slate-950 rounded-full h-3.5 overflow-hidden flex items-center p-0.5">
+                                <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(2, treatPctWidth)}%` }} />
+                              </div>
+                              <span className="w-24 text-right text-orange-400 font-bold">{r.treatedMean.toFixed(3)} ± {r.treatedSE.toFixed(3)}</span>
+                              <span className="w-16 text-right text-slate-500">({r.treatedPctExpressing.toFixed(1)}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-xl p-6 text-center text-xs text-slate-500 gap-2">
+                <HelpCircle className="w-8 h-8 text-slate-700 animate-pulse" />
+                <span>Search any gene above (e.g. NFE2L2, EPCAM, COL1A1) to compute patient-level pseudobulk comparisons.</span>
               </div>
             )}
           </div>
+        </div>
+      ) : activeTab === "pseudobulk_table" ? (
+        /* ─── TAB 3: STATISTICAL SENSITIVITY & PATIENT TABLES ─── */
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Table className="w-5 h-5 text-amber-400" />
+                <h2 className="text-base font-bold text-white">
+                  Statistical Sensitivity Table: <span className="text-amber-400">{activeGene || "Select a Gene"}</span>
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Parametric (Welch's t-test) vs. Non-parametric (Mann-Whitney U) sensitivity testing with Benjamini-Hochberg FDR.
+              </p>
+            </div>
 
-          {/* Gene Search & Cell Type Summaries Panel */}
-          <div className="flex flex-col gap-5">
-            
-            {/* Search Card */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                Single-Nucleus Gene Expression
-              </label>
-              
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xxs">
+                <button
+                  onClick={() => setComparisonLevel("broad")}
+                  className={`px-2.5 py-1.5 rounded font-semibold transition cursor-pointer ${
+                    comparisonLevel === "broad" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Broad Lineages
+                </button>
+                <button
+                  onClick={() => setComparisonLevel("level2")}
+                  className={`px-2.5 py-1.5 rounded font-semibold transition cursor-pointer ${
+                    comparisonLevel === "level2" ? "bg-amber-500 text-slate-950 shadow" : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  Subtypes (Level 2)
+                </button>
+              </div>
+
+              <ExportButton
+                disabled={!activeGene || pseudobulkResults.length === 0}
+                onExportCSV={handleDownloadPseudobulkCSV}
+              />
+            </div>
+          </div>
+
+          {activeGene && pseudobulkResults.length > 0 ? (
+            <div className="overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-950 text-slate-400 text-xxs uppercase tracking-wider border-b border-slate-800">
+                    <th className="p-3">Cell Lineage</th>
+                    <th className="p-3 text-center">Naïve (Pts / Nuc)</th>
+                    <th className="p-3 text-center">Treated (Pts / Nuc)</th>
+                    <th className="p-3 text-right">Naïve Mean ± SE</th>
+                    <th className="p-3 text-right">Treated Mean ± SE</th>
+                    <th className="p-3 text-right">Δ Pseudobulk</th>
+                    <th className="p-3 text-right">log2FC</th>
+                    <th className="p-3 text-right">Cohen's d (95% CI)</th>
+                    <th className="p-3 text-right">Welch t (p)</th>
+                    <th className="p-3 text-right">Mann-Whitney (p)</th>
+                    <th className="p-3 text-right">FDR (q)</th>
+                    <th className="p-3 text-center">Trend</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-850">
+                  {pseudobulkResults.map((r) => (
+                    <tr key={r.cellType} className="hover:bg-slate-850/50 transition">
+                      <td className="p-3 font-bold text-slate-200 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: BROAD_COLORS[r.cellType] || LEVEL2_COLORS[r.cellType] || "#64748b" }} />
+                        {r.cellType}
+                      </td>
+                      <td className="p-3 text-center text-slate-400">{r.naivePatientCount}p ({r.naiveNucleusCount})</td>
+                      <td className="p-3 text-center text-slate-400">{r.treatedPatientCount}p ({r.treatedNucleusCount})</td>
+                      <td className="p-3 text-right text-teal-400">{r.naiveMean.toFixed(3)} ± {r.naiveSE.toFixed(3)}</td>
+                      <td className="p-3 text-right text-orange-400">{r.treatedMean.toFixed(3)} ± {r.treatedSE.toFixed(3)}</td>
+                      <td className={`p-3 text-right font-bold ${r.deltaPseudobulk > 0 ? "text-emerald-400" : (r.deltaPseudobulk < 0 ? "text-rose-400" : "text-slate-400")}`}>
+                        {r.deltaPseudobulk > 0 ? `+${r.deltaPseudobulk.toFixed(3)}` : r.deltaPseudobulk.toFixed(3)}
+                      </td>
+                      <td className="p-3 text-right text-slate-300 font-bold">{r.log2FC > 0 ? `+${r.log2FC.toFixed(2)}` : r.log2FC.toFixed(2)}</td>
+                      <td className="p-3 text-right text-slate-400 text-xxs">
+                        {r.cohensD.toFixed(2)} [{r.ci95Lower.toFixed(2)}, {r.ci95Upper.toFixed(2)}]
+                      </td>
+                      <td className="p-3 text-right text-slate-300">{r.pValueWelch.toExponential(2)}</td>
+                      <td className="p-3 text-right text-slate-400">{r.pValueMannWhitney.toExponential(2)}</td>
+                      <td className={`p-3 text-right font-bold ${r.isSignificant ? "text-rose-400" : "text-slate-500"}`}>
+                        {r.qValue.toExponential(2)}{r.isSignificant ? "*" : ""}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className={`text-xxs px-2 py-0.5 rounded font-bold ${
+                          r.direction === "UP" ? "bg-emerald-500/20 text-emerald-300" : 
+                          r.direction === "DOWN" ? "bg-rose-500/20 text-rose-300" : "bg-slate-800 text-slate-500"
+                        }`}>
+                          {r.direction}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+              Please select a target gene to generate the sensitivity matrix.
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ─── TAB 1: UMAP ATLAS EXPLORER (EXISTING POOLED ATLAS) ─── */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Visualizer Area */}
+          <div className="lg:col-span-8 flex flex-col gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
+              {/* UMAP Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-mono">Color by:</span>
+                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 font-mono text-xxs">
+                    <button
+                      onClick={() => setColorMode("broad")}
+                      className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
+                        colorMode === "broad" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Broad Type
+                    </button>
+                    <button
+                      onClick={() => setColorMode("level2")}
+                      className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
+                        colorMode === "level2" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Subtypes (L2)
+                    </button>
+                    <button
+                      onClick={() => setColorMode("treatment")}
+                      className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
+                        colorMode === "treatment" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Treatment
+                    </button>
+                    {activeGene && (
+                      <button
+                        onClick={() => setColorMode("expression")}
+                        className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
+                          colorMode === "expression" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {activeGene} Expr
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Patient Filter Dropdown */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 font-mono">Patient:</span>
+                  <select
+                    value={selectedPid}
+                    onChange={e => setSelectedPid(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-rose-500 cursor-pointer"
+                  >
+                    <option value="ALL">All Cohort Patients (n=43)</option>
+                    <optgroup label="── Treatment-Naïve (n=18) ──">
+                      {Object.keys(patients).filter(p => p.startsWith("U")).map(p => (
+                        <option key={p} value={p}>{p} ({patients[p].treatment_group})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="── Neoadjuvant-Treated / RT-CRT (n=25) ──">
+                      {Object.keys(patients).filter(p => p.startsWith("T")).map(p => (
+                        <option key={p} value={p}>{p} ({patients[p].treatment_status})</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              {/* UMAP Canvas */}
+              <div ref={containerRef} className="relative w-full h-[520px] bg-slate-950 rounded-xl overflow-hidden cursor-crosshair border border-slate-850">
+                <canvas
+                  ref={canvasRef}
+                  onMouseMove={onMouseMove}
+                  onWheel={onWheel}
+                  onMouseDown={e => { dragging.current = true; dragStart.current = { x: e.clientX, y: e.clientY }; }}
+                  onMouseUp={() => { dragging.current = false; }}
+                  onMouseLeave={() => { dragging.current = false; setHovered(null); }}
+                  className="w-full h-full"
+                />
+
+                {/* Tooltip */}
+                {hovered && (
+                  <div
+                    style={{ left: tipPos.x + 12, top: tipPos.y + 12 }}
+                    className="absolute z-50 pointer-events-none bg-slate-900/95 border border-slate-700 text-slate-100 rounded-lg p-2.5 shadow-2xl text-xs font-mono backdrop-blur flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-teal-400">
+                      <span>{hovered.cell.broad_celltype}</span>
+                      <span className="text-slate-500">·</span>
+                      <span className="text-white">{hovered.cell.level2}</span>
+                    </div>
+                    <div className="text-slate-400 text-xxs">
+                      Patient: <span className="text-slate-200">{hovered.cell.pid}</span> ({hovered.cell.treatment_group} · {hovered.cell.treatment})
+                    </div>
+                    {hovered.cell.response && (
+                      <div className="text-slate-400 text-xxs">
+                        Response: <span className="text-amber-300">{hovered.cell.response}</span>
+                      </div>
+                    )}
+                    {activeGene && exprVec && (
+                      <div className="text-rose-400 text-xxs font-bold pt-1 border-t border-slate-800">
+                        {activeGene}: {(exprVec[hovered.origIdx] ?? 0).toFixed(3)} log1p
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Legend & Stats Footer */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400 pt-2">
+                <span>Displaying: <strong className="text-slate-200">{activeCells.length.toLocaleString()}</strong> nuclei in view</span>
+                <span className="text-xxs text-slate-500">Pan: Click + Drag · Zoom: Mouse Wheel</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sidebar: Search & Gene Summary */}
+          <div className="lg:col-span-4 flex flex-col gap-4">
+            {/* Search Box */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white uppercase font-mono tracking-wider">Gene Search</span>
+                {activeGene && (
+                  <span className="text-xxs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono font-bold">
+                    {activeGene}
+                  </span>
+                )}
+              </div>
+
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                  {loadingGene
-                    ? <div className="w-3.5 h-3.5 border border-t-teal-500 border-slate-600 rounded-full animate-spin" />
-                    : <Search className="w-3.5 h-3.5" />}
-                </span>
-                <input type="text" value={query}
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={query}
                   onChange={e => { setQuery(e.target.value); setShowSuggest(true); }}
                   onKeyDown={e => {
                     if (e.key === "Enter" && suggestions.length > 0) { handleGene(suggestions[0]); setQuery(""); }
                     if (e.key === "Escape") { setShowSuggest(false); setQuery(""); }
                   }}
-                  placeholder="Search any gene (e.g. KRAS, KRT19, GATA6)…"
-                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-teal-500 transition-colors"
+                  placeholder="Search any gene (e.g. KRAS, NFE2L2, EPCAM)…"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-rose-500"
                 />
-                {query && (
-                  <button onClick={() => { setQuery(""); setSuggestions([]); setShowSuggest(false); }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-
-                {/* Autocomplete dropdown */}
                 {showSuggest && suggestions.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 mt-1.5 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl max-h-52 overflow-y-auto">
-                    {suggestions.map((g, idx) => (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl max-h-48 overflow-y-auto">
+                    {suggestions.map((g) => (
                       <button key={g} onClick={() => { handleGene(g); setQuery(""); setShowSuggest(false); }}
-                        className="w-full text-left px-4 py-2.5 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white transition-colors border-b border-slate-900 last:border-0">
-                        <span className="text-teal-400 font-bold">{g.slice(0, query.length)}</span>
-                        {g.slice(query.length)}
-                        {idx === 0 && <span className="ml-2 text-[8px] text-slate-600 uppercase font-mono">↵ Enter</span>}
+                        className="w-full text-left px-3 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white">
+                        {g}
                       </button>
                     ))}
                   </div>
                 )}
-
-                {/* Error mismatch notice */}
-                {query && suggestions.length === 0 && query.trim().length > 0 && (
-                  <div className="mt-2 text-[10px] text-amber-500/90 px-1 flex gap-1 items-center">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    <span>Gene not available in the processed GSE202051 atlas.</span>
-                  </div>
-                )}
               </div>
 
-              {/* Active display label */}
-              {activeGene && (
-                <div className="mt-3 p-3 bg-slate-950 border border-slate-850 rounded-xl flex justify-between items-center text-xs">
-                  <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Selected Gene</span>
-                    <span className="font-mono font-bold text-slate-100 text-sm">{activeGene}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Session Cache</span>
-                    <span className="font-mono text-slate-400">{exprCache.size}/{MAX_CACHE}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Methods info box */}
-              <div className="mt-3 bg-slate-950/40 border border-slate-850 rounded-lg px-3 py-2 text-[9px] text-slate-500 leading-relaxed">
-                <strong className="text-slate-400">Processed expression (log-normalized, log1p scale)</strong>
-                <p className="mt-0.5">
-                  Expression files use a Float16 near-lossless representation to optimize page loads. Raw source values are stored at high precision.
-                </p>
-              </div>
-            </div>
-
-            {/* Summaries Panel - Primary and Secondary Metrics corrected */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex-1 flex flex-col">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h3 className="text-slate-100 text-xs font-semibold flex items-center gap-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-                  Cell-Type Expression Summary
-                  {selectedPid !== "ALL" && (
-                    <span className="text-[9px] bg-slate-950 px-2 py-0.5 border border-slate-800 rounded text-teal-400 font-mono">{selectedPid}</span>
-                  )}
-                </h3>
-
-                <ExportButton
-                  disabled={!activeGene || dotData.length === 0}
-                  disabledTooltip="Select a gene before exporting."
-                  onExportCSV={handleDownloadCSV}
-                  onExportCellMetadata={handleExportCellMetadata}
-                  onExportExpressionMatrix={handleExportExpressionMatrix}
-                />
-              </div>
-
-              {activeGene ? (
-                <div className="flex flex-col gap-0 flex-1 overflow-y-auto max-h-[460px] pr-1">
-                  
-                  {/* Corrected column headers */}
-                  <div className="grid grid-cols-12 text-[8px] font-bold text-slate-500 uppercase border-b border-slate-800 pb-1.5 mb-2 tracking-wider">
-                    <div className="col-span-4">Subtype (L2)</div>
-                    <div className="col-span-2 text-center">N</div>
-                    <div className="col-span-2 text-center">Expr%</div>
-                    <div className="col-span-2 text-center" title="Mean expression across all nuclei including zeros (Primary metric)">Mean</div>
-                    <div className="col-span-2 text-center text-slate-600" title="Mean expression among expressing nuclei only (Secondary metric)">Mean(Pos)</div>
-                  </div>
-
-                  {/* Rows */}
-                  {dotData.map(row => (
-                    <div key={row.cellType}
-                      className={`grid grid-cols-12 items-center py-1.5 text-[10px] border-b border-slate-900/60 last:border-0 ${row.tooSmall ? "opacity-50" : ""}`}>
-                      <div className="col-span-4 flex items-center gap-1.5 truncate">
-                        {row.tooSmall && (
-                          <span title="Extremely rare population in active view">
-                            <AlertTriangle className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                          </span>
-                        )}
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: LEVEL2_COLORS[row.cellType] || "#64748b" }} />
-                        <span className="truncate text-slate-300" title={row.cellType}>{row.cellType}</span>
+              {/* Exploratory Cell-Type Summary */}
+              {activeGene && dotData.length > 0 && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider">Top Expressing Subtypes (Exploratory)</span>
+                  <div className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-1">
+                    {dotData.slice(0, 6).map(r => (
+                      <div key={r.cellType} className="flex items-center justify-between py-1 border-b border-slate-850 text-xs font-mono">
+                        <span className="truncate text-slate-300">{r.cellType}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-teal-400 font-bold">{r.meanAll.toFixed(2)}</span>
+                          <span className="text-xxs text-slate-500">({r.pct.toFixed(0)}%)</span>
+                        </div>
                       </div>
-                      <div className="col-span-2 text-center text-slate-500 font-mono text-[9px]">{row.total}</div>
-                      <div className="col-span-2 flex justify-center items-center">
-                        <span className="rounded-full border border-slate-800/80 inline-block"
-                          style={{
-                            width:  `${Math.max(5, 3 + 10 * row.pct / 100)}px`,
-                            height: `${Math.max(5, 3 + 10 * row.pct / 100)}px`,
-                            backgroundColor: exprColor(row.meanAll, exprCap), // Colored by mean of ALL nuclei
-                          }} title={`${row.pct.toFixed(1)}% expressing cells`} />
-                      </div>
-                      <div className="col-span-2 text-center font-mono font-bold text-slate-200 text-[10px]" title="Mean across all nuclei">
-                        {row.meanAll.toFixed(2)}
-                      </div>
-                      <div className="col-span-2 text-center font-mono text-slate-500 text-[9px]" title="Mean among expressing only">
-                        {row.meanPos.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Warning notices */}
-                  {dotData.some(r => r.tooSmall) && (
-                    <p className="text-[9px] text-amber-500/70 mt-2.5 italic px-1 leading-relaxed">
-                      ⚠ Interpret very small cell populations (N &lt; 10) cautiously.
-                    </p>
-                  )}
-
-                  <div className="mt-4 pt-2 border-t border-slate-800 text-[8px] text-slate-500 flex justify-between items-center leading-relaxed">
-                    <span>Dot size = % expressing · Color = mean (all nuclei)</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span>Low</span>
-                      <div className="w-12 h-1.5 rounded bg-gradient-to-r from-teal-500 via-amber-500 to-rose-500" />
-                      <span>High</span>
-                    </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-xl p-6 text-center text-xs text-slate-500 min-h-[180px] gap-2">
-                  <HelpCircle className="w-8 h-8 text-slate-700 animate-pulse" />
-                  <span>Search any gene in the sidebar input to compute expression breakdowns and populate coordinates</span>
                 </div>
               )}
             </div>
@@ -1349,41 +1277,27 @@ export default function SingleNucleusExplorer() {
         </div>
       )}
 
-      {/* Dataset & Methods detailed box */}
-      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-        <h4 className="text-slate-100 text-xs font-semibold flex items-center gap-2 pb-2 border-b border-slate-800">
-          <Info className="w-3.5 h-3.5 text-blue-400" />
-          Single-Nucleus Reference Atlas Information & Methods
+      {/* 4. Methods & Citation Footer */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 text-xs font-mono text-slate-400 shadow-xl">
+        <h4 className="font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Info className="w-4 h-4 text-blue-400" />
+          Single-Nucleus Reference Atlas Information & Methods (GSE202051)
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-slate-400">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[11px] leading-relaxed">
           <div>
-            <strong className="text-slate-200 block mb-1">Study Citation</strong>
-            <p className="leading-relaxed">
-              <strong>Hwang et al., Nature Genetics (2022)</strong><br />
-              <em>"Refined molecular taxonomy and treatment remodeling of pancreatic cancer using single-cell resolution"</em><br />
-              <span className="text-[10px] text-slate-500 font-mono block mt-1">GEO: GSE202051 · DOI: 10.1038/s41588-022-01134-8</span>
-              <span className="text-[10px] text-slate-500 font-mono block mt-0.5">Resource version: 1.0</span>
-            </p>
+            <strong className="text-slate-300 block mb-1">Study Provenance</strong>
+            <p>Hwang et al., <em>Nature Genetics</em> (2022). High-resolution single-nucleus dissection of untreated vs. neoadjuvant-treated PDAC resections.</p>
           </div>
-          <div className="border-l border-slate-800 pl-6">
-            <strong className="text-slate-200 block mb-1">Visualization Subsampling Strategy</strong>
-            <p className="leading-relaxed">
-              The web explorer uses a stratified 20,000-nucleus subset representing all 43 patients and broad cell lineages (seed=42). This ensures highly interactive visual representation and fast page loads.
-              <span className="text-[10px] text-slate-500 block mt-1.5">
-                Expression values are stored as Float16 to optimize network transfers. Statistical analyses, DEG calculations, or quantitative comparisons must use the full-precision Float32 source atlas.
-              </span>
-            </p>
+          <div className="border-l border-slate-800 pl-4">
+            <strong className="text-slate-300 block mb-1">Patient Pseudobulk Standard</strong>
+            <p>Biological replicates are defined at the patient level ($n=43$), with cell-type-specific aggregation to prevent false statistical inflation caused by single-cell clustering.</p>
           </div>
-          <div className="border-l border-slate-800 pl-6 text-amber-200/90 bg-amber-950/10 p-3 rounded-lg border border-amber-900/20">
-            <strong className="text-amber-100 block mb-1 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Important Cohort Differences
-            </strong>
-            <p className="leading-relaxed text-[11px]">
-              GSE202051 represents an independent cohort and should not be used as direct cellular validation of fold changes in GSE225767. Additionally, the clinical response markers shown in tooltips correspond to overall patient-level annotations; they do not represent individual cell-level phenotypes.
-            </p>
+          <div className="border-l border-slate-800 pl-4">
+            <strong className="text-slate-300 block mb-1">Radiation-Exposed Architecture</strong>
+            <p>All 25 neoadjuvant-treated patients in GSE202051 received documented radiation therapy (14 CRT, 5 CRT+Losartan, 2 CRT+Nivolumab, 2 CRTx, 1 GART, 1 RT).</p>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
