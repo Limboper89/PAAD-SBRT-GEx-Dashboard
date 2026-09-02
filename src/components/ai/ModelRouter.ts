@@ -440,13 +440,28 @@ export function formatBioPortalDirectResponse(
   // Case D: Single Nucleus
   if (d.gse202051) {
     const sn = d.gse202051 as any;
-    const gene = plan.entities.genes[0] || "Target Gene";
+    const gene = plan.entities.genes[0] || sn.gene || "Target Gene";
+    
+    if (sn.pseudobulkResults && sn.pseudobulkResults.length > 0) {
+      let md = `### 🧬 Single-Nucleus Treatment-Stratified Pseudobulk: ${gene} (GSE202051)\n\n`;
+      md += `* **Clinical Cohort:** Treatment-Naïve Baseline ($n=18$) vs. Neoadjuvant-Treated / CRT ($n=25$, 100% Radiation-Exposed)\n`;
+      md += `* **Statistical Unit:** Patient Pseudobulk Means across $43$ independent patients\n\n`;
+      md += `| Cell Lineage | Naïve Mean ± SE (n=18) | Treated Mean ± SE (n=25) | log2FC | Welch t (p) | FDR (q) | Trend |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+      
+      sn.pseudobulkResults.forEach((r: any) => {
+        md += `| **${r.cellType}** | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |\n`;
+      });
+      
+      md += `\n*Note: All 25 treated patients in GSE202051 received documented radiation therapy (14 CRT, 5 CRT+Losartan, 2 CRT+Nivolumab, 2 CRTx, 1 GART, 1 RT).*`;
+      md += `\n\n[Action: OPEN_SINGLE_NUCLEUS]`;
+      return md;
+    }
+
     const topCell = sn.broadCellTypes?.[0];
     let md = `### 🧬 Single-Nucleus Transcriptomics: ${gene} (GSE202051)\n\n`;
-    md += `* **Highest Expressing Lineage:** **${sn.topLineage || topCell?.type || 'Epithelial / Tumor Cells'}**\n`;
-    md += `* **Mean Expression:** \`${topCell?.meanExpr?.toFixed(2) || '1.85'}\` log2(counts+1)\n`;
-    md += `* **Percentage Expressing:** \`${(topCell?.pctPositive ? topCell.pctPositive * 100 : 42.5).toFixed(1)}%\` of nuclei\n`;
-    md += `* **Atlas Scope:** ${sn.totalNuclei ? sn.totalNuclei.toLocaleString() : '224,988'} single nuclei across PDAC tumors.\n\n`;
+    md += `* **Highest Expressing Lineage:** **${sn.topLineage || topCell?.type || 'Epithelial / Ductal Cells'}**\n`;
+    md += `* **Atlas Scope:** ${sn.totalNuclei ? sn.totalNuclei.toLocaleString() : '224,988'} single nuclei across 43 PDAC patients (18 Naïve vs 25 Treated).\n\n`;
     md += `[Action: OPEN_SINGLE_NUCLEUS]`;
     return md;
   }

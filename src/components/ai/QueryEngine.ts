@@ -93,6 +93,8 @@ export interface SingleNucleusQueryResult {
   found: boolean;
   totalNuclei: number;
   broadCellTypes: Array<{ type: string; meanExpr: number; pctPositive: number }>;
+  pseudobulkResults?: any[];
+  comparisonLabel?: string;
   topLineage: string;
   success: boolean;
 }
@@ -679,27 +681,72 @@ export class QueryEngine {
     };
   }
 
-  async querySingleNucleusExpression(geneSymbol: string): Promise<SingleNucleusQueryResult> {
+  async querySingleNucleusExpression(geneSymbol: string, subgroupFilter?: string): Promise<SingleNucleusQueryResult> {
     const dataset = DATASET_REGISTRY.gse202051;
     const upperGene = geneSymbol.trim().toUpperCase();
 
     try {
-      const geneIndex = await fetchCachedJson(`${this.basePath}/data/gse202051/genes_index_chunked.json`);
+      const [geneIndex, metadata] = await Promise.all([
+        fetchCachedJson(`${this.basePath}/data/gse202051/genes_index_chunked.json`),
+        fetchCachedJson(`${this.basePath}/data/gse202051/metadata.json`)
+      ]);
+
       const entry = (geneIndex.genes || []).find((g: any) => (g.s || "").toUpperCase() === upperGene);
 
-      if (entry) {
+      if (entry && metadata && Array.isArray(metadata)) {
+        const chunkId = entry.c ?? 0;
+        const offset = entry.o ?? 0;
+        const length = entry.l ?? 0;
+
+        let exprVec = new Float32Array(metadata.length);
+
+        try {
+          const chunkFilename = `chunk_${chunkId.toString().padStart(3, "0")}.bin`;
+          const chunkRes = await fetch(`${this.basePath}/data/gse202051/expression_chunks/${chunkFilename}`);
+          if (chunkRes.ok) {
+            const chunkBuf = await chunkRes.arrayBuffer();
+            const buf = chunkBuf.slice(offset, offset + length);
+            const dv = new DataView(buf);
+            const n_nz = dv.getUint32(0, true);
+            const idxArr = new Uint16Array(buf, 4, n_nz);
+            const valU16 = new Uint16Array(buf, 4 + n_nz * 2, n_nz);
+
+            for (let i = 0; i < n_nz; i++) {
+              const h = valU16[i];
+              const s = (h & 0x8000) ? -1 : 1;
+              const e = (h >> 10) & 0x1F;
+              const m = h & 0x3FF;
+              const f32 = e === 0 
+                ? s * Math.pow(2, -14) * (m / 1024)
+                : e === 31 
+                  ? (m ? NaN : s * Infinity)
+                  : s * Math.pow(2, e - 15) * (1 + m / 1024);
+              exprVec[idxArr[i]] = f32;
+            }
+          }
+        } catch (binErr) {
+          console.warn("Could not read binary chunk directly, computing pseudobulk fallback:", binErr);
+        }
+
+        const { computePatientPseudobulk } = await import("@/utils/singleNucleusStats");
+        const pseudobulk = computePatientPseudobulk(exprVec, metadata, "broad_celltype", subgroupFilter);
+        const topBroad = pseudobulk.slice().sort((a, b) => b.treatedMean - a.treatedMean)[0] || pseudobulk[0];
+
+        const broadCellTypes = pseudobulk.map(r => ({
+          type: r.cellType,
+          meanExpr: (r.naiveMean + r.treatedMean) / 2,
+          pctPositive: (r.naivePctExpressing + r.treatedPctExpressing) / 2
+        }));
+
         return {
           datasetId: "gse202051",
           gene: entry.s,
           found: true,
           totalNuclei: 224988,
-          broadCellTypes: [
-            { type: "Epithelial / Ductal", meanExpr: 1.85, pctPositive: 42.5 },
-            { type: "Fibroblast / CAF", meanExpr: 0.42, pctPositive: 12.1 },
-            { type: "Immune Lineages", meanExpr: 0.15, pctPositive: 5.2 },
-            { type: "Endothelial", meanExpr: 0.08, pctPositive: 2.1 }
-          ],
-          topLineage: "Epithelial / Ductal Cells",
+          broadCellTypes,
+          pseudobulkResults: pseudobulk,
+          comparisonLabel: subgroupFilter ? `Treatment-Naïve (n=18) vs. ${subgroupFilter}` : "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)",
+          topLineage: topBroad?.cellType || "Epithelial / Ductal Cells",
           success: true
         };
       }

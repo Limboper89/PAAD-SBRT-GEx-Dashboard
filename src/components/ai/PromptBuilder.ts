@@ -255,10 +255,23 @@ export function buildContextualPrompt(
 
   if (executionResult.datasetResults.gse202051) {
     const sn: any = executionResult.datasetResults.gse202051;
-    if (sn.found && sn.metrics) {
-      toolDataText += `\n[DETERMINISTIC SINGLE-NUCLEUS TABLE: GSE202051]\n` +
-        `| Gene | Highest Expressing Lineage | Atlas Nuclei Count |\n|---|---|---|\n` +
-        `| **${sn.gene}** | ${sn.topLineage} | 224,988 nuclei across 43 patients |\n`;
+    if (sn.found) {
+      toolDataText += `\n[DETERMINISTIC SINGLE-NUCLEUS PSEUDOBULK TABLE: GSE202051]\n` +
+        `* Dataset: GSE202051 Single-Nucleus Reference Atlas (224,988 nuclei across 43 patients)\n` +
+        `* Clinical Cohort: Treatment-Naïve (n=18 patients, U1-U18) vs Neoadjuvant-Treated [100% RT/CRT-Exposed] (n=25 patients, T1-T25)\n` +
+        `* Statistical Unit: Patient Pseudobulk Means (n=43 biological units) with Welch's t-test and Mann-Whitney U test\n` +
+        `* Gene Evaluated: **${sn.gene}**\n\n`;
+
+      if (sn.pseudobulkResults && sn.pseudobulkResults.length > 0) {
+        toolDataText += `| Cell Lineage | Naïve Mean ± SE (n=18) | Treated Mean ± SE (n=25) | Delta Pseudobulk | log2FC | Welch t (p) | Mann-Whitney U (p) | FDR (q) | Trend |\n` +
+          `|---|---|---|---|---|---|---|---|---|\n` +
+          sn.pseudobulkResults.map((r: any) =>
+            `| **${r.cellType}** | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` (${r.naivePatientCount}p) | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` (${r.treatedPatientCount}p) | \`${r.deltaPseudobulk > 0 ? '+' : ''}${r.deltaPseudobulk.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.pValueMannWhitney.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |`
+          ).join('\n') + '\n';
+      } else {
+        toolDataText += `| Gene | Highest Expressing Lineage | Atlas Nuclei Count |\n|---|---|---|\n` +
+          `| **${sn.gene}** | ${sn.topLineage} | 224,988 nuclei across 43 patients |\n`;
+      }
     }
   }
 

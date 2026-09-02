@@ -373,23 +373,42 @@ export class IntentRouter {
       };
     }
 
-    // Rule 4: Single-nucleus cell type query
+    // Rule 4: Single-nucleus cell type & CRT / Neoadjuvant treatment remodeling query
     if (
       qLower.includes("single-nucleus") ||
       qLower.includes("single nucleus") ||
       qLower.includes("snrna") ||
+      qLower.includes("crt") ||
+      qLower.includes("chemoradiotherapy") ||
+      qLower.includes("neoadjuvant") ||
+      qLower.includes("naive vs") ||
+      qLower.includes("pseudobulk") ||
       qLower.includes("cell type") ||
       qLower.includes("lineage") ||
       qLower.includes("cell population") ||
       qLower.includes("cell populations") ||
       qLower.includes("which cells")
     ) {
+      const isTreatmentQuery = 
+        qLower.includes("crt") || 
+        qLower.includes("chemoradiotherapy") || 
+        qLower.includes("neoadjuvant") || 
+        qLower.includes("treated") || 
+        qLower.includes("treatment") || 
+        qLower.includes("remodeling") || 
+        qLower.includes("naive") ||
+        qLower.includes("pseudobulk") ||
+        qLower.includes("change after") ||
+        qLower.includes("post-treatment");
+
       return {
-        intent: "cell_type_lineage_expression",
+        intent: isTreatmentQuery ? "single_nucleus_treatment_comparison" : "cell_type_lineage_expression",
         entities: { genes: extractedGenes },
         targetDatasets: ["gse202051"],
         isPageSpecificQuestion: false,
-        reasoning: "Single-nucleus cell type/lineage query detected. Routing to GSE202051."
+        reasoning: isTreatmentQuery
+          ? "Single-nucleus treatment-stratified pseudobulk query detected (Naïve vs 100% RT/CRT). Routing to GSE202051."
+          : "Single-nucleus cell type/lineage query detected. Routing to GSE202051."
       };
     }
 
@@ -786,26 +805,18 @@ export class IntentRouter {
 
     // 4. Query Single Nucleus if targeted
     if (targetSet.has("gse202051")) {
-      if (primaryGene) {
-        const snRes = await queryEngine.querySingleNucleusExpression(primaryGene);
-        datasetResults.gse202051 = snRes;
-        provenance.push({
-          datasetId: "gse202051",
-          datasetName: DATASET_REGISTRY.gse202051.name,
-          status: snRes.success && snRes.found ? "success" : "failed",
-          operation: "querySingleNucleusExpression",
-          queryDetails: snRes.found
-            ? `Queried ${primaryGene} across 224,988 nuclei (Top lineage: ${snRes.topLineage})`
-            : `Query failed: gene '${primaryGene}' not found in single-nucleus index`
-        });
-      } else {
-        provenance.push({
-          datasetId: "gse202051",
-          datasetName: DATASET_REGISTRY.gse202051.name,
-          status: "not_required",
-          queryDetails: "Not queried for this question"
-        });
-      }
+      const targetGene = primaryGene || "NFE2L2";
+      const snRes = await queryEngine.querySingleNucleusExpression(targetGene);
+      datasetResults.gse202051 = snRes;
+      provenance.push({
+        datasetId: "gse202051",
+        datasetName: DATASET_REGISTRY.gse202051.name,
+        status: snRes.success && snRes.found ? "success" : "failed",
+        operation: "querySingleNucleusExpression",
+        queryDetails: snRes.found
+          ? `Queried ${targetGene} across 224,988 nuclei / 43 patients (18 Naïve vs 25 RT/CRT Treated)`
+          : `Query failed: gene '${targetGene}' not found in single-nucleus index`
+      });
     } else {
       provenance.push({
         datasetId: "gse202051",

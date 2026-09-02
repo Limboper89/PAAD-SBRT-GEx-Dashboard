@@ -21,6 +21,7 @@ export interface DatasetDefinition {
     singleNucleus: boolean;
     spatialExpression: boolean;
     pathwayAnalysis?: boolean;
+    patientPseudobulk?: boolean;
   };
   limitations: string[];
   queryFunctions: string[];
@@ -114,39 +115,42 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
 
   gse202051: {
     id: "gse202051",
-    name: "PDAC Single-Nucleus Reference Atlas (GSE202051)",
+    name: "PDAC Single-Nucleus Reference Atlas & Treatment Remodeling (GSE202051)",
     accession: "GSE202051",
-    modality: ["single-nucleus RNA-seq", "cell-type resolution"],
+    modality: ["single-nucleus RNA-seq", "cell-type resolution", "treatment-stratified pseudobulk"],
     biologicalQuestions: [
-      "cell-type specific gene expression",
-      "single-nucleus lineage markers",
-      "epithelial vs stromal vs immune expression"
+      "cell-type specific gene expression in human PDAC",
+      "treatment remodeling: Treatment-Naïve (n=18) vs Neoadjuvant-Treated (n=25)",
+      "100% radiation-exposed clinical cohort (CRT, CRT+Losartan, CRT+Nivolumab, GART, RT)",
+      "compartment-specific divergence across malignant ducts, CAFs, and vascular endothelium",
+      "patient-aware pseudobulk differential expression"
     ],
     groups: [
-      { id: "epithelial", label: "Epithelial / Ductal Cells", sampleCount: 85000, description: "Tumor ductal and normal acinar/ductal epithelium" },
-      { id: "fibroblast", label: "Stellate & Fibroblasts", sampleCount: 45000, description: "Cancer-associated fibroblasts (CAFs) and stellate cells" },
-      { id: "immune", label: "Immune Lineages", sampleCount: 52000, description: "T cells, B cells, macrophages, myeloid cells" },
-      { id: "endothelial", label: "Endothelial Cells", sampleCount: 22000, description: "Vascular endothelium" },
-      { id: "endocrine", label: "Endocrine Cells", sampleCount: 15000, description: "Islet endocrine cells" },
-      { id: "schwann", label: "Schwann / Neural", sampleCount: 5988, description: "Perineural sheath cells" }
+      { id: "naive", label: "Treatment-Naïve Baseline", sampleCount: 18, description: "18 untreated patients (U1–U18; 9,689 subset nuclei, 108,964 full atlas)" },
+      { id: "treated", label: "Neoadjuvant-Treated (100% RT/CRT)", sampleCount: 25, description: "25 radiation-exposed patients (T1–T25; 10,311 subset nuclei, 116,024 full atlas)" }
     ],
     analyses: [
       "cell_type_expression",
-      "cluster_markers",
+      "patient_pseudobulk_differential",
+      "lineage_treatment_comparison",
+      "regimen_subgroups",
       "umap_exploration"
     ],
     capabilities: {
       geneExpression: true,
-      differentialExpression: false,
+      differentialExpression: true,
       singleNucleus: true,
-      spatialExpression: false
+      spatialExpression: false,
+      patientPseudobulk: true
     },
     limitations: [
-      "Single-nucleus transcriptomics captures nuclear RNA (may underestimate some cytoplasmic transcripts)",
-      "Subset visualization on client (20,000 nuclei render subset out of 224,988 total atlas nuclei)"
+      "Single-nucleus transcriptomics captures nuclear RNA",
+      "Independent cross-sectional cohorts (18 Naïve resections vs 25 Neoadjuvant-treated resections, not longitudinal within-patient tracking)",
+      "100% of treated patients received radiation (RT/CRT); no chemo-only without radiation"
     ],
     queryFunctions: [
-      "querySingleNucleusExpression"
+      "querySingleNucleusExpression",
+      "querySingleNucleusTreatmentComparison"
     ],
     dataPath: "/PAAD-SBRT-GEx-Dashboard/data/gse202051/genes_index_chunked.json",
     pairedPrePost: false
