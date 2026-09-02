@@ -174,7 +174,7 @@ export function computePatientPseudobulk(
   exprVector: Float32Array,
   metadata: CellMeta[],
   cellTypeKey: "broad_celltype" | "level2" = "broad_celltype",
-  treatedSubgroupFilter?: string // optional filter for treated patients e.g. "CRT", "CRTl"
+  treatedSubgroupFilter?: string // optional filter for treated patients e.g. "CRT", "CRTl", "RESP_MOD"
 ): PatientPseudobulkResult[] {
   if (!exprVector || exprVector.length === 0 || !metadata || metadata.length === 0) {
     return [];
@@ -192,13 +192,23 @@ export function computePatientPseudobulk(
     const cell = metadata[i];
     const expr = exprVector[i] || 0;
     const cType = cell[cellTypeKey] || "Unknown";
-    const pid = cell.pid;
-    const isNaive = (cell.treatment_group || "").toLowerCase().includes("na");
-    const isTreated = (cell.treatment_group || "").toLowerCase().includes("treat");
+    const pid = cell.pid || "";
+    
+    // Robust Naive vs. Treated discrimination (pid U1-U18 vs T1-T25)
+    const isNaive = pid.startsWith("U") || cell.treatment === "Untreated";
+    const isTreated = !isNaive && (pid.startsWith("T") || (cell.treatment_group || "").toLowerCase().includes("treated"));
 
+    // Subgroup filtering for Treated patients
     if (treatedSubgroupFilter && isTreated) {
-      if ((cell.treatment || "").trim() !== treatedSubgroupFilter.trim()) {
-        continue; // skip if not in specified subgroup
+      if (treatedSubgroupFilter.startsWith("RESP_")) {
+        const respKeyword = treatedSubgroupFilter.replace("RESP_", "").toLowerCase();
+        if (!(cell.response || "").toLowerCase().includes(respKeyword)) {
+          continue;
+        }
+      } else {
+        if ((cell.treatment || "").trim() !== treatedSubgroupFilter.trim()) {
+          continue;
+        }
       }
     }
 
@@ -321,7 +331,7 @@ export function computePatientPseudobulk(
       tStatistic: tStat,
       pValueWelch: pWelch,
       pValueMannWhitney: pMannWhitney,
-      qValue: 1.0, // calculated below via FDR
+      qValue: 1.0,
       isSignificant: false,
       direction: delta > 0 ? "UP" : (delta < 0 ? "DOWN" : "NS"),
       compartmentTrend: Math.abs(delta) > 0.15 ? (delta > 0 ? "Enriched in Treated" : "Depleted in Treated") : "Stable"

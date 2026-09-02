@@ -111,6 +111,31 @@ export type CohortFilter =
 
 export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table";
 
+function getComparisonLabel(cohort: CohortFilter): string {
+  switch (cohort) {
+    case "CRT":
+      return "Treatment-Naïve (n=18) vs. Standard CRT (n=14)";
+    case "CRTl":
+      return "Treatment-Naïve (n=18) vs. CRT + Losartan [CRTl] (n=5)";
+    case "CRTn":
+      return "Treatment-Naïve (n=18) vs. CRT + Nivolumab [CRTn/ln] (n=2)";
+    case "CRTx":
+      return "Treatment-Naïve (n=18) vs. CRTx [Other Regimen] (n=2)";
+    case "GART":
+      return "Treatment-Naïve (n=18) vs. GART (n=1)";
+    case "RT":
+      return "Treatment-Naïve (n=18) vs. Radiation Alone [RT] (n=1)";
+    case "RESP_MOD":
+      return "Treatment-Naïve (n=18) vs. Moderate Response (n=8)";
+    case "RESP_MIN":
+      return "Treatment-Naïve (n=18) vs. Minimal Response (n=11)";
+    case "RESP_POOR":
+      return "Treatment-Naïve (n=18) vs. Poor Response (n=6)";
+    default:
+      return "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)";
+  }
+}
+
 export default function SingleNucleusExplorer() {
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const DATA = `${basePath}/data/gse202051`;
@@ -295,8 +320,9 @@ export default function SingleNucleusExplorer() {
         if (selectedPid !== "ALL" && c.pid !== selectedPid) return acc;
 
         // 2. Cohort Filter
-        const isNaive = (c.treatment_group || "").toLowerCase().includes("na");
-        const isTreated = (c.treatment_group || "").toLowerCase().includes("treat");
+        const pid = c.pid || "";
+        const isNaive = pid.startsWith("U") || c.treatment === "Untreated";
+        const isTreated = !isNaive && (pid.startsWith("T") || (c.treatment_group || "").toLowerCase().includes("treated"));
 
         if (selectedCohort === "NAIVE" && !isNaive) return acc;
         if (selectedCohort === "TREATED" && !isTreated) return acc;
@@ -307,9 +333,9 @@ export default function SingleNucleusExplorer() {
         }
 
         // Response Subgroup Filters
-        if (selectedCohort === "RESP_MOD" && !c.response?.toLowerCase().includes("moderate")) return acc;
-        if (selectedCohort === "RESP_MIN" && !c.response?.toLowerCase().includes("minimal")) return acc;
-        if (selectedCohort === "RESP_POOR" && !c.response?.toLowerCase().includes("poor")) return acc;
+        if (selectedCohort === "RESP_MOD" && (!isTreated || !c.response?.toLowerCase().includes("moderate"))) return acc;
+        if (selectedCohort === "RESP_MIN" && (!isTreated || !c.response?.toLowerCase().includes("minimal"))) return acc;
+        if (selectedCohort === "RESP_POOR" && (!isTreated || !c.response?.toLowerCase().includes("poor"))) return acc;
 
         acc.activeCells.push(c);
         acc.activeOrigIdx.push(i);
@@ -458,10 +484,105 @@ export default function SingleNucleusExplorer() {
   // ── Patient-Aware Pseudobulk Statistics (Confirmatory Patient Level) ─────────
   const pseudobulkResults = useMemo(() => {
     if (!activeGene || !exprVec || cells.length === 0) return [];
-    const subFilter = ["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT"].includes(selectedCohort) ? selectedCohort : undefined;
+    
+    // Determine subgroup filter for treated cohort (if not ALL, NAIVE, or TREATED)
+    let subFilter: string | undefined = undefined;
+    if (["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT", "RESP_MOD", "RESP_MIN", "RESP_POOR"].includes(selectedCohort)) {
+      subFilter = selectedCohort;
+    }
+
     const key = comparisonLevel === "broad" ? "broad_celltype" : "level2";
     return computePatientPseudobulk(exprVec, cells, key, subFilter);
   }, [activeGene, exprVec, cells, comparisonLevel, selectedCohort]);
+
+  // CSV Download handler for UMAP Exploratory Summary
+  const handleDownloadCSV = useCallback(() => {
+    if (!activeGene || dotData.length === 0) return;
+
+    exportToCSV({
+      filename: `GSE202051_${activeGene}_CellType_Exploratory_Summary.csv`,
+      metadata: {
+        dataset: "GSE202051 Single-Nucleus Atlas",
+        module: "Single-Nucleus Cell-Type Summary",
+        selectedGene: activeGene,
+        cohort: selectedCohort,
+        patient: selectedPid,
+      },
+      headers: ["Subtype (Level 2)", "N (Nuclei)", "Expr %", "Mean (All Nuclei)", "Mean (Pos Nuclei)"],
+      rows: dotData.map((row) => [
+        row.cellType,
+        row.total,
+        row.pct.toFixed(2),
+        row.meanAll.toFixed(4),
+        row.meanPos.toFixed(4),
+      ]),
+    });
+  }, [activeGene, dotData, selectedCohort, selectedPid]);
+
+  // Filtered Cell Metadata export callback
+  const handleExportCellMetadata = useCallback(() => {
+    if (!activeCells || activeCells.length === 0) return;
+    const headers = [
+      "Cell Barcode",
+      "Patient ID",
+      "Broad Cell Type",
+      "Subtype (Level 2)",
+      "Treatment Status",
+      "UMAP1",
+      "UMAP2",
+      activeGene ? `${activeGene} Expression (log1p Float16)` : "Gene Expression",
+    ];
+
+    const rows = activeCells.map((c, i) => {
+      const origIdx = activeOrigIdx[i];
+      const exprVal = exprVec && origIdx !== undefined ? exprVec[origIdx] : 0;
+      return [
+        c.id,
+        c.pid,
+        c.broad_celltype,
+        c.level2,
+        c.treatment,
+        c.x.toFixed(4),
+        c.y.toFixed(4),
+        exprVal.toFixed(4),
+      ];
+    });
+
+    exportToCSV({
+      filename: `GSE202051_FilteredCells_${activeGene || "All"}.csv`,
+      metadata: {
+        dataset: "GSE202051 Single-Nucleus Atlas",
+        module: "Single-Nucleus Cell Metadata Explorer",
+        selectedGene: activeGene || "None",
+        filters: `Cohort: ${selectedCohort}, Patient: ${selectedPid}, Total Cells: ${activeCells.length}`,
+      },
+      headers,
+      rows,
+    });
+  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedCohort]);
+
+  // Filtered Expression Matrix export callback
+  const handleExportExpressionMatrix = useCallback(() => {
+    if (!activeCells || activeCells.length === 0 || !activeGene || !exprVec) return;
+    const headers = ["Cell Barcode", "Patient ID", "Cell Type", activeGene];
+    const rows = activeCells.map((c, i) => {
+      const origIdx = activeOrigIdx[i];
+      const exprVal = origIdx !== undefined ? exprVec[origIdx] : 0;
+      return [c.id, c.pid, c.level2, exprVal.toFixed(4)];
+    });
+
+    exportToCSV({
+      filename: `GSE202051_ExpressionMatrix_${activeGene}.csv`,
+      metadata: {
+        dataset: "GSE202051 Single-Nucleus Atlas",
+        module: "Filtered Single-Nucleus Expression Matrix",
+        selectedGene: activeGene,
+        filters: `Cohort: ${selectedCohort}, Patient: ${selectedPid}, Total Cells: ${activeCells.length}`,
+      },
+      headers,
+      rows,
+    });
+  }, [activeCells, activeOrigIdx, exprVec, activeGene, selectedPid, selectedCohort]);
 
   // CSV Download handler for Patient Pseudobulk Table
   const handleDownloadPseudobulkCSV = useCallback(() => {
@@ -473,7 +594,7 @@ export default function SingleNucleusExplorer() {
         dataset: "GSE202051 Single-Nucleus Reference Atlas",
         module: "Patient-Aware Pseudobulk Treatment Comparison",
         selectedGene: activeGene,
-        cohort: "Treatment-Naïve (n=18) vs Neoadjuvant-Treated (n=25, 100% RT/CRT)",
+        cohortComparison: getComparisonLabel(selectedCohort),
         statisticalUnit: "Patient (Biological Replicate)",
       },
       headers: [
@@ -521,7 +642,74 @@ export default function SingleNucleusExplorer() {
         r.direction
       ]),
     });
-  }, [activeGene, pseudobulkResults]);
+  }, [activeGene, pseudobulkResults, selectedCohort]);
+
+  // High-Res UMAP Canvas Generator
+  const generateHighResSingleCellCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = size;
+    offscreen.height = size;
+    const ctx = offscreen.getContext("2d");
+    if (!ctx) return offscreen;
+
+    const isLight = theme === "light";
+
+    // 1. Background Fill
+    ctx.fillStyle = isLight ? "#ffffff" : "#020617";
+    ctx.fillRect(0, 0, size, size);
+
+    // 2. Title and Subtitle Header
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Single-Nucleus Transcriptomic Atlas (GSE202051)", 80, 85);
+
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 30px monospace";
+    let sub = `Cohort: ${selectedCohort} · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
+    if (colorMode === "expression") {
+      sub = `Target Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max Log-Expr: ${exprActualMax.toFixed(2)}`;
+    }
+    ctx.fillText(sub, 80, 136);
+
+    // Divider
+    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, 160);
+    ctx.lineTo(size - 80, 160);
+    ctx.stroke();
+
+    // 3. Coordinate Layout
+    const pad = 120;
+    const plotW = size - pad * 2;
+    const plotH = size - pad * 2 - 80;
+
+    const mapX = (x: number) => pad + ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * plotW;
+    const mapY = (y: number) => size - pad - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * plotH;
+
+    // Draw all active cells
+    const order = activeCells.map((_, i) => i);
+    if (colorMode === "expression" && exprVec) {
+      order.sort((a, b) => (exprVec[activeOrigIdx[a]] ?? 0) - (exprVec[activeOrigIdx[b]] ?? 0));
+    }
+
+    for (const i of order) {
+      const cell = activeCells[i];
+      const origIdx = activeOrigIdx[i];
+      const sx = mapX(cell.x);
+      const sy = mapY(cell.y);
+      const exprVal = (colorMode === "expression" && exprVec) ? (exprVec[origIdx] ?? 0) : 0;
+      const r = colorMode === "expression" && exprVal > 0 ? 6.5 : 5.0;
+
+      ctx.fillStyle = getCellColor(cell, origIdx);
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    return offscreen;
+  };
 
   // High-Res Publication Canvas Generator for Treatment Comparison
   const generateHighResComparisonCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
@@ -548,7 +736,7 @@ export default function SingleNucleusExplorer() {
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
     ctx.font = "bold 24px monospace";
     ctx.fillText(
-      `GSE202051 snRNA-seq · Patient Pseudobulk: Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)`,
+      `GSE202051 snRNA-seq · Patient Pseudobulk: ${getComparisonLabel(selectedCohort)}`,
       80,
       126
     );
@@ -693,7 +881,7 @@ export default function SingleNucleusExplorer() {
     ctx.fillStyle = "#f97316";
     ctx.fillRect(legBoxX + 530, legBoxY + 20, 28, 24);
     ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
-    ctx.fillText("Neoadjuvant-Treated / RT-CRT (n=25)", legBoxX + 570, legBoxY + 39);
+    ctx.fillText("Treated Subgroup", legBoxX + 570, legBoxY + 39);
 
     return offscreen;
   };
@@ -785,7 +973,7 @@ export default function SingleNucleusExplorer() {
             <optgroup label="── Exploratory Regimen Subgroups ──">
               <option value="CRT">Standard CRT (n=14, 6,455 nuclei)</option>
               <option value="CRTl">CRT + Losartan [CRTl] (n=5, 1,647 nuclei)</option>
-              <option value="CRTn">CRT + Nivolumab [CRTn] (n=1, 502 nuclei)</option>
+              <option value="CRTn">CRT + Nivolumab [CRTn/ln] (n=2, 667 nuclei)</option>
               <option value="CRTx">CRTx [Other Regimen] (n=2, 1,037 nuclei)</option>
               <option value="GART">GART [Gem/Abraxane+RT] (n=1, 245 nuclei)</option>
               <option value="RT">Radiation Alone [RT] (n=1, 260 nuclei)</option>
@@ -824,7 +1012,7 @@ export default function SingleNucleusExplorer() {
                   </h2>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-1">
-                  Lineage-specific pseudobulk expression across 18 Treatment-Naïve vs. 25 Neoadjuvant-Treated patients (100% RT/CRT).
+                  Lineage-specific pseudobulk: {getComparisonLabel(selectedCohort)}
                 </p>
               </div>
 
@@ -896,14 +1084,18 @@ export default function SingleNucleusExplorer() {
                 {/* Cohort Summary Badges */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
-                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treatment-Naïve Cohort</span>
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treatment-Naïve Baseline</span>
                     <span className="text-lg font-bold text-teal-400">18 Patients</span>
                     <span className="text-xxs text-slate-500">9,689 in-tissue nuclei</span>
                   </div>
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
-                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Neoadjuvant-Treated Cohort</span>
-                    <span className="text-lg font-bold text-orange-400">25 Patients</span>
-                    <span className="text-xxs text-slate-500">10,311 nuclei (100% RT/CRT)</span>
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treated Group ({selectedCohort})</span>
+                    <span className="text-lg font-bold text-orange-400">
+                      {pseudobulkResults[0]?.treatedPatientCount || 25} Patients
+                    </span>
+                    <span className="text-xxs text-slate-500">
+                      {pseudobulkResults.reduce((sum, r) => Math.max(sum, r.treatedNucleusCount), 0)} nuclei
+                    </span>
                   </div>
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
                     <span className="text-xxs text-slate-500 uppercase tracking-wider">Max Lineage Effect Size</span>
@@ -926,7 +1118,7 @@ export default function SingleNucleusExplorer() {
                   <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
                     <span className="flex items-center gap-3">
                       <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-teal-500"></span> Treatment-Naïve (n=18)</span>
-                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-500"></span> Neoadjuvant-Treated [RT/CRT] (n=25)</span>
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-500"></span> Treated ({selectedCohort})</span>
                     </span>
                     <span className="text-xxs text-slate-500">Error bars represent ± Standard Error (SE) across patient means</span>
                   </div>
@@ -1006,11 +1198,37 @@ export default function SingleNucleusExplorer() {
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Parametric (Welch's t-test) vs. Non-parametric (Mann-Whitney U) sensitivity testing with Benjamini-Hochberg FDR.
+                Comparison: {getComparisonLabel(selectedCohort)}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Search Bar for Gene */}
+              <div className="relative w-56">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => { setQuery(e.target.value); setShowSuggest(true); }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && suggestions.length > 0) { handleGene(suggestions[0]); setQuery(""); }
+                    if (e.key === "Escape") { setShowSuggest(false); setQuery(""); }
+                  }}
+                  placeholder="Search gene…"
+                  className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500"
+                />
+                {showSuggest && suggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl max-h-48 overflow-y-auto">
+                    {suggestions.map((g) => (
+                      <button key={g} onClick={() => { handleGene(g); setQuery(""); setShowSuggest(false); }}
+                        className="w-full text-left px-3 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-white">
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xxs">
                 <button
                   onClick={() => setComparisonLevel("broad")}
@@ -1146,26 +1364,43 @@ export default function SingleNucleusExplorer() {
                   </div>
                 </div>
 
-                {/* Patient Filter Dropdown */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-mono">Patient:</span>
-                  <select
-                    value={selectedPid}
-                    onChange={e => setSelectedPid(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-rose-500 cursor-pointer"
-                  >
-                    <option value="ALL">All Cohort Patients (n=43)</option>
-                    <optgroup label="── Treatment-Naïve (n=18) ──">
-                      {Object.keys(patients).filter(p => p.startsWith("U")).map(p => (
-                        <option key={p} value={p}>{p} ({patients[p].treatment_group})</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="── Neoadjuvant-Treated / RT-CRT (n=25) ──">
-                      {Object.keys(patients).filter(p => p.startsWith("T")).map(p => (
-                        <option key={p} value={p}>{p} ({patients[p].treatment_status})</option>
-                      ))}
-                    </optgroup>
-                  </select>
+                <div className="flex items-center gap-3">
+                  {/* Patient Filter Dropdown */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 font-mono">Patient:</span>
+                    <select
+                      value={selectedPid}
+                      onChange={e => setSelectedPid(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-rose-500 cursor-pointer"
+                    >
+                      <option value="ALL">All Cohort Patients (n=43)</option>
+                      <optgroup label="── Treatment-Naïve (n=18) ──">
+                        {Object.keys(patients).filter(p => p.startsWith("U")).map(p => (
+                          <option key={p} value={p}>{p} ({patients[p].treatment_group})</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="── Neoadjuvant-Treated / RT-CRT (n=25) ──">
+                        {Object.keys(patients).filter(p => p.startsWith("T")).map(p => (
+                          <option key={p} value={p}>{p} ({patients[p].treatment_status})</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  {/* UMAP Export Button */}
+                  <ExportButton
+                    onExportCSV={handleDownloadCSV}
+                    onExportCellMetadata={handleExportCellMetadata}
+                    onExportExpressionMatrix={handleExportExpressionMatrix}
+                    onExportPNG={({ theme = "light" } = {}) => {
+                      const canvas = generateHighResSingleCellCanvas(theme, 2400);
+                      exportCanvasToPNG({ canvas, filename: `GSE202051_UMAP_${activeGene || "Atlas"}.png`, theme });
+                    }}
+                    onExportSVG={({ theme = "light" } = {}) => {
+                      const canvas = generateHighResSingleCellCanvas(theme, 1200);
+                      exportCanvasToSVG({ canvas, filename: `GSE202051_UMAP_${activeGene || "Atlas"}.svg`, theme });
+                    }}
+                  />
                 </div>
               </div>
 
@@ -1261,7 +1496,7 @@ export default function SingleNucleusExplorer() {
                   <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider">Top Expressing Subtypes (Exploratory)</span>
                   <div className="flex flex-col gap-1 max-h-60 overflow-y-auto pr-1">
                     {dotData.slice(0, 6).map(r => (
-                      <div key={r.cellType} className="flex items-center justify-between py-1 border-b border-slate-850 text-xs font-mono">
+                      <div key={r.cellType} className="flex items-center justify-between py-1 border-b border-slate-855 text-xs font-mono">
                         <span className="truncate text-slate-300">{r.cellType}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-teal-400 font-bold">{r.meanAll.toFixed(2)}</span>
