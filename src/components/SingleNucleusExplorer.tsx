@@ -171,6 +171,7 @@ export default function SingleNucleusExplorer() {
 
   // Broad Type Inspector / Subtype Hierarchy State
   const [selectedBroadInspect, setSelectedBroadInspect] = useState<string>("ALL");
+  const [selectedSubtypeInspect, setSelectedSubtypeInspect] = useState<string>("ALL");
 
   // Canvas / interaction
   const canvasRef    = useRef<HTMLCanvasElement | null>(null);
@@ -379,6 +380,9 @@ export default function SingleNucleusExplorer() {
     if (selectedBroadInspect !== "ALL" && cell.broad_celltype !== selectedBroadInspect) {
       return "rgba(51, 65, 85, 0.08)";
     }
+    if (selectedSubtypeInspect !== "ALL" && cell.level2 !== selectedSubtypeInspect) {
+      return "rgba(51, 65, 85, 0.08)";
+    }
 
     if (colorMode === "broad")      return BROAD_COLORS[cell.broad_celltype] ?? "#64748b";
     if (colorMode === "level2")     return LEVEL2_COLORS[cell.level2] ?? "#64748b";
@@ -386,7 +390,7 @@ export default function SingleNucleusExplorer() {
     if (colorMode === "expression" && exprVec)
       return exprColor(exprVec[origIdx] ?? 0, exprCap);
     return "#64748b";
-  }, [colorMode, exprVec, exprCap, selectedBroadInspect]);
+  }, [colorMode, exprVec, exprCap, selectedBroadInspect, selectedSubtypeInspect]);
 
   // Draw UMAP loops
   useEffect(() => {
@@ -481,11 +485,35 @@ export default function SingleNucleusExplorer() {
     }).filter(r => r.pct > 0).sort((a, b) => b.meanAll - a.meanAll);
   }, [activeCells, activeOrigIdx, exprVec, activeGene]);
 
+  // Active Category Counts for Legends
+  const broadCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    activeCells.forEach(c => {
+      counts[c.broad_celltype] = (counts[c.broad_celltype] || 0) + 1;
+    });
+    return counts;
+  }, [activeCells]);
+
+  const level2Counts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    activeCells.forEach(c => {
+      counts[c.level2] = (counts[c.level2] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [activeCells]);
+
+  const treatmentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    activeCells.forEach(c => {
+      counts[c.treatment_group] = (counts[c.treatment_group] || 0) + 1;
+    });
+    return counts;
+  }, [activeCells]);
+
   // ── Patient-Aware Pseudobulk Statistics (Confirmatory Patient Level) ─────────
   const pseudobulkResults = useMemo(() => {
     if (!activeGene || !exprVec || cells.length === 0) return [];
     
-    // Determine subgroup filter for treated cohort (if not ALL, NAIVE, or TREATED)
     let subFilter: string | undefined = undefined;
     if (["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT", "RESP_MOD", "RESP_MIN", "RESP_POOR"].includes(selectedCohort)) {
       subFilter = selectedCohort;
@@ -644,7 +672,7 @@ export default function SingleNucleusExplorer() {
     });
   }, [activeGene, pseudobulkResults, selectedCohort]);
 
-  // High-Res UMAP Canvas Generator
+  // High-Res UMAP Canvas Generator with Embedded Legends
   const generateHighResSingleCellCanvas = (theme: "light" | "dark" = "light", size: number = 2400): HTMLCanvasElement => {
     const offscreen = document.createElement("canvas");
     offscreen.width = size;
@@ -683,10 +711,10 @@ export default function SingleNucleusExplorer() {
     // 3. Coordinate Layout
     const pad = 120;
     const plotW = size - pad * 2;
-    const plotH = size - pad * 2 - 80;
+    const plotH = size - pad * 2 - 160;
 
     const mapX = (x: number) => pad + ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * plotW;
-    const mapY = (y: number) => size - pad - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * plotH;
+    const mapY = (y: number) => size - pad - 120 - ((y - bounds.minY) / (bounds.maxY - bounds.minY)) * plotH;
 
     // Draw all active cells
     const order = activeCells.map((_, i) => i);
@@ -706,6 +734,81 @@ export default function SingleNucleusExplorer() {
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // 4. Colorbar / Legend Footer on High-Res Canvas
+    const legY = size - 110;
+    if (colorMode === "expression" && activeGene) {
+      const barW = 700;
+      const barH = 28;
+      const barX = (size - barW) / 2;
+
+      // Draw gradient
+      const grad = ctx.createLinearGradient(barX, legY, barX + barW, legY);
+      grad.addColorStop(0.0, "rgba(51,65,85,0.85)");
+      grad.addColorStop(0.2, "rgba(20,184,166,0.95)");
+      grad.addColorStop(0.6, "rgba(234,179,8,0.95)");
+      grad.addColorStop(1.0, "rgba(244,63,94,0.95)");
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, legY, barW, barH);
+      ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(barX, legY, barW, barH);
+
+      // Labels
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 22px monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("0.00 (Unexpressed)", barX, legY + barH + 32);
+
+      ctx.textAlign = "center";
+      ctx.fillText(`${(exprCap * 0.5).toFixed(2)} (Mid)`, barX + barW / 2, legY + barH + 32);
+
+      ctx.textAlign = "right";
+      ctx.fillText(`${exprCap.toFixed(2)} log1p (${capped ? "99th %ile Cap" : "Max"})`, barX + barW, legY + barH + 32);
+
+      ctx.textAlign = "center";
+      ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${activeGene} Expression Scale`, barX + barW / 2, legY - 14);
+    } else if (colorMode === "broad") {
+      const entries = Object.entries(BROAD_COLORS);
+      const boxW = 26;
+      const totalItems = entries.length;
+      const spacing = size / (totalItems + 1);
+
+      entries.forEach(([name, col], idx) => {
+        const itemX = spacing * (idx + 1) - 60;
+        ctx.fillStyle = col;
+        ctx.fillRect(itemX, legY, boxW, boxW);
+        ctx.strokeStyle = isLight ? "#000000" : "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(itemX, legY, boxW, boxW);
+
+        ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+        ctx.font = "bold 22px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(name, itemX + boxW + 10, legY + 20);
+      });
+    } else if (colorMode === "treatment") {
+      const tEntries = Object.entries(TREATMENT_COLORS);
+      const boxW = 28;
+      const itemX1 = size / 2 - 320;
+      const itemX2 = size / 2 + 60;
+
+      // Item 1
+      ctx.fillStyle = tEntries[0][1];
+      ctx.fillRect(itemX1, legY, boxW, boxW);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Treatment-naïve (n=18)", itemX1 + boxW + 12, legY + 22);
+
+      // Item 2
+      ctx.fillStyle = tEntries[1][1];
+      ctx.fillRect(itemX2, legY, boxW, boxW);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText("Neoadjuvant-treated [RT/CRT] (n=25)", itemX2 + boxW + 12, legY + 22);
     }
 
     return offscreen;
@@ -1130,7 +1233,7 @@ export default function SingleNucleusExplorer() {
                       const treatPctWidth = Math.min(100, (r.treatedMean / maxBar) * 100);
 
                       return (
-                        <div key={r.cellType} className="bg-slate-900/60 border border-slate-850 rounded-xl p-4 flex flex-col gap-2.5">
+                        <div key={r.cellType} className="bg-slate-900/60 border border-slate-855 rounded-xl p-4 flex flex-col gap-2.5">
                           <div className="flex items-center justify-between text-xs font-mono">
                             <div className="flex items-center gap-2">
                               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BROAD_COLORS[r.cellType] || LEVEL2_COLORS[r.cellType] || "#64748b" }} />
@@ -1274,7 +1377,7 @@ export default function SingleNucleusExplorer() {
                     <th className="p-3 text-center">Trend</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-850">
+                <tbody className="divide-y divide-slate-855">
                   {pseudobulkResults.map((r) => (
                     <tr key={r.cellType} className="hover:bg-slate-850/50 transition">
                       <td className="p-3 font-bold text-slate-200 flex items-center gap-2">
@@ -1328,7 +1431,7 @@ export default function SingleNucleusExplorer() {
                   <span className="text-xs text-slate-400 font-mono">Color by:</span>
                   <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 font-mono text-xxs">
                     <button
-                      onClick={() => setColorMode("broad")}
+                      onClick={() => { setColorMode("broad"); setSelectedBroadInspect("ALL"); setSelectedSubtypeInspect("ALL"); }}
                       className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
                         colorMode === "broad" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
                       }`}
@@ -1336,7 +1439,7 @@ export default function SingleNucleusExplorer() {
                       Broad Type
                     </button>
                     <button
-                      onClick={() => setColorMode("level2")}
+                      onClick={() => { setColorMode("level2"); setSelectedBroadInspect("ALL"); setSelectedSubtypeInspect("ALL"); }}
                       className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
                         colorMode === "level2" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
                       }`}
@@ -1344,7 +1447,7 @@ export default function SingleNucleusExplorer() {
                       Subtypes (L2)
                     </button>
                     <button
-                      onClick={() => setColorMode("treatment")}
+                      onClick={() => { setColorMode("treatment"); setSelectedBroadInspect("ALL"); setSelectedSubtypeInspect("ALL"); }}
                       className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
                         colorMode === "treatment" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
                       }`}
@@ -1353,7 +1456,7 @@ export default function SingleNucleusExplorer() {
                     </button>
                     {activeGene && (
                       <button
-                        onClick={() => setColorMode("expression")}
+                        onClick={() => { setColorMode("expression"); setSelectedBroadInspect("ALL"); setSelectedSubtypeInspect("ALL"); }}
                         className={`px-2.5 py-1.5 rounded transition cursor-pointer ${
                           colorMode === "expression" ? "bg-rose-500 text-white font-bold" : "text-slate-400 hover:text-white"
                         }`}
@@ -1444,8 +1547,160 @@ export default function SingleNucleusExplorer() {
                 )}
               </div>
 
+              {/* ─── DYNAMIC COLOR SCALING & LEGEND BAR ─── */}
+              <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex flex-col gap-2.5 font-mono text-xs">
+                {colorMode === "expression" && activeGene ? (
+                  /* 1. Continuous Gradient Expression Color Scale */
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-xxs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {activeGene} Color Scale
+                        </span>
+                        <span className="text-slate-500">·</span>
+                        <span className="text-slate-400">Normalized Expression (log1p Float16)</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <span>Active Max: <strong className="text-slate-200">{exprActualMax.toFixed(2)}</strong></span>
+                        {capped && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">
+                            99th %ile Capped ({exprCap.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Gradient Bar */}
+                    <div className="flex flex-col gap-1">
+                      <div className="h-3.5 rounded-full border border-slate-800 relative overflow-hidden shadow-inner"
+                        style={{
+                          background: "linear-gradient(to right, #334155 0%, #14b8a6 20%, #eab308 60%, #f43f5e 100%)"
+                        }}
+                      />
+                      <div className="flex justify-between text-[11px] text-slate-400 pt-0.5">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600"></span> 0.00 (Unexpressed)</span>
+                        <span className="text-teal-400">{(exprCap * 0.25).toFixed(2)} (Low)</span>
+                        <span className="text-amber-400">{(exprCap * 0.50).toFixed(2)} (Mid)</span>
+                        <span className="text-rose-400">{(exprCap * 0.75).toFixed(2)} (High)</span>
+                        <span className="flex items-center gap-1 font-bold text-rose-400">
+                          {exprCap.toFixed(2)} (Cap)
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : colorMode === "broad" ? (
+                  /* 2. Categorical Broad Type Legend */
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-xxs">
+                      <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-rose-400" />
+                        Broad Lineages Legend (Click to Highlight)
+                      </span>
+                      {selectedBroadInspect !== "ALL" && (
+                        <button
+                          onClick={() => setSelectedBroadInspect("ALL")}
+                          className="text-teal-400 hover:text-white underline cursor-pointer text-xxs"
+                        >
+                          Reset Highlight (Show All)
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {Object.entries(BROAD_COLORS).map(([name, col]) => {
+                        const count = broadCounts[name] || 0;
+                        const pct = activeCells.length > 0 ? ((count / activeCells.length) * 100).toFixed(1) : "0";
+                        const isSelected = selectedBroadInspect === name;
+
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => setSelectedBroadInspect(isSelected ? "ALL" : name)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xxs transition cursor-pointer ${
+                              isSelected
+                                ? "bg-slate-800 border-white text-white font-bold ring-1 ring-white"
+                                : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                            }`}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: col }} />
+                            <span>{name}</span>
+                            <span className="text-slate-500 font-mono">({count.toLocaleString()} · {pct}%)</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : colorMode === "level2" ? (
+                  /* 3. Subtypes (L2) Legend */
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-xxs">
+                      <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-rose-400" />
+                        Cell Subtypes Legend (Top 12 Displayed · Click to Highlight)
+                      </span>
+                      {selectedSubtypeInspect !== "ALL" && (
+                        <button
+                          onClick={() => setSelectedSubtypeInspect("ALL")}
+                          className="text-teal-400 hover:text-white underline cursor-pointer text-xxs"
+                        >
+                          Reset Highlight (Show All)
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto pr-1">
+                      {level2Counts.slice(0, 16).map(([name, count]) => {
+                        const col = LEVEL2_COLORS[name] || "#64748b";
+                        const pct = activeCells.length > 0 ? ((count / activeCells.length) * 100).toFixed(1) : "0";
+                        const isSelected = selectedSubtypeInspect === name;
+
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => setSelectedSubtypeInspect(isSelected ? "ALL" : name)}
+                            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] transition cursor-pointer ${
+                              isSelected
+                                ? "bg-slate-800 border-white text-white font-bold ring-1 ring-white"
+                                : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700"
+                            }`}
+                          >
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: col }} />
+                            <span className="truncate max-w-[130px]">{name}</span>
+                            <span className="text-slate-500 font-mono text-[10px]">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* 4. Treatment Legend */
+                  <div className="flex flex-col gap-2">
+                    <span className="font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 text-xxs">
+                      <ShieldAlert className="w-3.5 h-3.5 text-orange-400" />
+                      Treatment Cohort Legend
+                    </span>
+                    <div className="flex items-center gap-4">
+                      {Object.entries(TREATMENT_COLORS).map(([name, col]) => {
+                        const count = treatmentCounts[name] || 0;
+                        const pct = activeCells.length > 0 ? ((count / activeCells.length) * 100).toFixed(1) : "0";
+
+                        return (
+                          <div key={name} className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: col }} />
+                            <span className="text-slate-200 font-bold">{name}</span>
+                            <span className="text-slate-400">({count.toLocaleString()} nuclei · {pct}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Legend & Stats Footer */}
-              <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400 pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400 pt-1">
                 <span>Displaying: <strong className="text-slate-200">{activeCells.length.toLocaleString()}</strong> nuclei in view</span>
                 <span className="text-xxs text-slate-500">Pan: Click + Drag · Zoom: Mouse Wheel</span>
               </div>
