@@ -6,9 +6,10 @@ import React, {
 import {
   Search, Info, AlertTriangle, ChevronDown,
   TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download, Bot,
-  BarChart3, GitCompare, Table, ShieldAlert, Sparkles, Filter
+  BarChart3, GitCompare, Table, ShieldAlert, Sparkles, Filter, Activity
 } from "lucide-react";
 
+import SingleNucleusPathwayExplorer from "./singleNucleus/SingleNucleusPathwayExplorer";
 import ExportButton from "./ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
@@ -109,7 +110,7 @@ export type CohortFilter =
   | "RESP_MIN" 
   | "RESP_POOR";
 
-export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table";
+export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table" | "pathway_analysis";
 
 function getComparisonLabel(cohort: CohortFilter): string {
   switch (cohort) {
@@ -1037,6 +1038,15 @@ export default function SingleNucleusExplorer() {
             <Table className="w-4 h-4" />
             Sensitivity & Patient Tables
           </button>
+          <button
+            onClick={() => setActiveTab("pathway_analysis")}
+            className={`px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "pathway_analysis" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Activity className="w-4 h-4 text-indigo-300" />
+            Pathway Remodeling & Divergence (3-Layer)
+          </button>
         </div>
       </div>
 
@@ -1419,6 +1429,9 @@ export default function SingleNucleusExplorer() {
             </div>
           )}
         </div>
+      ) : activeTab === "pathway_analysis" ? (
+        /* ─── TAB 4: UNBIASED 3-LAYER PATHWAY ANALYSIS ─── */
+        <SingleNucleusPathwayExplorer />
       ) : (
         /* ─── TAB 1: UMAP ATLAS EXPLORER (EXISTING POOLED ATLAS) ─── */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

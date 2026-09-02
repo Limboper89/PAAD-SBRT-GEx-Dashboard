@@ -399,7 +399,13 @@ export class IntentRouter {
         qLower.includes("naive") ||
         qLower.includes("pseudobulk") ||
         qLower.includes("change after") ||
-        qLower.includes("post-treatment");
+        qLower.includes("post-treatment") ||
+        qLower.includes("divergence") ||
+        qLower.includes("divergent") ||
+        qLower.includes("pathway remodeling") ||
+        qLower.includes("cds") ||
+        qLower.includes("mixed model") ||
+        qLower.includes("mixed-effects");
 
       return {
         intent: isTreatmentQuery ? "single_nucleus_treatment_comparison" : "cell_type_lineage_expression",
