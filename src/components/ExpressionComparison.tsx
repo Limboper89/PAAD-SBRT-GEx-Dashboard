@@ -322,7 +322,7 @@ export default function ExpressionComparison({
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     ctx.font = "bold 30px monospace";
-    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Paired Cohort (N = 55)`, 100, 136);
+    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Independent Cohorts (N = 55)`, 100, 136);
 
     // 3. Layout Dimensions
     const padLeft = 240;

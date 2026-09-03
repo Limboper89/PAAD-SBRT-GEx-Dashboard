@@ -11,8 +11,8 @@ PDAC BioPortal is an interactive multi-modal transcriptomics analytics platform 
 
 ## 🌟 Key Features & Datasets
 
-1. **Bulk RNA-seq Radiotherapy Atlas (GSE225767)**:
-   - Differential expression analysis (Volcano plots, Heatmaps, Boxplots) for paired SBRT Pre vs Post treatment response.
+1. **Neoadjuvant Treatment-Associated Transcriptomic Cohort (GSE225767)**:
+   - Differential expression analysis (Volcano plots, Heatmaps, Boxplots) across independent pre-treatment FNA biopsies ($n=26$) and post-treatment surgical resections ($n=29$) following multimodal neoadjuvant therapy (induction chemotherapy + SBRT).
 2. **TCGA-PAAD vs GTEx Pancreas Normal Reference**:
    - 349-sample tumor vs normal reference dataset using high-performance Float32 binary matrix memory indexing.
 3. **PDAC Single-Nucleus Reference Atlas (GSE202051)**:

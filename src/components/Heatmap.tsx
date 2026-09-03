@@ -424,7 +424,7 @@ export default function Heatmap({
     ctx.font = "bold 30px monospace";
     const sub = isTcgaGtex 
       ? `TCGA-PAAD Primary Tumor (n=${heatmapData.tumorCount}) vs GTEx Normal (n=${heatmapData.gtexCount})`
-      : `Pre-SBRT (N=${heatmapData.preCount}) vs Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount}) Paired Cohort`;
+      : `Pre-SBRT (N=${heatmapData.preCount}) vs Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount}) Independent Cohorts`;
     ctx.fillText(sub, 80, 136);
 
     const padLeft = 480;
