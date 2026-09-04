@@ -560,16 +560,16 @@ export default function Dashboard() {
     <div className="flex flex-col flex-1 min-h-screen bg-slate-950 bg-grid-pattern bg-blend-overlay">
       {/* Premium Header */}
       <header className="border-b border-slate-900 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-tr from-teal-500 to-indigo-600 p-2 rounded-xl text-slate-950 shadow-lg shadow-teal-500/10">
-            <Activity className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent font-sans">
-              PDAC BioPortal
-            </h1>
-            <p className="text-xs text-slate-400 font-mono">A Multi-Cohort Transcriptomics &amp; SBRT Translational Knowledgebase</p>
-          </div>
+        <div 
+          className="flex items-center cursor-pointer group"
+          onClick={() => setActiveTab("de")}
+          title="PDAC BioPortal - Home"
+        >
+          <img 
+            src={`${basePath}/pdac_bioportal_logo_transparent.png`} 
+            alt="PDAC BioPortal - A multi-Cohort Transcriptomics & RT Translational Knowledgebase" 
+            className="h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain transition-all duration-200 group-hover:scale-[1.02] drop-shadow-[0_2px_12px_rgba(56,189,248,0.15)]"
+          />
         </div>
 
         {/* Search & Study dropdown controllers */}

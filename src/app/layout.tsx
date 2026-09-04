@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PDAC BioPortal | A Multi-Cohort Transcriptomics & SBRT Translational Knowledgebase",
-  description: "Interactive multi-cohort transcriptomic and spatial knowledgebase for bulk RNA-seq, single-nucleus RNA-seq, and 10x Visium spatial transcriptomics in pancreatic ductal adenocarcinoma and SBRT response",
+  title: "PDAC BioPortal | A Multi-Cohort Transcriptomics & RT Translational Knowledgebase",
+  description: "Interactive multi-cohort transcriptomic and spatial knowledgebase for bulk RNA-seq, single-nucleus RNA-seq, and 10x Visium spatial transcriptomics in pancreatic ductal adenocarcinoma and radiotherapy response",
 };
 
 export default function RootLayout({
