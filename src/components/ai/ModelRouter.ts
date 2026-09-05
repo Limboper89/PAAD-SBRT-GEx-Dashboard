@@ -11,6 +11,7 @@ export interface RouteComplexityFlags {
   mechanisticInterpretation: boolean;
   conflictingEvidence: boolean;
   explicitIntegrationRequest: boolean;
+  patientLevelAnalysis?: boolean;
 }
 
 export interface RoutingDecision {
@@ -72,13 +73,22 @@ export function selectModelRoute(
     qLower.includes("conflict") ||
     qLower.includes("contradiction");
 
+  const patientLevelAnalysis =
+    qLower.includes("patient") ||
+    qLower.includes("patients") ||
+    qLower.includes("individual") ||
+    qLower.includes("cross-patient") ||
+    qLower.includes("each patient") ||
+    qLower.includes("heterogeneity");
+
   const complexityFlags: RouteComplexityFlags = {
     multipleDatasets,
     multipleModalities,
     hypothesisGeneration,
     mechanisticInterpretation,
     conflictingEvidence,
-    explicitIntegrationRequest
+    explicitIntegrationRequest,
+    patientLevelAnalysis
   };
 
   const isComplex =
@@ -87,19 +97,25 @@ export function selectModelRoute(
     hypothesisGeneration ||
     mechanisticInterpretation ||
     conflictingEvidence ||
-    explicitIntegrationRequest;
+    explicitIntegrationRequest ||
+    patientLevelAnalysis;
 
   // Environment Flags
   const geminiEnabled = process.env.GEMINI_ENABLED !== "false" && process.env.NEXT_PUBLIC_GEMINI_ENABLED !== "false";
   const llamaEnabled = process.env.LLAMA_ENABLED !== "false" && process.env.NEXT_PUBLIC_LLAMA_ENABLED !== "false";
 
-  // 2. LEVEL 0: BioPortal First (0 LLM API Calls)
+  // 2. LEVEL 0: BioPortal First (0 LLM Calls)
   // BioPortal answers directly if intent is a data lookup AND user did NOT ask for text explanation/reasoning
   const explanationKeywords = [
     "explain", "why", "mechanism", "role", "function", "hypothesis", "hypotheses",
     "propose", "suggest", "meaning", "significance", "summarize", "summary",
     "what does", "what is the role", "how does", "interact", "compare", "integrate",
-    "cross-study", "cross-module", "limitation", "limitations", "experiment"
+    "cross-study", "cross-module", "limitation", "limitations", "experiment",
+    "look", "take a look", "look at", "look on", "inspect", "examine", "analyze", "analyse",
+    "analysis", "evaluate", "assess", "interpret", "interpretation", "reason", "reasoning",
+    "think", "tell me", "tell us", "describe", "description", "discuss", "discussion",
+    "trend", "pattern", "distribution", "heterogeneity", "variation", "profile",
+    "patient", "patients", "values", "value", "what about", "how about", "check", "view"
   ];
 
   const requestsTextExplanation = explanationKeywords.some(kw => qLower.includes(kw));
@@ -151,6 +167,7 @@ export function selectModelRoute(
     if (hypothesisGeneration) reasons.push("hypothesis generation");
     if (mechanisticInterpretation) reasons.push("mechanistic interpretation");
     if (explicitIntegrationRequest) reasons.push("explicit integration");
+    if (patientLevelAnalysis) reasons.push("cross-patient heterogeneity analysis");
 
     return {
       route: "GEMINI",
@@ -350,7 +367,7 @@ export function formatVerifiedQuantitativeBlock(
     }
   }
 
-  return blocks.join("\n\n");
+  return blocks.join("\n\n") + "\n\n[Action: OPEN_DEG]";
 }
 
 /**
@@ -481,6 +498,17 @@ export function formatBioPortalDirectResponse(
     let md = `### 📍 Spatial Visium Localization: ${gene} (GSE274103)\n\n`;
     md += `* **Tissue Region:** **${sp.description || 'Ductal Epithelial / Tumor Core'}**\n`;
     md += `* **Max Spot Expression:** \`${sp.maxSpotExpr !== undefined ? (typeof sp.maxSpotExpr === 'number' ? sp.maxSpotExpr.toFixed(2) : sp.maxSpotExpr) : '3.45'}\` log1p\n\n`;
+
+    if (sp.patientMetrics && sp.patientMetrics.length > 0) {
+      md += `* **Cross-Patient Spatial Expression (GSE274103):**\n\n`;
+      md += `| Patient ID | GSM Accession | Max Spot Expression (log1p) | Max Raw UMI Count |\n`;
+      md += `| :--- | :--- | :--- | :--- |\n`;
+      sp.patientMetrics.forEach((pm: any) => {
+        md += `| **${pm.patientId}** | \`${pm.gsm || 'N/A'}\` | \`${typeof pm.maxSpotExpr === 'number' ? pm.maxSpotExpr.toFixed(2) : pm.maxSpotExpr}\` | ${pm.maxRawCount ?? 'N/A'} |\n`;
+      });
+      md += `\n`;
+    }
+
     md += `[Action: OPEN_SPATIAL]`;
     return md;
   }

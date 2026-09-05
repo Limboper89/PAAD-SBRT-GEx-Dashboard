@@ -161,8 +161,17 @@ STRICT SCIENTIFIC EVIDENCE-CONSISTENCY & ANTI-HALLUCINATION RULES:
    - CRITICAL: A gene absent from the feature set must NEVER be interpreted or described as having "zero expression", "low expression", or "unexpressed spots".
    - FABRICATION PROHIBITION: Do NOT fabricate spatial localization, expression values, spot counts, positive spot ratios, enrichment, or biological conclusions for an unavailable gene.
    - KRT19 IN GSE274103 SPATIAL: In the GSE274103 Visium spatial dataset, **KRT19 is ABSENT** from the targeted FFPE probe set. For any query regarding KRT19 spatial expression in GSE274103, state explicitly that KRT19 is unavailable in this dataset's feature set and cannot be determined. You may suggest available related epithelial/ductal markers such as KRT18 or EPCAM, but must clearly distinguish these from KRT19 measurement.
-`;
 
+12. DASHBOARD NAVIGATION ACTION BUTTONS:
+   - When discussing single-nucleus data or recommending exploration of single-cell clusters, you may append '[Action: OPEN_SINGLE_NUCLEUS]' on its own line at the end of your response.
+   - When discussing spatial Visium localization, you may append '[Action: OPEN_SPATIAL]' on its own line at the end of your response.
+   - When discussing pathway enrichment or GSEA, you may append '[Action: OPEN_PATHWAYS]' on its own line at the end of your response.
+   - When discussing differential expression or volcano plots, you may append '[Action: OPEN_DEG]' on its own line at the end of your response.
+
+13. SELECTED TARGET PLOT / FIGURE FOCUS:
+   - The user can dynamically select which specific plot or visualization is active for analysis (e.g. Expression Heatmap, Correlation Scatter Plot, Volcano Plot, UMAP Atlas).
+   - When the user asks about 'this plot', 'this figure', 'the heatmap', 'the correlation plot', or asks for interpretation of the current visualization, directly interpret the figure designated in 'Selected Target Plot Focus' in SYSTEM METADATA.
+`;
 }
 
 export function buildContextualPrompt(
@@ -284,6 +293,14 @@ export function buildContextualPrompt(
       toolDataText += `\n[DETERMINISTIC SPATIAL VISIUM TABLE: GSE274103]\n` +
         `| Gene | Sample ID | Tissue Region / Localization | Max Spot Expression (log1p) |\n|---|---|---|---|\n` +
         `| **${spatial.gene}** | ${sampleId} | ${desc} | \`${typeof maxExpr === 'number' ? maxExpr.toFixed(2) : maxExpr}\` |\n`;
+
+      if (spatial.patientMetrics && spatial.patientMetrics.length > 0) {
+        toolDataText += `\n[DETERMINISTIC GSE274103 CROSS-PATIENT SPATIAL TABLE (${spatial.patientMetrics.length} Patients)]\n` +
+          `| Patient ID | GSM Accession | Max Spot Expression (log1p) | Max Raw UMI Count |\n|---|---|---|---|\n` +
+          spatial.patientMetrics.map((pm: any) =>
+            `| **${pm.patientId}** | ${pm.gsm || 'N/A'} | \`${typeof pm.maxSpotExpr === 'number' ? pm.maxSpotExpr.toFixed(2) : pm.maxSpotExpr}\` | ${pm.maxRawCount ?? 'N/A'} |`
+          ).join('\n') + '\n';
+      }
     } else {
       toolDataText += `\n[DETERMINISTIC SPATIAL FEATURE AVAILABILITY STATUS: GSE274103]\n` +
         `* Requested Gene: **${spatial.gene}**\n` +
@@ -313,6 +330,7 @@ export function buildContextualPrompt(
 
   const prompt = `[SYSTEM METADATA]
 Active Module: ${currentPageContext.module} (${currentPageContext.dataset})
+Selected Target Plot Focus: ${currentPageContext.currentFigure || "Default View"}
 Selected Page Gene Context (VISUAL HINT ONLY): ${currentPageContext.gene || "None"}
 Active Heatmap Genes in Context: ${heatmapGenesStr}
 

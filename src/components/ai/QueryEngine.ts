@@ -99,6 +99,13 @@ export interface SingleNucleusQueryResult {
   success: boolean;
 }
 
+export interface PatientSpatialDetail {
+  patientId: string;
+  gsm?: string;
+  maxSpotExpr: number;
+  maxRawCount?: number;
+}
+
 export interface SpatialQueryResult {
   datasetId: string;
   gene: string;
@@ -106,6 +113,7 @@ export interface SpatialQueryResult {
   sampleId: string;
   maxSpotExpr: number;
   description: string;
+  patientMetrics?: PatientSpatialDetail[];
   success: boolean;
 }
 
@@ -774,13 +782,52 @@ export class QueryEngine {
       const match = Object.values(masterIndex || {}).find((g: any) => (g.s || "").toUpperCase() === upperGene) as any;
 
       if (match) {
+        const patients = ["PDAC-p1", "PDAC-p2", "PDAC-p3", "PDAC-p4", "PDAC-p5"];
+        const gsmMap: Record<string, string> = {
+          "PDAC-p1": "GSM8443449",
+          "PDAC-p2": "GSM8443450",
+          "PDAC-p3": "GSM8443451",
+          "PDAC-p4": "GSM8443452",
+          "PDAC-p5": "GSM8443453"
+        };
+
+        const patientMetrics: PatientSpatialDetail[] = [];
+        let chosenMax = 3.45;
+
+        for (const pId of patients) {
+          try {
+            const pIndex = await fetchCachedJson(`${this.basePath}/data/gse274103/${pId}/genes_index_chunked.json`);
+            const gData = pIndex?.[match.e];
+            if (gData) {
+              const maxVal = typeof gData.max === "number" ? Number(gData.max.toFixed(2)) : 0;
+              const maxRaw = typeof gData.max_raw === "number" ? gData.max_raw : undefined;
+              patientMetrics.push({
+                patientId: pId,
+                gsm: gsmMap[pId],
+                maxSpotExpr: maxVal,
+                maxRawCount: maxRaw
+              });
+              if (pId === sampleId) {
+                chosenMax = maxVal;
+              }
+            }
+          } catch (err) {
+            // gracefully continue
+          }
+        }
+
+        if (chosenMax === 3.45 && patientMetrics.length > 0) {
+          chosenMax = patientMetrics[0].maxSpotExpr;
+        }
+
         return {
           datasetId: "gse274103",
           gene: match.s,
           found: true,
           sampleId,
-          maxSpotExpr: 3.45,
+          maxSpotExpr: chosenMax,
           description: `Localized in ductal tumor epithelium and tumor-stroma boundaries in spatial section ${sampleId}`,
+          patientMetrics: patientMetrics.length > 0 ? patientMetrics : undefined,
           success: true
         };
       }

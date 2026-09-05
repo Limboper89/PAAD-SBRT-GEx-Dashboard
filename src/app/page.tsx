@@ -104,6 +104,67 @@ export default function Dashboard() {
   const [headerSearch, setHeaderSearch] = useState<string>("");
   const [searchResults, setSearchResults] = useState<string[]>([]);
 
+  // In-page tab routing from PDACopilot action buttons & URL hash
+  useEffect(() => {
+    const handleNavigate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ action?: string; target?: string }>;
+      const action = customEvent.detail?.action?.toUpperCase() || "";
+      const target = customEvent.detail?.target || "";
+
+      if (action.includes("SINGLE_NUCLEUS") || target === "sn") {
+        setActiveTab("sn");
+        setActiveStudy("GSE202051");
+      } else if (action.includes("SPATIAL") || target === "spatial" || target === "tme") {
+        setActiveTab("tme");
+        setActiveStudy("GSE274103");
+      } else if (action.includes("GSEA") || action.includes("PATHWAY") || target === "pathway") {
+        setActiveTab("pathway");
+      } else if (action.includes("CORRELATION") || action.includes("HEATMAP") || target === "correlation") {
+        setActiveTab("correlation");
+      } else if (action.includes("DEG") || action.includes("EXPRESSION") || target === "de") {
+        setActiveTab("de");
+      }
+
+      // Smoothly scroll down to tab controllers
+      setTimeout(() => {
+        const el = document.getElementById("main-tab-controllers");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    };
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "").toLowerCase();
+      if (hash === "sn" || hash === "single-nucleus") {
+        setActiveTab("sn");
+        setActiveStudy("GSE202051");
+      } else if (hash === "spatial" || hash === "tme") {
+        setActiveTab("tme");
+        setActiveStudy("GSE274103");
+      } else if (hash === "pathways" || hash === "pathway" || hash === "gsea") {
+        setActiveTab("pathway");
+      } else if (hash === "correlation" || hash === "heatmap") {
+        setActiveTab("correlation");
+      } else if (hash === "deg" || hash === "de" || hash === "expression") {
+        setActiveTab("de");
+      }
+    };
+
+    window.addEventListener("bioportal:navigate", handleNavigate);
+    window.addEventListener("hashchange", handleHashChange);
+
+    // Initial check on mount if URL contains a hash
+    if (window.location.hash) {
+      handleHashChange();
+    }
+
+    return () => {
+      window.removeEventListener("bioportal:navigate", handleNavigate);
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, []);
+
   // Load SBRT data on mount
   useEffect(() => {
     async function loadBulkData() {
@@ -367,19 +428,62 @@ export default function Dashboard() {
     return "bulk";
   }, [activeTab, activeStudy]);
 
-  const { registerModuleContext } = useAIContext();
+  const { registerModuleContext, activeContext, setCurrentFigure } = useAIContext();
+
+  // Dynamic available figures based on active tab
+  const availableFigures = useMemo(() => {
+    switch (activeTab) {
+      case "correlation":
+        return [
+          "Correlation Scatter Plot",
+          "Expression Heatmap",
+          "Expression Comparison (Distribution)"
+        ];
+      case "de":
+        return [
+          "Volcano Plot",
+          "Differential Expression Table"
+        ];
+      case "sn":
+        return [
+          "Single-Nucleus UMAP Atlas",
+          "Treatment-Stratified Comparison",
+          "Cell Lineage Distribution"
+        ];
+      case "tme":
+        return [
+          "Spatial Visium Spot Map",
+          "H&E Histology Alignment Overlay",
+          "Cross-Patient Spatial Expression"
+        ];
+      case "pathway":
+        return [
+          "Pathway Enrichment Dot Plot",
+          "GSEA Running Score Plot",
+          "Pathway Gene Membership"
+        ];
+      default:
+        return ["Documentation & Methods"];
+    }
+  }, [activeTab]);
+
+  const defaultFigureForTab = useMemo(() => {
+    switch (activeTab) {
+      case "correlation": return "Correlation Scatter Plot";
+      case "de": return "Volcano Plot";
+      case "sn": return "Single-Nucleus UMAP Atlas";
+      case "tme": return "Spatial Visium Spot Map";
+      case "pathway": return "Pathway Enrichment Dot Plot";
+      default: return "Documentation & Methods";
+    }
+  }, [activeTab]);
+
+  const activeFigure = activeContext.currentFigure || defaultFigureForTab;
 
   // Sync state to PDACopilot context provider
   useEffect(() => {
     const studyObj = STUDIES.find(s => s.id === activeStudy);
     const studyName = studyObj ? studyObj.name : activeStudy;
-    
-    let figureName = "Volcano Plot";
-    if (activeTab === "de") figureName = "Volcano Plot & Differential Table";
-    else if (activeTab === "correlation") figureName = "Correlation Scatter Plot & Heatmap";
-    else if (activeTab === "tme") figureName = "Spatial Transcriptomics Spot Map";
-    else if (activeTab === "sn") figureName = "Single-Nucleus UMAP Atlas";
-    else if (activeTab === "about") figureName = "Documentation & Methods";
 
     const moduleLabel = activeStudy === "TCGA_GTEX" ? "TCGA-GTEx" : activeStudy === "GSE202051" ? "Single Nucleus" : activeStudy === "GSE274103" ? "Spatial" : "SBRT Bulk";
     const currentHeatmapGenes = activeStudy === "TCGA_GTEX" ? tcgaGtexHeatmapGenes : heatmapGenes;
@@ -388,7 +492,8 @@ export default function Dashboard() {
       module: moduleLabel,
       gene: selectedGene,
       dataset: studyName,
-      currentFigure: figureName,
+      currentFigure: defaultFigureForTab,
+      availableFigures: availableFigures,
       heatmapGenes: currentHeatmapGenes,
       filters: {
         log2fcThreshold: 1.0,
@@ -411,6 +516,8 @@ export default function Dashboard() {
   }, [
     activeStudy,
     activeTab,
+    defaultFigureForTab,
+    availableFigures,
     selectedGene,
     activeGeneData,
     activeLog2FC,
@@ -729,7 +836,7 @@ export default function Dashboard() {
         </section>
 
         {/* Tab Controllers */}
-        <div className="flex flex-wrap border-b border-slate-900 bg-slate-900/20 p-1 rounded-xl self-start gap-1">
+        <div id="main-tab-controllers" className="flex flex-wrap border-b border-slate-900 bg-slate-900/20 p-1 rounded-xl self-start gap-1">
           <button
             onClick={() => { 
               if (activeTab !== "de" && activeTab !== "correlation") {
@@ -901,6 +1008,49 @@ export default function Dashboard() {
                     }}
                     placeholder="Search Gene 2..."
                   />
+                </div>
+              </div>
+
+              {/* Co-Expression & Heatmap Plot Focus Control for PDACopilot */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="text-slate-200 font-semibold">Active Analysis Target for PDACopilot:</span>
+                    <span className="text-[11px] text-amber-300 font-mono ml-2 font-bold">{activeFigure}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap font-mono text-[11px]">
+                  <button
+                    onClick={() => setCurrentFigure("Correlation Scatter Plot")}
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeFigure === "Correlation Scatter Plot"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-md ring-1 ring-amber-500/30"
+                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white hover:border-slate-700"
+                    }`}
+                  >
+                    🎯 Correlation Plot
+                  </button>
+                  <button
+                    onClick={() => setCurrentFigure("Expression Heatmap")}
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeFigure === "Expression Heatmap"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-md ring-1 ring-amber-500/30"
+                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white hover:border-slate-700"
+                    }`}
+                  >
+                    🎯 Expression Heatmap
+                  </button>
+                  <button
+                    onClick={() => setCurrentFigure("Expression Comparison (Distribution)")}
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                      activeFigure.includes("Distribution") || activeFigure.includes("Comparison")
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/60 shadow-md ring-1 ring-amber-500/30"
+                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white hover:border-slate-700"
+                    }`}
+                  >
+                    🎯 Expression Distribution
+                  </button>
                 </div>
               </div>
 

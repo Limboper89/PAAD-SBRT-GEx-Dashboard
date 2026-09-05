@@ -120,7 +120,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["gse202051"],
     outputSchema: "SingleNucleusQueryResult",
     validator: "validateSingleNucleus",
-    uiDestination: "/sn-prototype",
+    uiDestination: "/#sn",
     actionType: "OPEN_SINGLE_NUCLEUS"
   },
 
@@ -132,7 +132,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["gse274103"],
     outputSchema: "SpatialQueryResult",
     validator: "validateSpatial",
-    uiDestination: "/spatial-prototype",
+    uiDestination: "/#spatial",
     actionType: "OPEN_SPATIAL"
   },
 
@@ -144,7 +144,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["tcga_gtex", "gse225767"],
     outputSchema: "PathwayEnrichmentResult[]",
     validator: "validateORA",
-    uiDestination: "/pathways",
+    uiDestination: "/#pathways",
     actionType: "OPEN_PATHWAYS"
   },
 
@@ -156,7 +156,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["tcga_gtex", "gse225767"],
     outputSchema: "PathwayEnrichmentResult[]",
     validator: "validateGSEA",
-    uiDestination: "/pathways",
+    uiDestination: "/#pathways",
     actionType: "OPEN_GSEA"
   },
 
@@ -168,7 +168,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["tcga_gtex", "gse225767"],
     outputSchema: "PathwayGeneMembership",
     validator: "validatePathwayMembership",
-    uiDestination: "/pathways",
+    uiDestination: "/#pathways",
     actionType: "OPEN_PATHWAY_DETAIL"
   },
 
@@ -180,7 +180,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     supportedDatasets: ["tcga_gtex", "gse225767"],
     outputSchema: "CrossStudyQueryResult",
     validator: "validateCrossStudy",
-    uiDestination: "/pathways",
+    uiDestination: "/#pathways",
     actionType: "OPEN_CROSS_STUDY"
   }
 };

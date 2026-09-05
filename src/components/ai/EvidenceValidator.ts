@@ -233,19 +233,41 @@ export class EvidenceValidator {
         const isSig = (adjPValue !== undefined && adjPValue < 0.05) || (pValue !== undefined && pValue < 0.05);
 
         if (!isSig) {
-          // Non-significant metric (e.g. FDR = 0.31)
-          const claimsSignificant = 
-            respLower.includes(`${gene} is significantly`) ||
-            respLower.includes("statistically significant");
+          // Non-significant metric (e.g. FDR >= 0.05)
+          const statesNonSignificant = 
+            respLower.includes("not statistically significant") ||
+            respLower.includes("not significant") ||
+            respLower.includes("non-significant") ||
+            respLower.includes("did not reach statistical significance") ||
+            respLower.includes("does not reach statistical significance") ||
+            respLower.includes("did not achieve statistical significance") ||
+            respLower.includes("does not achieve statistical significance") ||
+            respLower.includes("failed to reach statistical significance") ||
+            respLower.includes("fails to reach statistical significance") ||
+            respLower.includes("no statistically significant") ||
+            respLower.includes("without statistical significance") ||
+            respLower.includes("without statistically significant") ||
+            respLower.includes("not statistically significantly");
 
-          if (claimsSignificant && !respLower.includes("not statistically significant")) {
-            errors.push({
-              type: "SIGNIFICANCE_REVERSAL",
-              message: `${res.gene} has FDR = ${res.metrics.adjPValueFormatted || res.metrics.pValueFormatted} (NOT statistically significant), but response claimed it was statistically significant.`,
-              severity: "CRITICAL",
-              expected: `FDR = ${res.metrics.adjPValueFormatted || res.metrics.pValueFormatted} (Not statistically significant)`,
-              actual: "Claimed statistically significant"
-            });
+          if (!statesNonSignificant) {
+            const explicitlyClaimsSignificant = 
+              respLower.includes(`${gene} is significantly`) ||
+              respLower.includes(`${gene} was significantly`) ||
+              respLower.includes("is statistically significant") ||
+              respLower.includes("was statistically significant") ||
+              respLower.includes("demonstrates statistically significant") ||
+              respLower.includes("achieved statistical significance") ||
+              respLower.includes("reached statistical significance");
+
+            if (explicitlyClaimsSignificant) {
+              errors.push({
+                type: "SIGNIFICANCE_REVERSAL",
+                message: `${res.gene} has FDR = ${res.metrics.adjPValueFormatted || res.metrics.pValueFormatted} (NOT statistically significant), but response claimed it was statistically significant.`,
+                severity: "HIGH",
+                expected: `FDR = ${res.metrics.adjPValueFormatted || res.metrics.pValueFormatted} (Not statistically significant)`,
+                actual: "Claimed statistically significant"
+              });
+            }
           }
         } else {
           // Significant metric (e.g. FDR = 2.92e-12 or 2.08e-48)

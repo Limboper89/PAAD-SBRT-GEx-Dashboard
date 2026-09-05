@@ -79,30 +79,37 @@ export function assembleProductionResponse(
   const validation = EvidenceValidator.validateResponse(userText, plan, assembled, executionResult, selectedGene);
 
   if (!validation.isValid) {
-    const hasCriticalContradiction = validation.errors.some(e =>
+    const criticalErrors = validation.errors.filter(e =>
       e.type === "NUMERICAL_CONTRADICTION" ||
       e.type === "LOG2FC_SIGN_REVERSAL" ||
       e.type === "SIGNIFICANCE_REVERSAL" ||
       e.type === "STUDY_DESIGN_ERROR"
     );
 
-    if (hasCriticalContradiction && deterministicBlock) {
-      const tcgaMetrics = dResults.tcga_gtex?.metrics;
-      const sbrtMetrics = dResults.gse225767?.metrics;
-      const primaryGene = plan.entities.genes[0] || "Target Gene";
-      
-      let interpretationText = "";
-      if (tcgaMetrics) {
-        const up = tcgaMetrics.log2FC > 0;
-        interpretationText = `BioPortal analysis demonstrates that **${primaryGene}** is **${up ? 'significantly upregulated' : 'downregulated'}** in TCGA-PAAD primary pancreatic tumor samples relative to GTEx normal pancreas tissue (log2FC = \`${tcgaMetrics.log2FCFormatted}\`, FDR = \`${tcgaMetrics.adjPValueFormatted}\`).`;
-      } else if (sbrtMetrics) {
-        const up = sbrtMetrics.log2FC > 0;
-        interpretationText = `BioPortal analysis indicates that **${primaryGene}** expression is **${up ? 'increased' : 'decreased'}** following SBRT radiotherapy in GSE225767 (log2FC = \`${sbrtMetrics.log2FCFormatted}\`, FDR = \`${sbrtMetrics.adjPValueFormatted}\`).`;
-      } else {
-        interpretationText = `BioPortal verified quantitative evidence is presented in the table above.`;
-      }
+    if (criticalErrors.length > 0 && deterministicBlock) {
+      const errorNotes = criticalErrors.map(e => `> 💡 **Evidence Clarification:** *${e.message}*`).join("\n\n");
 
-      assembled = `${deterministicBlock}\n\n### Biological Interpretation\n\n${interpretationText}\n\n*Note: Quantitative metrics above are served directly from the verified BioPortal analytical engine.*`;
+      // Preserve LLM's full biological interpretation instead of erasing it!
+      if (cleanedLlmText && cleanedLlmText.length > 40) {
+        assembled = `${deterministicBlock}\n\n${errorNotes}\n\n### Biological Interpretation\n\n${cleanedLlmText}`;
+      } else {
+        const tcgaMetrics = dResults.tcga_gtex?.metrics;
+        const sbrtMetrics = dResults.gse225767?.metrics;
+        const primaryGene = plan.entities.genes[0] || "Target Gene";
+        
+        let interpretationText = "";
+        if (tcgaMetrics) {
+          const up = tcgaMetrics.log2FC > 0;
+          interpretationText = `BioPortal analysis demonstrates that **${primaryGene}** is **${up ? 'significantly upregulated' : 'downregulated'}** in TCGA-PAAD primary pancreatic tumor samples relative to GTEx normal pancreas tissue (log2FC = \`${tcgaMetrics.log2FCFormatted}\`, FDR = \`${tcgaMetrics.adjPValueFormatted}\`).`;
+        } else if (sbrtMetrics) {
+          const up = sbrtMetrics.log2FC > 0;
+          interpretationText = `BioPortal analysis indicates that **${primaryGene}** expression is **${up ? 'increased' : 'decreased'}** following SBRT radiotherapy in GSE225767 (log2FC = \`${sbrtMetrics.log2FCFormatted}\`, FDR = \`${sbrtMetrics.adjPValueFormatted}\`).`;
+        } else {
+          interpretationText = `BioPortal verified quantitative evidence is presented in the table above.`;
+        }
+
+        assembled = `${deterministicBlock}\n\n### Biological Interpretation\n\n${interpretationText}\n\n*Note: Quantitative metrics above are served directly from the verified BioPortal analytical engine.*`;
+      }
     }
   }
 
@@ -118,6 +125,7 @@ export interface ActiveModuleContext {
   gene?: string | null;
   heatmapGenes: string[];
   currentFigure: string;
+  availableFigures?: string[];
   filters?: {
     log2fcThreshold?: number;
     pValueThreshold?: number;
@@ -187,6 +195,7 @@ interface AIContextType {
   setChatOpen: (open: boolean) => void;
   sendMessage: (text: string, taskType?: string) => Promise<void>;
   registerModuleContext: (partialContext: Partial<ActiveModuleContext>) => void;
+  setCurrentFigure: (figure: string) => void;
   clearChat: () => void;
   downloadSummary: () => void;
   retryLastMessage: () => Promise<void>;
@@ -247,18 +256,36 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
   const [messages, setMessages] = useState<ChatMessageItem[]>([initialGreeting]);
 
   const registerModuleContext = useCallback((partialContext: Partial<ActiveModuleContext>) => {
+    setActiveContext(prev => {
+      // Keep existing user-selected figure if we are in the same module
+      let targetFigure = partialContext.currentFigure || prev.currentFigure;
+      const isNewModule = partialContext.module && partialContext.module !== prev.module;
+      if (!isNewModule && prev.currentFigure) {
+        targetFigure = prev.currentFigure;
+      }
+
+      return {
+        ...prev,
+        ...partialContext,
+        currentFigure: targetFigure,
+        availableFigures: partialContext.availableFigures || prev.availableFigures,
+        filters: {
+          ...(prev.filters || {}),
+          ...(partialContext.filters || {})
+        },
+        heatmapGenes: partialContext.heatmapGenes || prev.heatmapGenes,
+        tcgaStats: partialContext.tcgaStats ? { ...prev.tcgaStats, ...partialContext.tcgaStats } : prev.tcgaStats,
+        sbrtStats: partialContext.sbrtStats ? { ...prev.sbrtStats, ...partialContext.sbrtStats } : prev.sbrtStats,
+        singleNucleusStats: partialContext.singleNucleusStats ? { ...prev.singleNucleusStats, ...partialContext.singleNucleusStats } : prev.singleNucleusStats,
+        spatialStats: partialContext.spatialStats ? { ...prev.spatialStats, ...partialContext.spatialStats } : prev.spatialStats,
+      };
+    });
+  }, []);
+
+  const setCurrentFigure = useCallback((figure: string) => {
     setActiveContext(prev => ({
       ...prev,
-      ...partialContext,
-      filters: {
-        ...(prev.filters || {}),
-        ...(partialContext.filters || {})
-      },
-      heatmapGenes: partialContext.heatmapGenes || prev.heatmapGenes,
-      tcgaStats: partialContext.tcgaStats ? { ...prev.tcgaStats, ...partialContext.tcgaStats } : prev.tcgaStats,
-      sbrtStats: partialContext.sbrtStats ? { ...prev.sbrtStats, ...partialContext.sbrtStats } : prev.sbrtStats,
-      singleNucleusStats: partialContext.singleNucleusStats ? { ...prev.singleNucleusStats, ...partialContext.singleNucleusStats } : prev.singleNucleusStats,
-      spatialStats: partialContext.spatialStats ? { ...prev.spatialStats, ...partialContext.spatialStats } : prev.spatialStats,
+      currentFigure: figure
     }));
   }, []);
 
@@ -298,7 +325,12 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
         const res = await fetch(provider.endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_message: payload.user_message, system_prompt: payload.context.system_prompt })
+          body: JSON.stringify({
+            user_message: payload.user_message,
+            system_prompt: payload.context?.system_prompt,
+            model: provider.model,
+            provider: provider.id
+          })
         });
 
         if (res.ok) {
@@ -307,6 +339,9 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
             const data = await res.json();
             if (!data.error) {
               rawReply = data.reply || data.choices?.[0]?.message?.content || null;
+              if (data.model) {
+                providerNameUsed = data.provider || `${provider.name} (${data.model})`;
+              }
             }
           }
         }
@@ -320,7 +355,11 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
           const localRes = await fetch("/api/ai/gemini", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_message: payload.user_message, system_prompt: payload.context.system_prompt })
+            body: JSON.stringify({
+              user_message: payload.user_message,
+              system_prompt: payload.context?.system_prompt,
+              model: provider.model
+            })
           });
           if (localRes.ok) {
             const localData = await localRes.json();
@@ -347,7 +386,8 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
             missingEntities: [],
             unsupportedClaims: []
           }),
-          providerUsed: "BioPortal Deterministic Engine"
+          providerUsed: "BioPortal Deterministic Engine",
+          error: true
         };
       }
 
@@ -485,7 +525,9 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
       if (response.error || !response.reply) {
         console.warn("[PDACopilot AIProvider]: Remote LLM unavailable -> Activating Level 0 BioPortal Grounding Engine fallback");
         const fallbackReply = formatBioPortalDirectResponse(plan, executionResult);
-        finalContent = fallbackReply;
+        finalContent = routingDecision.route !== "BIOPORTAL"
+          ? `> ⚠️ **Note:** *Live AI reasoning service is currently unreachable; displaying verified BioPortal analytical evidence below.*\n\n${fallbackReply}`
+          : fallbackReply;
         isFinalError = false;
       } else {
         finalContent = routingDecision.route === "BIOPORTAL" 
@@ -570,6 +612,7 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
         setChatOpen,
         sendMessage,
         registerModuleContext,
+        setCurrentFigure,
         clearChat,
         downloadSummary,
         retryLastMessage

@@ -121,33 +121,80 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
     return htmlLines;
   };
 
+  const formatActionTitle = (action: string) => {
+    const upper = action.toUpperCase();
+    if (upper.includes("SINGLE_NUCLEUS") || upper.includes("SINGLE NUCLEUS")) return "Open Single-Nucleus Atlas";
+    if (upper.includes("SPATIAL")) return "Open Spatial Transcriptomics";
+    if (upper.includes("GSEA") || upper.includes("PATHWAY") || upper.includes("PATHWAYS")) return "Open Pathway Explorer";
+    if (upper.includes("CORRELATION") || upper.includes("HEATMAP")) return "Open Co-Expression & Heatmap";
+    if (upper.includes("DEG") || upper.includes("VIEW DEG")) return "Open Differential Expression";
+    if (upper.includes("GENE_EXPRESSION")) return "Open Gene Expression";
+    return action.replace(/^OPEN_/, "").replace(/_/g, " ");
+  };
+
   const handleActionClick = (actionText: string) => {
     const textUpper = actionText.toUpperCase();
-    if (textUpper.includes("OPEN_DEG") || textUpper.includes("VIEW DEG")) {
-      window.location.hash = "deg";
-    } else if (textUpper.includes("OPEN_GSEA") || textUpper.includes("OPEN_PATHWAYS") || textUpper.includes("RUN GSEA") || textUpper.includes("PATHWAY")) {
-      window.location.pathname = "/pathways";
-    } else if (textUpper.includes("OPEN_SPATIAL") || textUpper.includes("SPATIAL")) {
-      window.location.pathname = "/spatial-prototype";
-    } else if (textUpper.includes("OPEN_SINGLE_NUCLEUS") || textUpper.includes("SINGLE NUCLEUS")) {
-      window.location.pathname = "/sn-prototype";
+    let target = "de";
+    let hash = "deg";
+
+    if (textUpper.includes("SINGLE_NUCLEUS") || textUpper.includes("SINGLE NUCLEUS")) {
+      target = "sn";
+      hash = "sn";
+    } else if (textUpper.includes("SPATIAL")) {
+      target = "spatial";
+      hash = "spatial";
+    } else if (textUpper.includes("GSEA") || textUpper.includes("PATHWAY") || textUpper.includes("PATHWAYS")) {
+      target = "pathway";
+      hash = "pathways";
+    } else if (textUpper.includes("CORRELATION") || textUpper.includes("HEATMAP")) {
+      target = "correlation";
+      hash = "correlation";
     } else {
-      window.location.hash = "expression";
+      target = "de";
+      hash = "deg";
+    }
+
+    if (typeof window !== "undefined") {
+      // 1. Dispatch custom event for instant in-page tab switching without full reload
+      window.dispatchEvent(new CustomEvent("bioportal:navigate", { 
+        detail: { action: textUpper, target } 
+      }));
+
+      // 2. Set hash for bookmarking and browser history
+      window.location.hash = hash;
+
+      // 3. If currently on a sub-route (e.g., prototype page), redirect cleanly to main page with hash
+      if (window.location.pathname.includes("-prototype")) {
+        window.location.href = `/PAAD-SBRT-GEx-Dashboard/#${hash}`;
+      }
     }
   };
 
   const parseInline = (text: string): React.ReactNode => {
-    const parts = text.split(/(\[Action:.*?\]|\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+    // Matches: [Action: OPEN_...], [OPEN_...], [🚀 OPEN_...], **bold**, `code`, *italic*
+    const parts = text.split(/(\[(?:Action:\s*)?(?:🚀\s*)?(?:OPEN_[A-Z0-9_]+|VIEW DEG|RUN GSEA)\]|\*\*.*?\*\*|`.*?`|\*.*?\*)/gi);
     return parts.map((part, idx) => {
-      if (part.startsWith("[Action:") && part.endsWith("]")) {
-        const actionLabel = part.slice(8, -1).trim();
+      if (part && part.startsWith("[") && part.endsWith("]") && (
+        part.toUpperCase().includes("OPEN_") ||
+        part.toUpperCase().includes("ACTION:") ||
+        part.toUpperCase().includes("VIEW DEG") ||
+        part.toUpperCase().includes("RUN GSEA")
+      )) {
+        const cleanLabel = part
+          .replace(/^\[/, "")
+          .replace(/\]$/, "")
+          .replace(/^Action:\s*/i, "")
+          .replace(/^🚀\s*/, "")
+          .trim();
+        const displayTitle = formatActionTitle(cleanLabel);
         return (
           <button
             key={idx}
-            onClick={() => handleActionClick(actionLabel)}
-            className="my-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 hover:text-white font-semibold text-[11px] transition-all shadow-sm cursor-pointer"
+            onClick={() => handleActionClick(cleanLabel)}
+            className="my-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-teal-950/80 hover:bg-teal-900 border border-teal-600/60 hover:border-teal-400 text-teal-300 hover:text-white font-semibold text-[11px] transition-all shadow-md hover:shadow-teal-900/30 cursor-pointer active:scale-95"
+            title={`Navigate to ${displayTitle}`}
           >
-            <span>🚀 {actionLabel}</span>
+            <span>🚀 {displayTitle}</span>
           </button>
         );
       }

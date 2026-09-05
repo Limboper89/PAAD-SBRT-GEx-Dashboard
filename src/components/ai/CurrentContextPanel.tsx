@@ -19,16 +19,28 @@ import {
 import { DATASET_REGISTRY } from "./DatasetRegistry";
 
 export function CurrentContextPanel() {
-  const { activeContext, currentProviderName } = useAIContext();
+  const { activeContext, currentProviderName, setCurrentFigure } = useAIContext();
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"mounted_page" | "global_registry">("mounted_page");
 
   const geneName = activeContext.gene || "None selected";
 
+  // Fallback available figures if not explicitly provided
+  const figures = activeContext.availableFigures && activeContext.availableFigures.length > 0
+    ? activeContext.availableFigures
+    : [
+        activeContext.currentFigure || "Volcano Plot",
+        "Expression Heatmap",
+        "Correlation Scatter Plot",
+        "Expression Distribution (Violin/Jitter)",
+        "Single-Nucleus UMAP Atlas",
+        "Spatial Visium Spot Map"
+      ];
+
   return (
     <div className="border-b border-slate-800/80 bg-slate-950/80 text-xs">
       <div className="px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-center gap-1.5 overflow-hidden flex-wrap">
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 font-semibold text-[11px] shrink-0">
             <Layers className="w-3 h-3 text-indigo-400" />
             <span>{activeContext.module}</span>
@@ -39,9 +51,22 @@ export function CurrentContextPanel() {
             <span>{geneName}</span>
           </div>
 
-          <span className="text-[10px] text-slate-500 hidden sm:inline truncate">
-            (Visual hint only — Router queries all portal datasets off-page)
-          </span>
+          {/* Quick Active Plot Selector in header */}
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-950/50 border border-amber-700/60 text-amber-300 text-[10.5px] shrink-0 shadow-sm">
+            <Activity className="w-3 h-3 text-amber-400 shrink-0" />
+            <select
+              value={activeContext.currentFigure}
+              onChange={(e) => setCurrentFigure(e.target.value)}
+              className="bg-transparent text-amber-300 text-[10.5px] font-semibold focus:outline-none cursor-pointer max-w-[170px] truncate"
+              title="Target plot for PDACopilot analysis"
+            >
+              {figures.map((fig) => (
+                <option key={fig} value={fig} className="bg-slate-950 text-slate-200">
+                  {fig}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <button
@@ -82,17 +107,11 @@ export function CurrentContextPanel() {
           </div>
 
           {activeTab === "mounted_page" && (
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5 overflow-hidden text-slate-300">
                 <Database className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span className="text-slate-400 shrink-0">Dataset:</span>
                 <span className="font-medium text-slate-200 truncate">{activeContext.dataset}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5 overflow-hidden text-slate-300">
-                <Activity className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="text-slate-400 shrink-0">Active Figure:</span>
-                <span className="font-medium text-amber-300 truncate">{activeContext.currentFigure}</span>
               </div>
 
               <div className="flex items-center gap-1.5 overflow-hidden text-slate-300">
@@ -101,6 +120,23 @@ export function CurrentContextPanel() {
                 <span className="font-mono text-slate-200 truncate">
                   log₂FC ≥ {activeContext.filters?.log2fcThreshold ?? 1.0}, p &lt; {activeContext.filters?.pValueThreshold ?? 0.05}
                 </span>
+              </div>
+
+              {/* Interactive Active Figure Selector in Expanded Panel */}
+              <div className="flex items-center gap-2 overflow-hidden text-slate-300 col-span-1 sm:col-span-2 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+                <Activity className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="text-slate-400 shrink-0 font-medium">Select Active Plot for Analysis:</span>
+                <select
+                  value={activeContext.currentFigure}
+                  onChange={(e) => setCurrentFigure(e.target.value)}
+                  className="bg-slate-950 border border-amber-500/50 text-amber-300 text-[11px] rounded px-2 py-1 font-semibold focus:outline-none focus:border-amber-400 cursor-pointer flex-1"
+                >
+                  {figures.map((fig) => (
+                    <option key={fig} value={fig} className="bg-slate-950 text-slate-200">
+                      {fig}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
