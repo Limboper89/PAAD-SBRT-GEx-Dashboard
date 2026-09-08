@@ -11,11 +11,16 @@ export interface QueryPlan {
     genes: string[];
     cellTypes?: string[];
     samples?: string[];
+    subgroupFilter?: string;
+    targetCellType?: string;
+    cellTypeLevel?: "broad_celltype" | "level2";
   };
   comparison?: {
     type: string;
     group1?: string;
     group2?: string;
+    subgroupFilter?: string;
+    targetCellType?: string;
   };
   targetDatasets: string[];
   isPageSpecificQuestion: boolean;
@@ -138,6 +143,127 @@ export class IntentRouter {
       "the top genes"
     ];
     return anaphoricPhrases.some(phrase => qLower.includes(phrase));
+  }
+
+  /**
+   * Dynamically parse single-nucleus cohort subgroups and target cell lineages
+   */
+  public extractSingleNucleusFilters(
+    question: string,
+    currentPageContext?: ActiveModuleContext
+  ): {
+    subgroupFilter?: string;
+    targetCellType?: string;
+    cellTypeLevel?: "broad_celltype" | "level2";
+  } {
+    const qLower = question.toLowerCase();
+    let subgroupFilter: string | undefined = undefined;
+    let targetCellType: string | undefined = undefined;
+    let cellTypeLevel: "broad_celltype" | "level2" | undefined = undefined;
+
+    // 1. Treatment Subgroup Extraction
+    if (
+      qLower.includes("losartan") ||
+      qLower.includes("crtl") ||
+      qLower.includes("crt+losartan") ||
+      qLower.includes("crt + losartan")
+    ) {
+      subgroupFilter = "CRTl";
+    } else if (
+      qLower.includes("nivolumab") ||
+      qLower.includes("crtn") ||
+      qLower.includes("crtln") ||
+      qLower.includes("crt + nivolumab")
+    ) {
+      subgroupFilter = "CRTn";
+    } else if (qLower.includes("crtx")) {
+      subgroupFilter = "CRTx";
+    } else if (qLower.includes("gart")) {
+      subgroupFilter = "GART";
+    } else if (qLower.includes("radiation alone") || qLower.includes("rt alone")) {
+      subgroupFilter = "RT";
+    } else if (
+      qLower.includes("moderate response") ||
+      qLower.includes("moderate responder") ||
+      qLower.includes("moderate responders") ||
+      qLower.includes("resp_mod")
+    ) {
+      subgroupFilter = "RESP_MOD";
+    } else if (
+      qLower.includes("minimal response") ||
+      qLower.includes("minimal responder") ||
+      qLower.includes("minimal responders") ||
+      qLower.includes("resp_min")
+    ) {
+      subgroupFilter = "RESP_MIN";
+    } else if (
+      qLower.includes("poor response") ||
+      qLower.includes("poor responder") ||
+      qLower.includes("poor responders") ||
+      qLower.includes("non-responder") ||
+      qLower.includes("non-responders") ||
+      qLower.includes("resp_poor")
+    ) {
+      subgroupFilter = "RESP_POOR";
+    } else if (
+      /\bcrt\b/.test(qLower) ||
+      qLower.includes("standard crt") ||
+      qLower.includes("chemoradiotherapy")
+    ) {
+      subgroupFilter = "CRT";
+    }
+
+    // Fallback to active page cohort filter if none specified in text
+    if (!subgroupFilter && currentPageContext?.singleNucleusStats?.selectedCohort) {
+      const activeCohort = currentPageContext.singleNucleusStats.selectedCohort;
+      if (activeCohort !== "ALL" && activeCohort !== "TREATED" && activeCohort !== "NAIVE") {
+        subgroupFilter = activeCohort;
+      }
+    }
+
+    // 2. Cell Type / Lineage Extraction
+    const broadLineages = [
+      { key: "Epithelial", terms: ["epithelial", "epithelium", "ductal", "tumor", "malignant"] },
+      { key: "Endothelial", terms: ["endothelial", "endothelium", "vascular", "blood vessel"] },
+      { key: "Fibroblast", terms: ["fibroblast", "fibroblasts", "stroma", "stromal", "caf", "mycaf"] },
+      { key: "Immune", terms: ["immune", "leukocyte", "lymphocyte", "t cell", "cd8", "cd4", "macrophage", "b cell", "myeloid"] },
+      { key: "Endocrine", terms: ["endocrine", "islet", "beta", "alpha", "acinar"] },
+      { key: "Schwann", terms: ["schwann", "neural", "neuron"] }
+    ];
+
+    for (const lineage of broadLineages) {
+      if (lineage.terms.some(t => qLower.includes(t))) {
+        targetCellType = lineage.key;
+        break;
+      }
+    }
+
+    // Check level 2 specific subtypes
+    const level2Subtypes = [
+      "Malignant", "Ductal", "CAF", "myCAF", "Pericyte", "Macrophage",
+      "CD8+ T", "CD4+ T", "Acinar", "Plasma", "Vascular", "Mast", "B", "Treg"
+    ];
+    for (const sub of level2Subtypes) {
+      if (qLower.includes(sub.toLowerCase())) {
+        if (
+          qLower.includes("subtype") ||
+          qLower.includes("level 2") ||
+          qLower.includes("level2") ||
+          ["mycaf", "caf", "macrophage", "acinar", "cd8"].some(k => qLower.includes(k))
+        ) {
+          cellTypeLevel = "level2";
+          targetCellType = sub;
+          break;
+        }
+      }
+    }
+
+    // Fallback to active page cell type if none specified in text
+    if (!targetCellType && currentPageContext?.singleNucleusStats?.targetCellType) {
+      targetCellType = currentPageContext.singleNucleusStats.targetCellType;
+    }
+
+    return { subgroupFilter, targetCellType, cellTypeLevel };
   }
 
   /**
@@ -378,6 +504,7 @@ export class IntentRouter {
       qLower.includes("single-nucleus") ||
       qLower.includes("single nucleus") ||
       qLower.includes("snrna") ||
+      qLower.includes("gse202051") ||
       qLower.includes("crt") ||
       qLower.includes("chemoradiotherapy") ||
       qLower.includes("neoadjuvant") ||
@@ -387,8 +514,10 @@ export class IntentRouter {
       qLower.includes("lineage") ||
       qLower.includes("cell population") ||
       qLower.includes("cell populations") ||
-      qLower.includes("which cells")
+      qLower.includes("which cells") ||
+      (currentPageContext.dataset.toLowerCase().includes("gse202051") && (qLower.includes("responder") || qLower.includes("treatment") || qLower.includes("naive")))
     ) {
+      const snFilters = this.extractSingleNucleusFilters(question, currentPageContext);
       const isTreatmentQuery = 
         qLower.includes("crt") || 
         qLower.includes("chemoradiotherapy") || 
@@ -405,15 +534,27 @@ export class IntentRouter {
         qLower.includes("pathway remodeling") ||
         qLower.includes("cds") ||
         qLower.includes("mixed model") ||
-        qLower.includes("mixed-effects");
+        qLower.includes("mixed-effects") ||
+        Boolean(snFilters.subgroupFilter);
 
       return {
         intent: isTreatmentQuery ? "single_nucleus_treatment_comparison" : "cell_type_lineage_expression",
-        entities: { genes: extractedGenes },
+        entities: {
+          genes: extractedGenes,
+          cellTypes: snFilters.targetCellType ? [snFilters.targetCellType] : undefined,
+          subgroupFilter: snFilters.subgroupFilter,
+          targetCellType: snFilters.targetCellType,
+          cellTypeLevel: snFilters.cellTypeLevel
+        },
+        comparison: {
+          type: "naive_vs_treated_single_nucleus",
+          subgroupFilter: snFilters.subgroupFilter,
+          targetCellType: snFilters.targetCellType
+        },
         targetDatasets: ["gse202051"],
         isPageSpecificQuestion: false,
         reasoning: isTreatmentQuery
-          ? "Single-nucleus treatment-stratified pseudobulk query detected (Naïve vs 100% RT/CRT). Routing to GSE202051."
+          ? `Single-nucleus treatment-stratified pseudobulk query detected (${snFilters.subgroupFilter ? `Naïve vs ${snFilters.subgroupFilter}` : 'Naïve vs 100% RT/CRT'}). Routing to GSE202051.`
           : "Single-nucleus cell type/lineage query detected. Routing to GSE202051."
       };
     }
@@ -572,9 +713,24 @@ export class IntentRouter {
     if (currentPageContext.dataset.toLowerCase().includes("gse202051")) fallbackDatasets = ["gse202051"];
     if (currentPageContext.dataset.toLowerCase().includes("gse274103")) fallbackDatasets = ["gse274103"];
 
+    const snFilters = fallbackDatasets.includes("gse202051") 
+      ? this.extractSingleNucleusFilters(question, currentPageContext) 
+      : {};
+
     return {
       intent: "general_gene_query",
-      entities: { genes: extractedGenes },
+      entities: { 
+        genes: extractedGenes,
+        cellTypes: snFilters.targetCellType ? [snFilters.targetCellType] : undefined,
+        subgroupFilter: snFilters.subgroupFilter,
+        targetCellType: snFilters.targetCellType,
+        cellTypeLevel: snFilters.cellTypeLevel
+      },
+      comparison: snFilters.subgroupFilter ? {
+        type: "naive_vs_treated_single_nucleus",
+        subgroupFilter: snFilters.subgroupFilter,
+        targetCellType: snFilters.targetCellType
+      } : undefined,
       targetDatasets: fallbackDatasets,
       isPageSpecificQuestion: true,
       reasoning: `Unspecified context. Fallback to mounted module dataset [${fallbackDatasets.join(', ')}].`
@@ -812,7 +968,10 @@ export class IntentRouter {
     // 4. Query Single Nucleus if targeted
     if (targetSet.has("gse202051")) {
       const targetGene = primaryGene || "NFE2L2";
-      const snRes = await queryEngine.querySingleNucleusExpression(targetGene);
+      const subgroupFilter = plan.entities.subgroupFilter || plan.comparison?.subgroupFilter;
+      const targetCellType = plan.entities.targetCellType || plan.comparison?.targetCellType;
+      const cellTypeLevel = plan.entities.cellTypeLevel;
+      const snRes = await queryEngine.querySingleNucleusExpression(targetGene, subgroupFilter, targetCellType, cellTypeLevel);
       datasetResults.gse202051 = snRes;
       provenance.push({
         datasetId: "gse202051",
@@ -820,7 +979,7 @@ export class IntentRouter {
         status: snRes.success && snRes.found ? "success" : "failed",
         operation: "querySingleNucleusExpression",
         queryDetails: snRes.found
-          ? `Queried ${targetGene} across 224,988 nuclei / 43 patients (18 Naïve vs 25 RT/CRT Treated)`
+          ? `Queried ${targetGene} across ${snRes.comparisonLabel || '224,988 nuclei / 43 patients'}${targetCellType ? ` (focus: ${targetCellType})` : ''}`
           : `Query failed: gene '${targetGene}' not found in single-nucleus index`
       });
     } else {
@@ -885,7 +1044,14 @@ export class IntentRouter {
       for (const gene of plan.entities.genes) {
         const tcgaRes = targetSet.has("tcga_gtex") ? await queryEngine.queryGeneExpression("tcga_gtex", gene) : null;
         const sbrtRes = targetSet.has("gse225767") ? await queryEngine.queryGeneExpression("gse225767", gene) : null;
-        const snRes = targetSet.has("gse202051") ? await queryEngine.querySingleNucleusExpression(gene) : null;
+        const snRes = targetSet.has("gse202051") 
+          ? await queryEngine.querySingleNucleusExpression(
+              gene,
+              plan.entities.subgroupFilter || plan.comparison?.subgroupFilter,
+              plan.entities.targetCellType || plan.comparison?.targetCellType,
+              plan.entities.cellTypeLevel
+            ) 
+          : null;
         const spatialRes = targetSet.has("gse274103") ? await queryEngine.querySpatialExpression(gene) : null;
 
         datasetResults.multiGeneResults[gene] = {

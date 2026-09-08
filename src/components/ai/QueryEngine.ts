@@ -95,8 +95,40 @@ export interface SingleNucleusQueryResult {
   broadCellTypes: Array<{ type: string; meanExpr: number; pctPositive: number }>;
   pseudobulkResults?: any[];
   comparisonLabel?: string;
+  subgroupFilter?: string;
+  targetCellType?: string;
+  cellTypeLevel?: "broad_celltype" | "level2";
+  naiveCount?: number;
+  treatedCount?: number;
   topLineage: string;
   success: boolean;
+}
+
+export function getSingleNucleusComparisonLabel(subgroupFilter?: string): string {
+  if (!subgroupFilter) return "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)";
+  switch (subgroupFilter) {
+    case "CRT":
+      return "Treatment-Naïve (n=18) vs. Standard CRT (n=14)";
+    case "CRTl":
+      return "Treatment-Naïve (n=18) vs. CRT + Losartan [CRTl] (n=5)";
+    case "CRTn":
+    case "CRTln":
+      return "Treatment-Naïve (n=18) vs. CRT + Nivolumab [CRTn/ln] (n=2)";
+    case "CRTx":
+      return "Treatment-Naïve (n=18) vs. CRTx [Other Regimen] (n=2)";
+    case "GART":
+      return "Treatment-Naïve (n=18) vs. GART (n=1)";
+    case "RT":
+      return "Treatment-Naïve (n=18) vs. Radiation Alone [RT] (n=1)";
+    case "RESP_MOD":
+      return "Treatment-Naïve (n=18) vs. Moderate Response (n=8)";
+    case "RESP_MIN":
+      return "Treatment-Naïve (n=18) vs. Minimal Response (n=11)";
+    case "RESP_POOR":
+      return "Treatment-Naïve (n=18) vs. Poor Response (n=6)";
+    default:
+      return `Treatment-Naïve (n=18) vs. ${subgroupFilter}`;
+  }
 }
 
 export interface PatientSpatialDetail {
@@ -689,7 +721,12 @@ export class QueryEngine {
     };
   }
 
-  async querySingleNucleusExpression(geneSymbol: string, subgroupFilter?: string): Promise<SingleNucleusQueryResult> {
+  async querySingleNucleusExpression(
+    geneSymbol: string,
+    subgroupFilter?: string,
+    targetCellType?: string,
+    cellTypeLevel?: "broad_celltype" | "level2"
+  ): Promise<SingleNucleusQueryResult> {
     const dataset = DATASET_REGISTRY.gse202051;
     const upperGene = geneSymbol.trim().toUpperCase();
 
@@ -737,14 +774,32 @@ export class QueryEngine {
         }
 
         const { computePatientPseudobulk } = await import("@/utils/singleNucleusStats");
-        const pseudobulk = computePatientPseudobulk(exprVec, metadata, "broad_celltype", subgroupFilter);
-        const topBroad = pseudobulk.slice().sort((a, b) => b.treatedMean - a.treatedMean)[0] || pseudobulk[0];
+        const pseudobulk = computePatientPseudobulk(exprVec, metadata, cellTypeLevel || "broad_celltype", subgroupFilter);
+        
+        // Prioritize queried cell lineage if specified
+        let prioritizedPseudobulk = [...pseudobulk];
+        if (targetCellType) {
+          const matchIdx = prioritizedPseudobulk.findIndex(r => 
+            r.cellType.toLowerCase().includes(targetCellType.toLowerCase()) || 
+            targetCellType.toLowerCase().includes(r.cellType.toLowerCase())
+          );
+          if (matchIdx > 0) {
+            const [matched] = prioritizedPseudobulk.splice(matchIdx, 1);
+            prioritizedPseudobulk.unshift(matched);
+          }
+        }
 
-        const broadCellTypes = pseudobulk.map(r => ({
+        const topBroad = prioritizedPseudobulk.slice().sort((a, b) => b.treatedMean - a.treatedMean)[0] || prioritizedPseudobulk[0];
+
+        const broadCellTypes = prioritizedPseudobulk.map(r => ({
           type: r.cellType,
           meanExpr: (r.naiveMean + r.treatedMean) / 2,
           pctPositive: (r.naivePctExpressing + r.treatedPctExpressing) / 2
         }));
+
+        const nNaive = prioritizedPseudobulk[0]?.naivePatientCount || 18;
+        const nTreated = prioritizedPseudobulk[0]?.treatedPatientCount || (subgroupFilter === "CRT" ? 14 : subgroupFilter === "CRTl" ? 5 : 25);
+        const compLabel = getSingleNucleusComparisonLabel(subgroupFilter);
 
         return {
           datasetId: "gse202051",
@@ -752,8 +807,13 @@ export class QueryEngine {
           found: true,
           totalNuclei: 224988,
           broadCellTypes,
-          pseudobulkResults: pseudobulk,
-          comparisonLabel: subgroupFilter ? `Treatment-Naïve (n=18) vs. ${subgroupFilter}` : "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)",
+          pseudobulkResults: prioritizedPseudobulk,
+          comparisonLabel: compLabel,
+          subgroupFilter,
+          targetCellType,
+          cellTypeLevel: cellTypeLevel || "broad_celltype",
+          naiveCount: nNaive,
+          treatedCount: nTreated,
           topLineage: topBroad?.cellType || "Epithelial / Ductal Cells",
           success: true
         };

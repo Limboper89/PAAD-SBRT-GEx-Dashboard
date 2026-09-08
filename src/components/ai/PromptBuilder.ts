@@ -39,14 +39,21 @@ export function buildQuestionIntent(
   else if (plan.intent === "spatial_localization") requiredOutputType = "spatial_tissue_localization";
 
   let requestedComparison = "none";
-  if (plan.comparison?.type) requestedComparison = plan.comparison.type;
+  if (plan.comparison?.subgroupFilter) requestedComparison = `naive_vs_${plan.comparison.subgroupFilter}`;
+  else if (plan.comparison?.type) requestedComparison = plan.comparison.type;
   else if (qLower.includes("tumor versus normal") || qLower.includes("tumor vs normal")) requestedComparison = "tumor_vs_normal";
   else if (qLower.includes("sbrt") || qLower.includes("radiation")) requestedComparison = "pre_vs_post_sbrt";
+  else if (qLower.includes("crt") || qLower.includes("neoadjuvant") || qLower.includes("naive")) requestedComparison = "naive_vs_treated_single_nucleus";
+
+  const entitiesList = [...plan.entities.genes];
+  if (plan.entities.targetCellType) entitiesList.push(`Cell Lineage: ${plan.entities.targetCellType}`);
+  else if (plan.entities.cellTypes?.length) entitiesList.push(...plan.entities.cellTypes.map(c => `Cell Lineage: ${c}`));
+  if (plan.entities.subgroupFilter) entitiesList.push(`Cohort: ${plan.entities.subgroupFilter}`);
 
   return {
     originalQuestion: userQuestion,
     requestedTask: plan.intent,
-    requestedEntities: plan.entities.genes,
+    requestedEntities: entitiesList,
     requestedComparison: requestedComparison,
     requiredDatasetIds: plan.targetDatasets,
     requiredOutputType: requiredOutputType,
@@ -63,10 +70,12 @@ export function buildRequiredAnswerContract(intentObj: QuestionIntent): string {
   const focusStr = intentObj.requestedEntities.length > 0 ? `\nMANDATORY BIOLOGICAL FOCUS: ${entityStr}` : "";
 
   let studyDesignRule = "Respect study design of the queried dataset. Do NOT mix cohort parameters across datasets.";
-  if (intentObj.requiredDatasetIds.includes("tcga_gtex") && !intentObj.requiredDatasetIds.includes("gse225767")) {
+  if (intentObj.requiredDatasetIds.includes("tcga_gtex") && !intentObj.requiredDatasetIds.includes("gse225767") && !intentObj.requiredDatasetIds.includes("gse202051")) {
     studyDesignRule = "Respect study design: TCGA-PAAD primary tumor (n=178) vs GTEx normal pancreas (n=167) independent cohort comparison. Do NOT cite pre/post SBRT cohort parameters.";
   } else if (intentObj.requiredDatasetIds.includes("gse225767")) {
     studyDesignRule = "Respect study design: GSE225767 is UNPAIRED pre-SBRT (n=26) vs post-SBRT (n=29) cohort resections (NOT longitudinal paired tracking).";
+  } else if (intentObj.requiredDatasetIds.includes("gse202051")) {
+    studyDesignRule = "Respect study design: GSE202051 single-nucleus pseudobulk. Always cite the exact cohort comparison (e.g. Standard CRT [n=14] vs Naïve [n=18], or All Treated [n=25] vs Naïve [n=18]) and cell lineage metrics from the deterministic table. Do NOT conflate with the aggregate All-Treated cohort or report endothelial results when epithelial or other lineages are queried.";
   }
 
   return `- Address EXCLUSIVELY the user's requested task: '${intentObj.requestedTask}' and entities: [${entityStr}].${focusStr}
@@ -126,8 +135,12 @@ STRICT SCIENTIFIC EVIDENCE-CONSISTENCY & ANTI-HALLUCINATION RULES:
 5. CAUSALITY SAFEGUARD:
    - Observational transcriptomics cannot prove causation. Distinguish transcriptomic associations from causal claims. State clearly that observed expression changes represent a transcriptomic association or hypothesis, not direct causal proof.
 
-6. STUDY-DESIGN FIDELITY:
-   - Match study design strictly to the queried dataset (TCGA-PAAD vs GTEx is primary tumor vs normal pancreas; GSE225767 is unpaired pre=26 vs post=29 SBRT). NEVER mix cohort parameters across datasets.
+6. STUDY-DESIGN FIDELITY & COHORT SUBGROUP PRECISION:
+   - Match study design strictly to the queried dataset (TCGA-PAAD vs GTEx is primary tumor vs normal pancreas; GSE225767 is unpaired pre=26 vs post=29 SBRT; GSE202051 is single-nucleus pseudobulk). NEVER mix cohort parameters across datasets.
+   - For GSE202051 single-nucleus pseudobulk:
+     * Cite the exact comparison cohort specified in the deterministic table (e.g. Standard CRT [n=14] vs Naïve [n=18], CRT+Losartan [n=5] vs Naïve [n=18], Responders [n=8] vs Naïve [n=18], or All Treated [n=25] vs Naïve [n=18]).
+     * DO NOT DEFAULT to repeating the generic All-Treated result (e.g. "log2FC = +0.47, FDR = 0.0235 exclusively in endothelial cells") when analyzing a specific treatment subgroup or when a specific cell lineage is queried!
+     * If the user queries a specific cell type (e.g., epithelial, ductal, fibroblast, immune), report that exact cell type's statistics (mean naive, mean treated, log2FC, p-value, FDR) as given in the deterministic table, clearly noting whether it reaches statistical significance.
 
 
 7. CITATION SAFETY & ZERO FAKE REFERENCES:
@@ -265,18 +278,29 @@ export function buildContextualPrompt(
   if (executionResult.datasetResults.gse202051) {
     const sn: any = executionResult.datasetResults.gse202051;
     if (sn.found) {
+      const compLabel = sn.comparisonLabel || "Treatment-Naïve (n=18) vs Neoadjuvant-Treated [100% RT/CRT-Exposed] (n=25)";
+      const nNaive = sn.pseudobulkResults?.[0]?.naivePatientCount || sn.naiveCount || 18;
+      const nTreated = sn.pseudobulkResults?.[0]?.treatedPatientCount || sn.treatedCount || 25;
+
       toolDataText += `\n[DETERMINISTIC SINGLE-NUCLEUS PSEUDOBULK TABLE: GSE202051]\n` +
         `* Dataset: GSE202051 Single-Nucleus Reference Atlas (224,988 nuclei across 43 patients)\n` +
-        `* Clinical Cohort: Treatment-Naïve (n=18 patients, U1-U18) vs Neoadjuvant-Treated [100% RT/CRT-Exposed] (n=25 patients, T1-T25)\n` +
-        `* Statistical Unit: Patient Pseudobulk Means (n=43 biological units) with Welch's t-test and Mann-Whitney U test\n` +
-        `* Gene Evaluated: **${sn.gene}**\n\n`;
+        `* Clinical Cohort: ${compLabel}\n` +
+        `* Statistical Unit: Patient Pseudobulk Means (${nNaive} Naïve vs ${nTreated} Treated biological patient units) with Welch's t-test and Mann-Whitney U test\n` +
+        `* Gene Evaluated: **${sn.gene}**\n`;
+
+      if (sn.targetCellType) {
+        toolDataText += `* Target Lineage Queried: **${sn.targetCellType}** (PRIORITY: You must specifically report and interpret metrics for this cell lineage)\n`;
+      }
+      toolDataText += `\n`;
 
       if (sn.pseudobulkResults && sn.pseudobulkResults.length > 0) {
-        toolDataText += `| Cell Lineage | Naïve Mean ± SE (n=18) | Treated Mean ± SE (n=25) | Delta Pseudobulk | log2FC | Welch t (p) | Mann-Whitney U (p) | FDR (q) | Trend |\n` +
+        toolDataText += `| Cell Lineage | Naïve Mean ± SE (n=${nNaive}) | Treated Mean ± SE (n=${nTreated}) | Delta Pseudobulk | log2FC | Welch t (p) | Mann-Whitney U (p) | FDR (q) | Trend |\n` +
           `|---|---|---|---|---|---|---|---|---|\n` +
-          sn.pseudobulkResults.map((r: any) =>
-            `| **${r.cellType}** | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` (${r.naivePatientCount}p) | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` (${r.treatedPatientCount}p) | \`${r.deltaPseudobulk > 0 ? '+' : ''}${r.deltaPseudobulk.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.pValueMannWhitney.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |`
-          ).join('\n') + '\n';
+          sn.pseudobulkResults.map((r: any) => {
+            const isTarget = sn.targetCellType && (r.cellType.toLowerCase().includes(sn.targetCellType.toLowerCase()) || sn.targetCellType.toLowerCase().includes(r.cellType.toLowerCase()));
+            const tag = isTarget ? ` 🎯 [QUERIED FOCUS]` : ``;
+            return `| **${r.cellType}**${tag} | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` (${r.naivePatientCount}p) | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` (${r.treatedPatientCount}p) | \`${r.deltaPseudobulk > 0 ? '+' : ''}${r.deltaPseudobulk.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.pValueMannWhitney.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |`;
+          }).join('\n') + '\n';
       } else {
         toolDataText += `| Gene | Highest Expressing Lineage | Atlas Nuclei Count |\n|---|---|---|\n` +
           `| **${sn.gene}** | ${sn.topLineage} | 224,988 nuclei across 43 patients |\n`;

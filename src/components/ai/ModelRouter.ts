@@ -460,14 +460,24 @@ export function formatBioPortalDirectResponse(
     const gene = plan.entities.genes[0] || sn.gene || "Target Gene";
     
     if (sn.pseudobulkResults && sn.pseudobulkResults.length > 0) {
+      const compLabel = sn.comparisonLabel || "Treatment-Naïve Baseline ($n=18$) vs. Neoadjuvant-Treated / CRT ($n=25$, 100% Radiation-Exposed)";
+      const nNaive = sn.pseudobulkResults[0]?.naivePatientCount || sn.naiveCount || 18;
+      const nTreated = sn.pseudobulkResults[0]?.treatedPatientCount || sn.treatedCount || 25;
+
       let md = `### 🧬 Single-Nucleus Treatment-Stratified Pseudobulk: ${gene} (GSE202051)\n\n`;
-      md += `* **Clinical Cohort:** Treatment-Naïve Baseline ($n=18$) vs. Neoadjuvant-Treated / CRT ($n=25$, 100% Radiation-Exposed)\n`;
-      md += `* **Statistical Unit:** Patient Pseudobulk Means across $43$ independent patients\n\n`;
-      md += `| Cell Lineage | Naïve Mean ± SE (n=18) | Treated Mean ± SE (n=25) | log2FC | Welch t (p) | FDR (q) | Trend |\n`;
+      md += `* **Clinical Cohort:** ${compLabel}\n`;
+      md += `* **Statistical Unit:** Patient Pseudobulk Means across $${nNaive + nTreated}$ independent patients (${nNaive} Naïve vs ${nTreated} Treated)\n`;
+      if (sn.targetCellType) {
+        md += `* **Target Lineage Focus:** **${sn.targetCellType}**\n`;
+      }
+      md += `\n`;
+      md += `| Cell Lineage | Naïve Mean ± SE (n=${nNaive}) | Treated Mean ± SE (n=${nTreated}) | log2FC | Welch t (p) | FDR (q) | Trend |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       
       sn.pseudobulkResults.forEach((r: any) => {
-        md += `| **${r.cellType}** | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |\n`;
+        const isTarget = sn.targetCellType && (r.cellType.toLowerCase().includes(sn.targetCellType.toLowerCase()) || sn.targetCellType.toLowerCase().includes(r.cellType.toLowerCase()));
+        const cellTypeStr = isTarget ? `**${r.cellType}** 🎯` : `**${r.cellType}**`;
+        md += `| ${cellTypeStr} | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |\n`;
       });
       
       md += `\n*Note: All 25 treated patients in GSE202051 received documented radiation therapy (14 CRT, 5 CRT+Losartan, 2 CRT+Nivolumab, 2 CRTx, 1 GART, 1 RT).*`;

@@ -234,6 +234,8 @@ export default function SingleNucleusExplorer() {
       currentFigure: activeTab === "atlas" ? "Single-Nucleus UMAP Atlas" : "Treatment-Stratified Comparison",
       singleNucleusStats: {
         selectedCellType: `${selectedBroadInspect !== "ALL" ? selectedBroadInspect : "All Cell Types"} (${selectedCohort})`,
+        selectedCohort: selectedCohort !== "ALL" ? selectedCohort : undefined,
+        targetCellType: selectedBroadInspect !== "ALL" ? selectedBroadInspect : undefined,
         totalNuclei: "224,988",
         markerGenes: activeGene ? [activeGene, "NFE2L2", "COL1A1", "EPCAM", "CD8A"] : ["NFE2L2", "COL1A1", "EPCAM", "CD8A"]
       }

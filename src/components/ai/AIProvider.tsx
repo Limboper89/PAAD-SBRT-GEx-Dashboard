@@ -104,6 +104,15 @@ export function assembleProductionResponse(
         } else if (sbrtMetrics) {
           const up = sbrtMetrics.log2FC > 0;
           interpretationText = `BioPortal analysis indicates that **${primaryGene}** expression is **${up ? 'increased' : 'decreased'}** following SBRT radiotherapy in GSE225767 (log2FC = \`${sbrtMetrics.log2FCFormatted}\`, FDR = \`${sbrtMetrics.adjPValueFormatted}\`).`;
+        } else if (dResults.gse202051?.pseudobulkResults && dResults.gse202051.pseudobulkResults.length > 0) {
+          const sn = dResults.gse202051;
+          const targetLineage = sn.targetCellType 
+            ? sn.pseudobulkResults.find((r: any) => r.cellType.toLowerCase().includes(sn.targetCellType.toLowerCase())) 
+            : null;
+          const sigLineage = sn.pseudobulkResults.find((r: any) => r.isSignificant);
+          const top = targetLineage || sigLineage || sn.pseudobulkResults[0];
+          const directionDesc = top.direction === 'UP' ? 'statistically significant upregulation' : top.direction === 'DOWN' ? 'statistically significant downregulation' : 'no statistically significant alteration';
+          interpretationText = `In the GSE202051 single-nucleus pseudobulk atlas (${sn.comparisonLabel || 'Naïve vs Treated'}), **${primaryGene}** in the **${top.cellType}** cell compartment exhibits ${directionDesc} (log2FC = \`${top.log2FC > 0 ? '+' : ''}${top.log2FC.toFixed(2)}\`, FDR = \`${top.qValue.toExponential(2)}\`).`;
         } else {
           interpretationText = `BioPortal verified quantitative evidence is presented in the table above.`;
         }
@@ -156,6 +165,8 @@ export interface ActiveModuleContext {
     meanExpr?: number;
     pctPositive?: number;
     selectedCellType?: string;
+    selectedCohort?: string;
+    targetCellType?: string;
     totalNuclei?: string;
     markerGenes?: string[];
   };
