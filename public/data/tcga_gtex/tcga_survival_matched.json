@@ -1,0 +1,1418 @@
+[
+  {
+    "sample_id": "TCGA-FB-AAQ6-01",
+    "patient_id": "TCGA-FB-AAQ6",
+    "tumor_idx": 0,
+    "os_days": 244.0,
+    "os_months": 8.02,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2L-AAQL-01",
+    "patient_id": "TCGA-2L-AAQL",
+    "tumor_idx": 1,
+    "os_days": 292.0,
+    "os_months": 9.59,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8005-01",
+    "patient_id": "TCGA-HZ-8005",
+    "tumor_idx": 2,
+    "os_days": 120.0,
+    "os_months": 3.94,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-A8P1-01",
+    "patient_id": "TCGA-HZ-A8P1",
+    "tumor_idx": 3,
+    "os_days": 7.0,
+    "os_months": 0.23,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-A7M4-01",
+    "patient_id": "TCGA-IB-A7M4",
+    "tumor_idx": 4,
+    "os_days": 483.0,
+    "os_months": 15.87,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7654-01",
+    "patient_id": "TCGA-IB-7654",
+    "tumor_idx": 5,
+    "os_days": 476.0,
+    "os_months": 15.64,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7886-01",
+    "patient_id": "TCGA-IB-7886",
+    "tumor_idx": 6,
+    "os_days": 123.0,
+    "os_months": 4.04,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-F2-A7TX-01",
+    "patient_id": "TCGA-F2-A7TX",
+    "tumor_idx": 7,
+    "os_days": 95.0,
+    "os_months": 3.12,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-7289-01",
+    "patient_id": "TCGA-HZ-7289",
+    "tumor_idx": 8,
+    "os_days": 661.0,
+    "os_months": 21.72,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-A49I-01",
+    "patient_id": "TCGA-HZ-A49I",
+    "tumor_idx": 9,
+    "os_days": 308.0,
+    "os_months": 10.12,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-A77P-01",
+    "patient_id": "TCGA-HZ-A77P",
+    "tumor_idx": 10,
+    "os_days": 330.0,
+    "os_months": 10.84,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-A5SP-01",
+    "patient_id": "TCGA-IB-A5SP",
+    "tumor_idx": 11,
+    "os_days": 482.0,
+    "os_months": 15.84,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2L-AAQA-01",
+    "patient_id": "TCGA-2L-AAQA",
+    "tumor_idx": 12,
+    "os_days": 143.0,
+    "os_months": 4.7,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-F2-A8YN-01",
+    "patient_id": "TCGA-F2-A8YN",
+    "tumor_idx": 13,
+    "os_days": 517.0,
+    "os_months": 16.99,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUM-01",
+    "patient_id": "TCGA-IB-AAUM",
+    "tumor_idx": 15,
+    "os_days": 8.0,
+    "os_months": 0.26,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AAB6-01",
+    "patient_id": "TCGA-2J-AAB6",
+    "tumor_idx": 16,
+    "os_days": 293.0,
+    "os_months": 9.63,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9J0-01",
+    "patient_id": "TCGA-3A-A9J0",
+    "tumor_idx": 17,
+    "os_days": 743.0,
+    "os_months": 24.41,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-A4BH-01",
+    "patient_id": "TCGA-HZ-A4BH",
+    "tumor_idx": 18,
+    "os_days": 194.0,
+    "os_months": 6.37,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-OE-A75W-01",
+    "patient_id": "TCGA-OE-A75W",
+    "tumor_idx": 19,
+    "os_days": 267.0,
+    "os_months": 8.77,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AABV-01",
+    "patient_id": "TCGA-2J-AABV",
+    "tumor_idx": 20,
+    "os_days": 652.0,
+    "os_months": 21.42,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-A5VM-01",
+    "patient_id": "TCGA-FB-A5VM",
+    "tumor_idx": 21,
+    "os_days": 498.0,
+    "os_months": 16.36,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AABE-01",
+    "patient_id": "TCGA-2J-AABE",
+    "tumor_idx": 22,
+    "os_days": 676.0,
+    "os_months": 22.21,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABF-01",
+    "patient_id": "TCGA-2J-AABF",
+    "tumor_idx": 23,
+    "os_days": 691.0,
+    "os_months": 22.7,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8519-01",
+    "patient_id": "TCGA-HZ-8519",
+    "tumor_idx": 24,
+    "os_days": 454.0,
+    "os_months": 14.92,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7890-01",
+    "patient_id": "TCGA-IB-7890",
+    "tumor_idx": 25,
+    "os_days": 598.0,
+    "os_months": 19.65,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A77E-01",
+    "patient_id": "TCGA-US-A77E",
+    "tumor_idx": 26,
+    "os_days": 430.0,
+    "os_months": 14.13,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-A7OP-01",
+    "patient_id": "TCGA-HV-A7OP",
+    "tumor_idx": 27,
+    "os_days": 978.0,
+    "os_months": 32.13,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-7918-01",
+    "patient_id": "TCGA-HZ-7918",
+    "tumor_idx": 28,
+    "os_days": 969.0,
+    "os_months": 31.84,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-A4BK-01",
+    "patient_id": "TCGA-HZ-A4BK",
+    "tumor_idx": 29,
+    "os_days": 657.0,
+    "os_months": 21.59,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AAB8-01",
+    "patient_id": "TCGA-2J-AAB8",
+    "tumor_idx": 30,
+    "os_days": 80.0,
+    "os_months": 2.63,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABK-01",
+    "patient_id": "TCGA-2J-AABK",
+    "tumor_idx": 31,
+    "os_days": 484.0,
+    "os_months": 15.9,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3E-AAAZ-01",
+    "patient_id": "TCGA-3E-AAAZ",
+    "tumor_idx": 32,
+    "os_days": 2182.0,
+    "os_months": 71.69,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-AAPP-01",
+    "patient_id": "TCGA-FB-AAPP",
+    "tumor_idx": 33,
+    "os_days": 485.0,
+    "os_months": 15.93,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-AAPY-01",
+    "patient_id": "TCGA-FB-AAPY",
+    "tumor_idx": 34,
+    "os_days": 1059.0,
+    "os_months": 34.79,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-7920-01",
+    "patient_id": "TCGA-HZ-7920",
+    "tumor_idx": 35,
+    "os_days": 236.0,
+    "os_months": 7.75,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-A5SO-01",
+    "patient_id": "TCGA-IB-A5SO",
+    "tumor_idx": 36,
+    "os_days": 365.0,
+    "os_months": 11.99,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-F2-6880-01",
+    "patient_id": "TCGA-F2-6880",
+    "tumor_idx": 37,
+    "os_days": 295.0,
+    "os_months": 9.69,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HV-A7OL-01",
+    "patient_id": "TCGA-HV-A7OL",
+    "tumor_idx": 38,
+    "os_days": 252.0,
+    "os_months": 8.28,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-A9TJ-01",
+    "patient_id": "TCGA-HZ-A9TJ",
+    "tumor_idx": 39,
+    "os_days": 603.0,
+    "os_months": 19.81,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-8001-01",
+    "patient_id": "TCGA-HZ-8001",
+    "tumor_idx": 40,
+    "os_days": 706.0,
+    "os_months": 23.2,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAQ0-01",
+    "patient_id": "TCGA-FB-AAQ0",
+    "tumor_idx": 41,
+    "os_days": 473.0,
+    "os_months": 15.54,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-AAUP-01",
+    "patient_id": "TCGA-IB-AAUP",
+    "tumor_idx": 42,
+    "os_days": 431.0,
+    "os_months": 14.16,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3A-A9I9-01",
+    "patient_id": "TCGA-3A-A9I9",
+    "tumor_idx": 43,
+    "os_days": 634.0,
+    "os_months": 20.83,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IS-01",
+    "patient_id": "TCGA-3A-A9IS",
+    "tumor_idx": 44,
+    "os_days": 998.0,
+    "os_months": 32.79,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3E-AAAY-01",
+    "patient_id": "TCGA-3E-AAAY",
+    "tumor_idx": 45,
+    "os_days": 2285.0,
+    "os_months": 75.07,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUR-01",
+    "patient_id": "TCGA-IB-AAUR",
+    "tumor_idx": 46,
+    "os_days": 338.0,
+    "os_months": 11.1,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-S4-A8RM-01",
+    "patient_id": "TCGA-S4-A8RM",
+    "tumor_idx": 47,
+    "os_days": 737.0,
+    "os_months": 24.21,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-XN-A8T3-01",
+    "patient_id": "TCGA-XN-A8T3",
+    "tumor_idx": 48,
+    "os_days": 951.0,
+    "os_months": 31.24,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2L-AAQI-01",
+    "patient_id": "TCGA-2L-AAQI",
+    "tumor_idx": 49,
+    "os_days": 103.0,
+    "os_months": 3.38,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-7925-01",
+    "patient_id": "TCGA-HZ-7925",
+    "tumor_idx": 50,
+    "os_days": 614.0,
+    "os_months": 20.17,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AAB1-01",
+    "patient_id": "TCGA-2J-AAB1",
+    "tumor_idx": 51,
+    "os_days": 66.0,
+    "os_months": 2.17,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IJ-01",
+    "patient_id": "TCGA-3A-A9IJ",
+    "tumor_idx": 52,
+    "os_days": 1854.0,
+    "os_months": 60.91,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3A-A9IU-01",
+    "patient_id": "TCGA-3A-A9IU",
+    "tumor_idx": 53,
+    "os_days": 458.0,
+    "os_months": 15.05,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-F2-A44H-01",
+    "patient_id": "TCGA-F2-A44H",
+    "tumor_idx": 54,
+    "os_days": 586.0,
+    "os_months": 19.25,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAPQ-01",
+    "patient_id": "TCGA-FB-AAPQ",
+    "tumor_idx": 55,
+    "os_days": 1130.0,
+    "os_months": 37.13,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-7923-01",
+    "patient_id": "TCGA-HZ-7923",
+    "tumor_idx": 56,
+    "os_days": 314.0,
+    "os_months": 10.32,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-A6UG-01",
+    "patient_id": "TCGA-IB-A6UG",
+    "tumor_idx": 57,
+    "os_days": 41.0,
+    "os_months": 1.35,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-AAUT-01",
+    "patient_id": "TCGA-IB-AAUT",
+    "tumor_idx": 58,
+    "os_days": 287.0,
+    "os_months": 9.43,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-F2-7276-01",
+    "patient_id": "TCGA-F2-7276",
+    "tumor_idx": 59,
+    "os_days": 216.0,
+    "os_months": 7.1,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7893-01",
+    "patient_id": "TCGA-IB-7893",
+    "tumor_idx": 60,
+    "os_days": 117.0,
+    "os_months": 3.84,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A77G-01",
+    "patient_id": "TCGA-US-A77G",
+    "tumor_idx": 61,
+    "os_days": 12.0,
+    "os_months": 0.39,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-A6UF-01",
+    "patient_id": "TCGA-IB-A6UF",
+    "tumor_idx": 62,
+    "os_days": 666.0,
+    "os_months": 21.88,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABH-01",
+    "patient_id": "TCGA-2J-AABH",
+    "tumor_idx": 63,
+    "os_days": 1287.0,
+    "os_months": 42.28,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-8002-01",
+    "patient_id": "TCGA-HZ-8002",
+    "tumor_idx": 64,
+    "os_days": 366.0,
+    "os_months": 12.02,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A776-01",
+    "patient_id": "TCGA-US-A776",
+    "tumor_idx": 65,
+    "os_days": 1216.0,
+    "os_months": 39.95,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7646-01",
+    "patient_id": "TCGA-IB-7646",
+    "tumor_idx": 66,
+    "os_days": 145.0,
+    "os_months": 4.76,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-8127-01",
+    "patient_id": "TCGA-IB-8127",
+    "tumor_idx": 67,
+    "os_days": 522.0,
+    "os_months": 17.15,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-YB-A89D-01",
+    "patient_id": "TCGA-YB-A89D",
+    "tumor_idx": 68,
+    "os_days": 350.0,
+    "os_months": 11.5,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-Q3-A5QY-01",
+    "patient_id": "TCGA-Q3-A5QY",
+    "tumor_idx": 69,
+    "os_days": 416.0,
+    "os_months": 13.67,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3A-A9I5-01",
+    "patient_id": "TCGA-3A-A9I5",
+    "tumor_idx": 70,
+    "os_days": 1794.0,
+    "os_months": 58.94,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-F2-6879-01",
+    "patient_id": "TCGA-F2-6879",
+    "tumor_idx": 71,
+    "os_days": 334.0,
+    "os_months": 10.97,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-7926-01",
+    "patient_id": "TCGA-HZ-7926",
+    "tumor_idx": 72,
+    "os_days": 518.0,
+    "os_months": 17.02,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-A7LX-01",
+    "patient_id": "TCGA-IB-A7LX",
+    "tumor_idx": 73,
+    "os_days": 250.0,
+    "os_months": 8.21,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AABU-01",
+    "patient_id": "TCGA-2J-AABU",
+    "tumor_idx": 74,
+    "os_days": 277.0,
+    "os_months": 9.1,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2L-AAQE-01",
+    "patient_id": "TCGA-2L-AAQE",
+    "tumor_idx": 75,
+    "os_days": 684.0,
+    "os_months": 22.47,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-XD-AAUL-01",
+    "patient_id": "TCGA-XD-AAUL",
+    "tumor_idx": 76,
+    "os_days": 498.0,
+    "os_months": 16.36,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABA-01",
+    "patient_id": "TCGA-2J-AABA",
+    "tumor_idx": 77,
+    "os_days": 607.0,
+    "os_months": 19.94,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IO-01",
+    "patient_id": "TCGA-3A-A9IO",
+    "tumor_idx": 78,
+    "os_days": 1942.0,
+    "os_months": 63.8,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-F2-7273-01",
+    "patient_id": "TCGA-F2-7273",
+    "tumor_idx": 79,
+    "os_days": 592.0,
+    "os_months": 19.45,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-A4P6-01",
+    "patient_id": "TCGA-FB-A4P6",
+    "tumor_idx": 80,
+    "os_days": 767.0,
+    "os_months": 25.2,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAPZ-01",
+    "patient_id": "TCGA-FB-AAPZ",
+    "tumor_idx": 81,
+    "os_days": 716.0,
+    "os_months": 23.52,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-H8-A6C1-01",
+    "patient_id": "TCGA-H8-A6C1",
+    "tumor_idx": 82,
+    "os_days": 671.0,
+    "os_months": 22.05,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2L-AAQM-01",
+    "patient_id": "TCGA-2L-AAQM",
+    "tumor_idx": 83,
+    "os_days": 1383.0,
+    "os_months": 45.44,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HV-A5A3-01",
+    "patient_id": "TCGA-HV-A5A3",
+    "tumor_idx": 84,
+    "os_days": 128.0,
+    "os_months": 4.21,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-AA8V-01",
+    "patient_id": "TCGA-HV-AA8V",
+    "tumor_idx": 85,
+    "os_days": 920.0,
+    "os_months": 30.23,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUQ-01",
+    "patient_id": "TCGA-IB-AAUQ",
+    "tumor_idx": 86,
+    "os_days": 183.0,
+    "os_months": 6.01,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-AAQ1-01",
+    "patient_id": "TCGA-FB-AAQ1",
+    "tumor_idx": 87,
+    "os_days": 123.0,
+    "os_months": 4.04,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-AAUV-01",
+    "patient_id": "TCGA-IB-AAUV",
+    "tumor_idx": 88,
+    "os_days": 404.0,
+    "os_months": 13.27,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AAB4-01",
+    "patient_id": "TCGA-2J-AAB4",
+    "tumor_idx": 89,
+    "os_days": 729.0,
+    "os_months": 23.95,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-A7DR-01",
+    "patient_id": "TCGA-FB-A7DR",
+    "tumor_idx": 90,
+    "os_days": 353.0,
+    "os_months": 11.6,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IZ-01",
+    "patient_id": "TCGA-3A-A9IZ",
+    "tumor_idx": 91,
+    "os_days": 308.0,
+    "os_months": 10.12,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9I7-01",
+    "patient_id": "TCGA-3A-A9I7",
+    "tumor_idx": 92,
+    "os_days": 1323.0,
+    "os_months": 43.47,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABO-01",
+    "patient_id": "TCGA-2J-AABO",
+    "tumor_idx": 93,
+    "os_days": 440.0,
+    "os_months": 14.46,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-RB-AA9M-01",
+    "patient_id": "TCGA-RB-AA9M",
+    "tumor_idx": 94,
+    "os_days": 286.0,
+    "os_months": 9.4,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7647-01",
+    "patient_id": "TCGA-IB-7647",
+    "tumor_idx": 95,
+    "os_days": 666.0,
+    "os_months": 21.88,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IX-01",
+    "patient_id": "TCGA-3A-A9IX",
+    "tumor_idx": 96,
+    "os_days": 1037.0,
+    "os_months": 34.07,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUU-01",
+    "patient_id": "TCGA-IB-AAUU",
+    "tumor_idx": 97,
+    "os_days": 245.0,
+    "os_months": 8.05,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-H6-A45N-01",
+    "patient_id": "TCGA-H6-A45N",
+    "tumor_idx": 98,
+    "os_days": 397.0,
+    "os_months": 13.04,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7889-01",
+    "patient_id": "TCGA-IB-7889",
+    "tumor_idx": 99,
+    "os_days": 481.0,
+    "os_months": 15.8,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8638-01",
+    "patient_id": "TCGA-HZ-8638",
+    "tumor_idx": 100,
+    "os_days": 151.0,
+    "os_months": 4.96,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-AAUS-01",
+    "patient_id": "TCGA-IB-AAUS",
+    "tumor_idx": 101,
+    "os_days": 225.0,
+    "os_months": 7.39,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAQ2-01",
+    "patient_id": "TCGA-FB-AAQ2",
+    "tumor_idx": 102,
+    "os_days": 153.0,
+    "os_months": 5.03,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-RB-A7B8-01",
+    "patient_id": "TCGA-RB-A7B8",
+    "tumor_idx": 103,
+    "os_days": 466.0,
+    "os_months": 15.31,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A77J-01",
+    "patient_id": "TCGA-US-A77J",
+    "tumor_idx": 104,
+    "os_days": 568.0,
+    "os_months": 18.66,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-F2-A44G-01",
+    "patient_id": "TCGA-F2-A44G",
+    "tumor_idx": 105,
+    "os_days": 233.0,
+    "os_months": 7.66,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-8126-01",
+    "patient_id": "TCGA-IB-8126",
+    "tumor_idx": 106,
+    "os_days": 462.0,
+    "os_months": 15.18,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7885-01",
+    "patient_id": "TCGA-IB-7885",
+    "tumor_idx": 107,
+    "os_days": 1257.0,
+    "os_months": 41.3,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-A77O-01",
+    "patient_id": "TCGA-HZ-A77O",
+    "tumor_idx": 108,
+    "os_days": 160.0,
+    "os_months": 5.26,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-S4-A8RP-01",
+    "patient_id": "TCGA-S4-A8RP",
+    "tumor_idx": 109,
+    "os_days": 702.0,
+    "os_months": 23.06,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8637-01",
+    "patient_id": "TCGA-HZ-8637",
+    "tumor_idx": 110,
+    "os_days": 517.0,
+    "os_months": 16.99,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A774-01",
+    "patient_id": "TCGA-US-A774",
+    "tumor_idx": 111,
+    "os_days": 695.0,
+    "os_months": 22.83,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-AA8X-01",
+    "patient_id": "TCGA-HV-AA8X",
+    "tumor_idx": 112,
+    "os_days": 532.0,
+    "os_months": 17.48,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-S4-A8RO-01",
+    "patient_id": "TCGA-S4-A8RO",
+    "tumor_idx": 113,
+    "os_days": 525.0,
+    "os_months": 17.25,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUN-01",
+    "patient_id": "TCGA-IB-AAUN",
+    "tumor_idx": 114,
+    "os_days": 144.0,
+    "os_months": 4.73,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-LB-A7SX-01",
+    "patient_id": "TCGA-LB-A7SX",
+    "tumor_idx": 115,
+    "os_days": 393.0,
+    "os_months": 12.91,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-Z5-AAPL-01",
+    "patient_id": "TCGA-Z5-AAPL",
+    "tumor_idx": 116,
+    "os_days": 467.0,
+    "os_months": 15.34,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7649-01",
+    "patient_id": "TCGA-IB-7649",
+    "tumor_idx": 117,
+    "os_days": 467.0,
+    "os_months": 15.34,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-YH-A8SY-01",
+    "patient_id": "TCGA-YH-A8SY",
+    "tumor_idx": 118,
+    "os_days": 388.0,
+    "os_months": 12.75,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABT-01",
+    "patient_id": "TCGA-2J-AABT",
+    "tumor_idx": 119,
+    "os_days": 319.0,
+    "os_months": 10.48,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-A545-01",
+    "patient_id": "TCGA-FB-A545",
+    "tumor_idx": 120,
+    "os_days": 732.0,
+    "os_months": 24.05,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-A5A4-01",
+    "patient_id": "TCGA-HV-A5A4",
+    "tumor_idx": 121,
+    "os_days": 232.0,
+    "os_months": 7.62,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-A78T-01",
+    "patient_id": "TCGA-FB-A78T",
+    "tumor_idx": 122,
+    "os_days": 375.0,
+    "os_months": 12.32,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AAB9-01",
+    "patient_id": "TCGA-2J-AAB9",
+    "tumor_idx": 123,
+    "os_days": 627.0,
+    "os_months": 20.6,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IB-01",
+    "patient_id": "TCGA-3A-A9IB",
+    "tumor_idx": 124,
+    "os_days": 224.0,
+    "os_months": 7.36,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-A4P5-01",
+    "patient_id": "TCGA-FB-A4P5",
+    "tumor_idx": 125,
+    "os_days": 179.0,
+    "os_months": 5.88,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8317-01",
+    "patient_id": "TCGA-HZ-8317",
+    "tumor_idx": 126,
+    "os_days": 378.0,
+    "os_months": 12.42,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-A49H-01",
+    "patient_id": "TCGA-HZ-A49H",
+    "tumor_idx": 127,
+    "os_days": 491.0,
+    "os_months": 16.13,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3A-A9IH-01",
+    "patient_id": "TCGA-3A-A9IH",
+    "tumor_idx": 128,
+    "os_days": 1021.0,
+    "os_months": 33.54,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7888-01",
+    "patient_id": "TCGA-IB-7888",
+    "tumor_idx": 129,
+    "os_days": 1332.0,
+    "os_months": 43.76,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-XD-AAUG-01",
+    "patient_id": "TCGA-XD-AAUG",
+    "tumor_idx": 130,
+    "os_days": 420.0,
+    "os_months": 13.8,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAQ3-01",
+    "patient_id": "TCGA-FB-AAQ3",
+    "tumor_idx": 131,
+    "os_days": 31.0,
+    "os_months": 1.02,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-A5A6-01",
+    "patient_id": "TCGA-HV-A5A6",
+    "tumor_idx": 132,
+    "os_days": 2036.0,
+    "os_months": 66.89,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-8003-01",
+    "patient_id": "TCGA-HZ-8003",
+    "tumor_idx": 133,
+    "os_days": 596.0,
+    "os_months": 19.58,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7644-01",
+    "patient_id": "TCGA-IB-7644",
+    "tumor_idx": 134,
+    "os_days": 394.0,
+    "os_months": 12.94,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IR-01",
+    "patient_id": "TCGA-3A-A9IR",
+    "tumor_idx": 135,
+    "os_days": 1542.0,
+    "os_months": 50.66,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7651-01",
+    "patient_id": "TCGA-IB-7651",
+    "tumor_idx": 136,
+    "os_days": 603.0,
+    "os_months": 19.81,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-A5SS-01",
+    "patient_id": "TCGA-IB-A5SS",
+    "tumor_idx": 137,
+    "os_days": 460.0,
+    "os_months": 15.11,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-A5ST-01",
+    "patient_id": "TCGA-IB-A5ST",
+    "tumor_idx": 138,
+    "os_days": 635.0,
+    "os_months": 20.86,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUO-01",
+    "patient_id": "TCGA-IB-AAUO",
+    "tumor_idx": 139,
+    "os_days": 239.0,
+    "os_months": 7.85,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-LB-A8F3-01",
+    "patient_id": "TCGA-LB-A8F3",
+    "tumor_idx": 140,
+    "os_days": 379.0,
+    "os_months": 12.45,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-Q3-AA2A-01",
+    "patient_id": "TCGA-Q3-AA2A",
+    "tumor_idx": 141,
+    "os_days": 95.0,
+    "os_months": 3.12,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-AAUW-01",
+    "patient_id": "TCGA-IB-AAUW",
+    "tumor_idx": 142,
+    "os_days": 230.0,
+    "os_months": 7.56,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-LB-A9Q5-01",
+    "patient_id": "TCGA-LB-A9Q5",
+    "tumor_idx": 143,
+    "os_days": 313.0,
+    "os_months": 10.28,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IN-01",
+    "patient_id": "TCGA-3A-A9IN",
+    "tumor_idx": 144,
+    "os_days": 2084.0,
+    "os_months": 68.47,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-FB-AAPS-01",
+    "patient_id": "TCGA-FB-AAPS",
+    "tumor_idx": 145,
+    "os_days": 228.0,
+    "os_months": 7.49,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7887-01",
+    "patient_id": "TCGA-IB-7887",
+    "tumor_idx": 146,
+    "os_days": 110.0,
+    "os_months": 3.61,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IC-01",
+    "patient_id": "TCGA-3A-A9IC",
+    "tumor_idx": 147,
+    "os_days": 738.0,
+    "os_months": 24.25,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HV-A5A5-01",
+    "patient_id": "TCGA-HV-A5A5",
+    "tumor_idx": 148,
+    "os_days": 289.0,
+    "os_months": 9.49,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-7922-01",
+    "patient_id": "TCGA-HZ-7922",
+    "tumor_idx": 149,
+    "os_days": 4.0,
+    "os_months": 0.13,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-YY-A8LH-01",
+    "patient_id": "TCGA-YY-A8LH",
+    "tumor_idx": 150,
+    "os_days": 2016.0,
+    "os_months": 66.23,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABR-01",
+    "patient_id": "TCGA-2J-AABR",
+    "tumor_idx": 151,
+    "os_days": 438.0,
+    "os_months": 14.39,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-7924-01",
+    "patient_id": "TCGA-HZ-7924",
+    "tumor_idx": 152,
+    "os_days": 840.0,
+    "os_months": 27.6,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-RL-AAAS-01",
+    "patient_id": "TCGA-RL-AAAS",
+    "tumor_idx": 153,
+    "os_days": 9.0,
+    "os_months": 0.3,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-3A-A9IV-01",
+    "patient_id": "TCGA-3A-A9IV",
+    "tumor_idx": 154,
+    "os_days": 1103.0,
+    "os_months": 36.24,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-2J-AABP-01",
+    "patient_id": "TCGA-2J-AABP",
+    "tumor_idx": 155,
+    "os_days": 463.0,
+    "os_months": 15.21,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-8636-01",
+    "patient_id": "TCGA-HZ-8636",
+    "tumor_idx": 156,
+    "os_days": 545.0,
+    "os_months": 17.91,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-HZ-A49G-01",
+    "patient_id": "TCGA-HZ-A49G",
+    "tumor_idx": 157,
+    "os_days": 660.0,
+    "os_months": 21.68,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-XD-AAUH-01",
+    "patient_id": "TCGA-XD-AAUH",
+    "tumor_idx": 158,
+    "os_days": 395.0,
+    "os_months": 12.98,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-H6-8124-01",
+    "patient_id": "TCGA-H6-8124",
+    "tumor_idx": 159,
+    "os_days": 392.0,
+    "os_months": 12.88,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-A5SQ-01",
+    "patient_id": "TCGA-IB-A5SQ",
+    "tumor_idx": 160,
+    "os_days": 219.0,
+    "os_months": 7.2,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2J-AABI-01",
+    "patient_id": "TCGA-2J-AABI",
+    "tumor_idx": 161,
+    "os_days": 969.0,
+    "os_months": 31.84,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-A77Q-01",
+    "patient_id": "TCGA-HZ-A77Q",
+    "tumor_idx": 162,
+    "os_days": 33.0,
+    "os_months": 1.08,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-8315-01",
+    "patient_id": "TCGA-HZ-8315",
+    "tumor_idx": 163,
+    "os_days": 299.0,
+    "os_months": 9.82,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-US-A779-01",
+    "patient_id": "TCGA-US-A779",
+    "tumor_idx": 164,
+    "os_days": 511.0,
+    "os_months": 16.79,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7897-01",
+    "patient_id": "TCGA-IB-7897",
+    "tumor_idx": 165,
+    "os_days": 486.0,
+    "os_months": 15.97,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-XN-A8T5-01",
+    "patient_id": "TCGA-XN-A8T5",
+    "tumor_idx": 166,
+    "os_days": 720.0,
+    "os_months": 23.66,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-HZ-7919-01",
+    "patient_id": "TCGA-HZ-7919",
+    "tumor_idx": 167,
+    "os_days": 593.0,
+    "os_months": 19.48,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-XD-AAUI-01",
+    "patient_id": "TCGA-XD-AAUI",
+    "tumor_idx": 168,
+    "os_days": 366.0,
+    "os_months": 12.02,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-2L-AAQJ-01",
+    "patient_id": "TCGA-2L-AAQJ",
+    "tumor_idx": 169,
+    "os_days": 394.0,
+    "os_months": 12.94,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-IB-7652-01",
+    "patient_id": "TCGA-IB-7652",
+    "tumor_idx": 170,
+    "os_days": 1116.0,
+    "os_months": 36.67,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7891-01",
+    "patient_id": "TCGA-IB-7891",
+    "tumor_idx": 171,
+    "os_days": 913.0,
+    "os_months": 30.0,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-L1-A7W4-01",
+    "patient_id": "TCGA-L1-A7W4",
+    "tumor_idx": 172,
+    "os_days": 278.0,
+    "os_months": 9.13,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-M8-A5N4-01",
+    "patient_id": "TCGA-M8-A5N4",
+    "tumor_idx": 173,
+    "os_days": 584.0,
+    "os_months": 19.19,
+    "os_event": 0
+  },
+  {
+    "sample_id": "TCGA-IB-7645-01",
+    "patient_id": "TCGA-IB-7645",
+    "tumor_idx": 174,
+    "os_days": 1502.0,
+    "os_months": 49.35,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-PZ-A5RE-01",
+    "patient_id": "TCGA-PZ-A5RE",
+    "tumor_idx": 175,
+    "os_days": 470.0,
+    "os_months": 15.44,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-FB-AAPU-01",
+    "patient_id": "TCGA-FB-AAPU",
+    "tumor_idx": 176,
+    "os_days": 381.0,
+    "os_months": 12.52,
+    "os_event": 1
+  },
+  {
+    "sample_id": "TCGA-3A-A9IL-01",
+    "patient_id": "TCGA-3A-A9IL",
+    "tumor_idx": 177,
+    "os_days": 2741.0,
+    "os_months": 90.05,
+    "os_event": 0
+  }
+]

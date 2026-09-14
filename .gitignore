@@ -44,5 +44,14 @@ next-env.d.ts
 /public/data/gse202051/genes_bin/
 /public/data/gse274103/*/genes_bin/
 
-# manuscript local analysis (not pushed to GitHub)
+# manuscript and publication figure assets (local only)
 manuscript_analysis/
+/Manuscript/
+/Figures/
+
+# work-in-progress CRISPR screening module (local development only)
+/public/data/crispr/
+/src/components/crispr/
+/src/types/crispr.ts
+scripts/audit_crispr_data.mjs
+scripts/generate_crispr_dataset.mjs

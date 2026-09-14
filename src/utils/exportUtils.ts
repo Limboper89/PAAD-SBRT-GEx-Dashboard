@@ -88,8 +88,8 @@ export function exportCanvasToPNG({
   theme?: ExportTheme;
   bgColor?: string;
 }) {
-  // High-res publication scale (2400px minimum target width)
-  const targetWidth = Math.max(2400, canvas.width * 2);
+  // High-res publication scale (2400px target width for 300 DPI publication standards)
+  const targetWidth = canvas.width >= 2400 ? canvas.width : Math.max(2400, canvas.width * 2);
   const scale = targetWidth / canvas.width;
   const targetHeight = Math.round(canvas.height * scale);
 

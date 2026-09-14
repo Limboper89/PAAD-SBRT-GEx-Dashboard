@@ -1244,11 +1244,12 @@ export default function SpatialPrototypeView() {
                 ref={canvasRef}
                 width={canvasWidth}
                 height={canvasHeight}
+                style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                className={`rounded border border-slate-700 bg-slate-950 shadow-inner w-full h-auto aspect-[${canvasWidth}/${canvasHeight}] max-h-[650px] ${zoom > 1.0 ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
+                className={`rounded border border-slate-700 bg-slate-950 shadow-inner w-full h-auto max-h-[650px] ${zoom > 1.0 ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
               />
               
               {/* Overlay Tooltip */}
@@ -1325,14 +1326,34 @@ export default function SpatialPrototypeView() {
               <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 focus-within:border-rose-500 focus-within:ring-1 focus-within:ring-rose-500 transition">
                 <Search className="h-4 w-4 text-slate-500 mr-2" />
                 <input
+                  id="spatial-gene-search-input"
                   type="text"
                   placeholder="Search PHGDH, COL1A1, TBCE..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onFocus={() => setShowSuggestions(true)}
-                  className="bg-transparent text-sm text-slate-100 placeholder-slate-600 focus:outline-none w-full"
+                  className="bg-transparent text-sm text-slate-100 placeholder-slate-600 focus:outline-none w-full font-mono"
                 />
                 {loadingGene && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-rose-500"></div>}
+              </div>
+
+              {/* Quick-load suggested marker chips */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xxs font-mono">
+                <span className="text-slate-500">Suggested:</span>
+                {["PHGDH", "EPCAM", "COL1A1", "KRT18"].map((sym) => {
+                  const g = searchableGenes.find(item => item.s === sym);
+                  return (
+                    <button
+                      key={sym}
+                      type="button"
+                      onClick={() => g && loadGene(g)}
+                      className="px-2 py-0.5 rounded bg-slate-950 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-slate-800 transition cursor-pointer"
+                      title={`Load ${sym} spatial expression`}
+                    >
+                      {sym}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Suggestions dropdown */}
@@ -1409,8 +1430,22 @@ export default function SpatialPrototypeView() {
                   Capture Spots
                 </button>
                 <button
-                  onClick={() => exprVec ? setViewMode("expression") : alert("Search and load a gene first!")}
-                  className={`text-xxs font-bold py-2 rounded-md transition ${viewMode === "expression" ? "bg-rose-500 text-white shadow" : "text-slate-400 hover:text-white"} ${!exprVec ? "opacity-40 cursor-not-allowed" : ""}`}
+                  onClick={() => {
+                    if (exprVec) {
+                      setViewMode("expression");
+                    } else {
+                      const targetGene = searchableGenes.find(g => g.s === "PHGDH") || searchableGenes[0];
+                      if (targetGene) {
+                        loadGene(targetGene);
+                      } else {
+                        const input = document.getElementById("spatial-gene-search-input");
+                        if (input) input.focus();
+                        setSearchError("Please search or select a gene to view expression overlay.");
+                      }
+                    }
+                  }}
+                  className={`text-xxs font-bold py-2 rounded-md transition ${viewMode === "expression" ? "bg-rose-500 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                  title={!exprVec ? "Click to load benchmark gene (PHGDH) expression overlay" : "Display gene expression overlay"}
                 >
                   Expression
                 </button>

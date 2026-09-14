@@ -13,11 +13,14 @@ import {
   ZAxis,
   ReferenceLine,
   ReferenceArea,
+  ErrorBar,
+  Customized,
 } from "recharts";
 import SearchableGeneSelect from "./SearchableGeneSelect";
 import { X, Info, AlertTriangle, HelpCircle } from "lucide-react";
 import ExportButton from "./ExportButton";
 import { exportToCSV, exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
+import { computeWelchTTest } from "@/utils/survivalEngine";
 
 interface DegGene {
   gene_name: string;
@@ -58,7 +61,7 @@ export default function ExpressionComparison({
   const sbrtChartRef = React.useRef<HTMLDivElement>(null);
   const tcgaChartRef = React.useRef<HTMLDivElement>(null);
 
-  // 1. SBRT Mode Data Processing
+  // 1. SBRT Mode Data Processing with Error Bars & Welch's t-test
   const SbrtData = useMemo(() => {
     if (isTcgaGtex || !expressionData || selectedGenes.length === 0) return [];
 
@@ -75,12 +78,34 @@ export default function ExpressionComparison({
         const meanPre = preVals.length > 0 ? preVals.reduce((a, b) => a + b, 0) / preVals.length : 0;
         const meanPost = postVals.length > 0 ? postVals.reduce((a, b) => a + b, 0) / postVals.length : 0;
 
+        const nPre = preVals.length;
+        const nPost = postVals.length;
+
+        const sdPre = nPre > 1 ? Math.sqrt(preVals.reduce((s, v) => s + (v - meanPre) ** 2, 0) / (nPre - 1)) : 0;
+        const sdPost = nPost > 1 ? Math.sqrt(postVals.reduce((s, v) => s + (v - meanPost) ** 2, 0) / (nPost - 1)) : 0;
+
+        const sePre = nPre > 1 ? sdPre / Math.sqrt(nPre) : 0;
+        const sePost = nPost > 1 ? sdPost / Math.sqrt(nPost) : 0;
+
+        const welch = computeWelchTTest(preVals, postVals);
         const log2FC = meanPost - meanPre;
 
         return {
           gene_name: geneName,
           "Pre-SBRT": Number(meanPre.toFixed(3)),
           "Post-SBRT": Number(meanPost.toFixed(3)),
+          pre_mean: meanPre,
+          post_mean: meanPost,
+          pre_se: Number(sePre.toFixed(3)),
+          post_se: Number(sePost.toFixed(3)),
+          pre_sd: sdPre,
+          post_sd: sdPost,
+          pre_vals: preVals,
+          post_vals: postVals,
+          n_pre: nPre,
+          n_post: nPost,
+          p_value: welch.p,
+          p_stat: welch.t,
           log2FC,
         };
       })
@@ -219,28 +244,38 @@ export default function ExpressionComparison({
     return { points, meanPoints, boxStats, stats };
   }, [isTcgaGtex, tcgaGtexExpressionForSelectedGene, showSolidNormal]);
 
-  // SBRT Custom Tooltip
+  // SBRT Custom Tooltip with SE and Welch p-value
   const SbrtTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const preVal = payload[0].value;
-      const postVal = payload[1].value;
-      const log2FCVal = payload[0].payload.log2FC;
+      const d = payload[0].payload;
+      const pVal = d.p_value;
+      let pStr = "ns";
+      if (pVal < 0.001) pStr = "p < 0.001 ***";
+      else if (pVal < 0.01) pStr = `p = ${pVal.toFixed(3)} **`;
+      else if (pVal < 0.05) pStr = `p = ${pVal.toFixed(3)} *`;
+      else if (pVal < 0.10) pStr = `p = ${pVal.toFixed(3)} (trend)`;
+      else pStr = `p = ${pVal.toFixed(3)} (ns)`;
 
       return (
-        <div className="bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-xs shadow-xl font-mono">
-          <div className="font-bold text-teal-400 text-sm mb-1">{label}</div>
-          <div className="flex justify-between gap-6 mb-1">
-            <span className="text-slate-400">Pre-SBRT (Mean):</span>
-            <span className="font-semibold text-slate-200">{preVal.toFixed(3)}</span>
+        <div className="bg-slate-950 border border-slate-700 p-3 rounded-xl text-xs shadow-2xl font-mono space-y-1.5">
+          <div className="font-bold text-teal-300 text-sm border-b border-slate-800 pb-1 flex justify-between items-center">
+            <span>{label}</span>
+            <span className={d.p_value < 0.05 ? "text-emerald-400 font-bold" : "text-slate-400"}>
+              {pStr}
+            </span>
           </div>
-          <div className="flex justify-between gap-6 mb-1.5">
-            <span className="text-slate-400">Post-SBRT (Mean):</span>
-            <span className="font-semibold text-slate-200">{postVal.toFixed(3)}</span>
+          <div className="flex justify-between gap-6">
+            <span className="text-slate-400">Pre-SBRT (Mean ± SE):</span>
+            <span className="font-semibold text-emerald-400">{d.pre_mean.toFixed(3)} ± {d.pre_se.toFixed(3)} <span className="text-slate-500">(n={d.n_pre})</span></span>
+          </div>
+          <div className="flex justify-between gap-6">
+            <span className="text-slate-400">Post-SBRT (Mean ± SE):</span>
+            <span className="font-semibold text-amber-400">{d.post_mean.toFixed(3)} ± {d.post_se.toFixed(3)} <span className="text-slate-500">(n={d.n_post})</span></span>
           </div>
           <div className="border-t border-slate-800 pt-1 flex justify-between gap-6">
-            <span>log2 Fold Change:</span>
-            <span className={`font-bold ${log2FCVal > 0 ? "text-red-400" : "text-blue-400"}`}>
-              {log2FCVal > 0 ? "+" : ""}{log2FCVal.toFixed(3)}
+            <span className="text-slate-400">Δ log2 Fold Change:</span>
+            <span className={`font-bold ${d.log2FC > 0 ? "text-rose-400" : "text-sky-400"}`}>
+              {d.log2FC > 0 ? "+" : ""}{d.log2FC.toFixed(3)}
             </span>
           </div>
         </div>
@@ -316,37 +351,43 @@ export default function ExpressionComparison({
 
     // 2. Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 60px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT vs. Post-SBRT Expression Response (GSE225767)", 100, 85);
+    ctx.fillText("Pre-SBRT vs. Post-SBRT Gene Expression Comparison (GSE225767)", 120, 100);
 
-    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
-    ctx.fillText(`Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Independent Cohorts (N = 55)`, 100, 136);
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 32px monospace";
+    ctx.fillText(
+      `Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Pre-SBRT (n=26) vs. Post-SBRT (n=29)`,
+      120,
+      155
+    );
 
     // 3. Layout Dimensions
-    const padLeft = 240;
+    const padLeft = 260;
     const padRight = 100;
-    const padTop = 260;
-    const padBottom = 260;
+    const padTop = 320; // Headroom for significance brackets
+    const padBottom = 340; // Room for X-labels, log2FC, and clean bottom legend
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
-    // Max expression value with 20% headroom
+    // Max expression value with 35% headroom for brackets
     let rawMax = 0;
     SbrtData.forEach((d: any) => {
-      if (d["Pre-SBRT"] > rawMax) rawMax = d["Pre-SBRT"];
-      if (d["Post-SBRT"] > rawMax) rawMax = d["Post-SBRT"];
+      const topPre = d.pre_mean + d.pre_se;
+      const topPost = d.post_mean + d.post_se;
+      if (topPre > rawMax) rawMax = topPre;
+      if (topPost > rawMax) rawMax = topPost;
     });
-    const maxVal = Math.ceil(rawMax * 1.25) || 10;
+    const maxVal = Math.ceil(rawMax * 1.25 * 10) / 10 || 10;
 
     const mapY = (y: number) => padTop + plotH - (y / maxVal) * plotH;
 
     // 4. Grid Lines & Ticks
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
 
-    const numTicks = 5;
+    const numTicks = 6;
     for (let i = 0; i <= numTicks; i++) {
       const yVal = (i / numTicks) * maxVal;
       const py = mapY(yVal);
@@ -356,10 +397,20 @@ export default function ExpressionComparison({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      // Outer tick
+      ctx.beginPath();
+      ctx.moveTo(padLeft - 16, py);
+      ctx.lineTo(padLeft, py);
+      ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
+      ctx.lineWidth = 2;
+
+      ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
       ctx.font = "bold 36px monospace";
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 24, py + 12);
+      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 12);
     }
 
     // 5. Axes Box
@@ -368,49 +419,137 @@ export default function ExpressionComparison({
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 120, padTop + plotH / 2);
+    ctx.translate(padLeft - 140, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Normalized log2-Expression", 0, 0);
+    ctx.fillText("Normalized log2-Expression (Mean ± SE)", 0, 0);
     ctx.restore();
 
-    // 6. Draw Grouped Bars
+    // 6. Draw Grouped Bars with Error Bars and Significance Brackets
     const groupW = plotW / SbrtData.length;
-    const barW = Math.min(groupW * 0.36, 140);
+    const barW = Math.min(groupW * 0.38, 140);
+
+    const formatPStr = (p: number) => {
+      let mark = "ns";
+      if (p < 0.001) mark = "***";
+      else if (p < 0.01) mark = "**";
+      else if (p < 0.05) mark = "*";
+      else if (p < 0.10) mark = "trend";
+      const pText = p < 0.001 ? "p < 0.001" : `p = ${p.toFixed(3)}`;
+      return `${pText} (${mark})`;
+    };
 
     SbrtData.forEach((d: any, idx: number) => {
       const groupCenter = padLeft + idx * groupW + groupW / 2;
 
-      // Pre-SBRT Bar (Teal #14b8a6)
-      const preX = groupCenter - barW - 8;
-      const preH = (d["Pre-SBRT"] / maxVal) * plotH;
+      // Pre-SBRT Bar (Teal #10b981)
+      const preX = groupCenter - barW - 10;
+      const preH = (d.pre_mean / maxVal) * plotH;
       const preY = padTop + plotH - preH;
 
-      ctx.fillStyle = "#14b8a6";
+      ctx.fillStyle = "#10b981";
       ctx.fillRect(preX, preY, barW, preH);
-      ctx.strokeStyle = isLight ? "rgba(15,23,42,0.3)" : "rgba(255,255,255,0.3)";
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(preX, preY, barW, preH);
 
-      // Pre Value above bar
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      // Pre-SBRT Error Bar (Mean ± SE)
+      const preErrTop = mapY(d.pre_mean + d.pre_se);
+      const preErrBottom = mapY(Math.max(0, d.pre_mean - d.pre_se));
+      const capW = 28;
+
+      ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(preX + barW / 2, preErrBottom);
+      ctx.lineTo(preX + barW / 2, preErrTop);
+      ctx.moveTo(preX + barW / 2 - capW / 2, preErrTop);
+      ctx.lineTo(preX + barW / 2 + capW / 2, preErrTop);
+      ctx.moveTo(preX + barW / 2 - capW / 2, preErrBottom);
+      ctx.lineTo(preX + barW / 2 + capW / 2, preErrBottom);
+      ctx.stroke();
+
+      // Pre Value above bar with clear backing
+      ctx.save();
+      const preStr = d["Pre-SBRT"].toFixed(2);
       ctx.font = "bold 28px monospace";
       ctx.textAlign = "center";
-      ctx.fillText(d["Pre-SBRT"].toFixed(2), preX + barW / 2, preY - 14);
+      const preLabelY = preErrTop - 16;
+      const ptw = ctx.measureText(preStr).width;
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(2, 6, 23, 0.95)";
+      ctx.fillRect(preX + barW / 2 - ptw / 2 - 8, preLabelY - 26, ptw + 16, 32);
+      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.15)" : "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(preX + barW / 2 - ptw / 2 - 8, preLabelY - 26, ptw + 16, 32);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText(preStr, preX + barW / 2, preLabelY);
+      ctx.restore();
 
       // Post-SBRT Bar (Orange #f97316)
-      const postX = groupCenter + 8;
-      const postH = (d["Post-SBRT"] / maxVal) * plotH;
+      const postX = groupCenter + 10;
+      const postH = (d.post_mean / maxVal) * plotH;
       const postY = padTop + plotH - postH;
 
       ctx.fillStyle = "#f97316";
       ctx.fillRect(postX, postY, barW, postH);
+      ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(postX, postY, barW, postH);
 
-      // Post Value above bar
-      ctx.fillText(d["Post-SBRT"].toFixed(2), postX + barW / 2, postY - 14);
+      // Post-SBRT Error Bar (Mean ± SE)
+      const postErrTop = mapY(d.post_mean + d.post_se);
+      const postErrBottom = mapY(Math.max(0, d.post_mean - d.post_se));
+
+      ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(postX + barW / 2, postErrBottom);
+      ctx.lineTo(postX + barW / 2, postErrTop);
+      ctx.moveTo(postX + barW / 2 - capW / 2, postErrTop);
+      ctx.lineTo(postX + barW / 2 + capW / 2, postErrTop);
+      ctx.moveTo(postX + barW / 2 - capW / 2, postErrBottom);
+      ctx.lineTo(postX + barW / 2 + capW / 2, postErrBottom);
+      ctx.stroke();
+
+      // Post Value above bar with clear backing
+      ctx.save();
+      const postStr = d["Post-SBRT"].toFixed(2);
+      ctx.font = "bold 28px monospace";
+      ctx.textAlign = "center";
+      const postLabelY = postErrTop - 16;
+      const postTw = ctx.measureText(postStr).width;
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(2, 6, 23, 0.95)";
+      ctx.fillRect(postX + barW / 2 - postTw / 2 - 8, postLabelY - 26, postTw + 16, 32);
+      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.15)" : "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(postX + barW / 2 - postTw / 2 - 8, postLabelY - 26, postTw + 16, 32);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText(postStr, postX + barW / 2, postLabelY);
+      ctx.restore();
+
+      // Significance Bracket Over Gene Pair
+      const bx0 = preX + barW / 2;
+      const bx1 = postX + barW / 2;
+      const bracketTopY = Math.min(preErrTop, postErrTop) - 64;
+      const tickH = 14;
+      const isSig = d.p_value < 0.05;
+      const pStr = formatPStr(d.p_value);
+
+      ctx.strokeStyle = isSig ? "#059669" : (isLight ? "#0f172a" : "#cbd5e1");
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(bx0, bracketTopY + tickH);
+      ctx.lineTo(bx0, bracketTopY);
+      ctx.lineTo(bx1, bracketTopY);
+      ctx.lineTo(bx1, bracketTopY + tickH);
+      ctx.stroke();
+
+      ctx.fillStyle = isSig ? "#059669" : (isLight ? "#0f172a" : "#f8fafc");
+      ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(pStr, (bx0 + bx1) / 2, bracketTopY - 14);
 
       // Gene Symbol Label on X-Axis
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
@@ -422,39 +561,49 @@ export default function ExpressionComparison({
       const fcColor = d.log2FC >= 0 ? (isLight ? "#15803d" : "#4ade80") : (isLight ? "#b91c1c" : "#f87171");
       ctx.fillStyle = fcColor;
       ctx.font = "bold 32px monospace";
-      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 100);
+      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 102);
     });
 
-    // 7. Dedicated Legend Card (Top-Right)
-    const legendCardX = padLeft + plotW - 540;
-    const legendCardY = padTop + 25;
-    const legendCardW = 520;
-    const legendCardH = 160;
-
-    ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
-    ctx.fillRect(legendCardX, legendCardY, legendCardW, legendCardH);
-    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    // 7. Clean Bottom Legend (Zero Plot Occlusion)
+    const legTop = padTop + plotH + 160;
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
     ctx.lineWidth = 2.5;
-    ctx.strokeRect(legendCardX, legendCardY, legendCardW, legendCardH);
+    ctx.beginPath();
+    ctx.moveTo(padLeft, legTop);
+    ctx.lineTo(padLeft + plotW, legTop);
+    ctx.stroke();
 
     // Pre-SBRT Swatch
-    ctx.fillStyle = "#14b8a6";
-    ctx.fillRect(legendCardX + 28, legendCardY + 30, 36, 36);
+    const legX = padLeft + 20;
+    const legY = legTop + 50;
+
+    ctx.fillStyle = "#10b981";
+    ctx.fillRect(legX, legY - 26, 32, 32);
     ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(legendCardX + 28, legendCardY + 30, 36, 36);
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legX, legY - 26, 32, 32);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT Baseline", legendCardX + 80, legendCardY + 58);
+    ctx.fillText("Pre-SBRT Baseline (n = 26)", legX + 44, legY);
 
     // Post-SBRT Swatch
+    const legX2 = legX + 540;
     ctx.fillStyle = "#f97316";
-    ctx.fillRect(legendCardX + 28, legendCardY + 95, 36, 36);
-    ctx.strokeRect(legendCardX + 28, legendCardY + 95, 36, 36);
+    ctx.fillRect(legX2, legY - 26, 32, 32);
+    ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legX2, legY - 26, 32, 32);
 
-    ctx.fillText("Post-SBRT Treated", legendCardX + 80, legendCardY + 123);
+    ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+    ctx.fillText("Post-SBRT Treated (n = 29)", legX2 + 44, legY);
+
+    // Bottom citation watermark
+    ctx.fillStyle = isLight ? "#94a3b8" : "#64748b";
+    ctx.font = "bold 24px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("GSE225767 Bulk RNA-seq · Pancreatic Ductal Adenocarcinoma · Neoadjuvant SBRT Cohort (N = 55)", padLeft + 20, legTop + 120);
 
     return offscreen;
   };
@@ -527,27 +676,27 @@ export default function ExpressionComparison({
           <div className="flex-1 flex flex-col gap-4">
             <div ref={sbrtChartRef} className="flex-1 w-full h-[250px] min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={SbrtData} margin={{ top: 10, right: 15, bottom: 15, left: 15 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.05)" />
+                <BarChart data={SbrtData} margin={{ top: 35, right: 20, bottom: 25, left: 15 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                   <XAxis
                     dataKey="gene_name"
-                    stroke="#64748b"
+                    stroke="#94a3b8"
                     tickLine={false}
-                    axisLine={{ stroke: "#475569" }}
-                    tick={{ fontSize: 10 }}
+                    axisLine={{ stroke: "#64748b" }}
+                    tick={{ fill: "#f1f5f9", fontSize: 12, fontWeight: 700 }}
                   />
                   <YAxis
-                    stroke="#64748b"
+                    stroke="#94a3b8"
                     tickLine={false}
-                    axisLine={{ stroke: "#475569" }}
-                    tick={{ fontSize: 10 }}
+                    axisLine={{ stroke: "#64748b" }}
+                    tick={{ fill: "#f1f5f9", fontSize: 11, fontWeight: 600 }}
                     label={{
-                      value: "Mean Expression level log₂(DESeq2 normalized counts)",
+                      value: "Mean Expression level log₂(normalized counts, Mean ± SE)",
                       angle: -90,
                       position: "insideLeft",
                       offset: 12,
-                      fill: "#94a3b8",
-                      fontSize: 10,
+                      fill: "#cbd5e1",
+                      fontSize: 11,
                       fontWeight: "bold",
                       style: { textAnchor: "middle" }
                     }}
@@ -555,13 +704,77 @@ export default function ExpressionComparison({
                   <Tooltip content={<SbrtTooltip />} cursor={{ fill: "rgba(255, 255, 255, 0.04)" }} />
                   <Legend
                     verticalAlign="top"
-                    height={30}
+                    height={35}
                     iconType="rect"
-                    iconSize={10}
-                    wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
+                    iconSize={12}
+                    wrapperStyle={{ fontSize: 12, fontWeight: 600, color: "#cbd5e1", paddingBottom: "10px" }}
                   />
-                  <Bar dataKey="Pre-SBRT" fill="#64748b" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Post-SBRT" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+
+                  {/* Vector Significance Bracket Layer for Each Gene */}
+                  <Customized
+                    component={(props: any) => {
+                      const { width, height } = props;
+                      if (!width || !height || SbrtData.length === 0) return null;
+
+                      const margin = { top: 35, right: 20, bottom: 25, left: 15 };
+                      const plotWidth = width - margin.left - margin.right;
+                      const groupW = plotWidth / SbrtData.length;
+
+                      const formatP = (p: number) => {
+                        let mark = "ns";
+                        if (p < 0.001) mark = "***";
+                        else if (p < 0.01) mark = "**";
+                        else if (p < 0.05) mark = "*";
+                        else if (p < 0.1) mark = "trend";
+                        const pStr = p < 0.001 ? "p < 0.001" : `p = ${p.toFixed(3)}`;
+                        return `${pStr} ${mark !== "ns" ? mark : ""}`;
+                      };
+
+                      return (
+                        <g className="sbrt-gene-brackets">
+                          {SbrtData.map((d: any, i: number) => {
+                            const groupCenter = margin.left + i * groupW + groupW / 2;
+                            const barHalfW = Math.min(groupW * 0.18, 30);
+                            const x0 = groupCenter - barHalfW;
+                            const x1 = groupCenter + barHalfW;
+                            const bracketY = 16;
+                            const tickH = 6;
+                            const isSig = d.p_value < 0.05;
+                            const pLabel = formatP(d.p_value);
+
+                            return (
+                              <g key={d.gene_name}>
+                                <path
+                                  d={`M ${x0},${bracketY + tickH} L ${x0},${bracketY} L ${x1},${bracketY} L ${x1},${bracketY + tickH}`}
+                                  fill="none"
+                                  stroke={isSig ? "#10b981" : "#94a3b8"}
+                                  strokeWidth={1.8}
+                                />
+                                <text
+                                  x={(x0 + x1) / 2}
+                                  y={bracketY - 5}
+                                  textAnchor="middle"
+                                  fill={isSig ? "#34d399" : "#cbd5e1"}
+                                  fontSize={11}
+                                  fontWeight="bold"
+                                  fontFamily="monospace"
+                                >
+                                  {pLabel}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </g>
+                      );
+                    }}
+                  />
+
+                  <Bar dataKey="Pre-SBRT" fill="#10b981" radius={[4, 4, 0, 0]}>
+                    <ErrorBar dataKey="pre_se" width={6} strokeWidth={2} stroke="#ffffff" />
+                  </Bar>
+                  <Bar dataKey="Post-SBRT" fill="#f97316" radius={[4, 4, 0, 0]}>
+                    <ErrorBar dataKey="post_se" width={6} strokeWidth={2} stroke="#ffffff" />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>

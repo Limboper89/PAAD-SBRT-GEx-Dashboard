@@ -11,7 +11,9 @@ import {
   HelpCircle, 
   Cpu,
   Info,
-  GitFork
+  GitFork,
+  HeartPulse,
+  Target
 } from "lucide-react";
 import VolcanoPlot from "@/components/VolcanoPlot";
 import Heatmap from "@/components/Heatmap";
@@ -24,6 +26,7 @@ import SingleNucleusExplorer from "@/components/SingleNucleusExplorer";
 import SpatialTranscriptomicsView from "@/components/SpatialPrototypeView";
 import SummaryCard from "@/components/SummaryCard";
 import PathwayExplorer from "@/components/pathways/PathwayExplorer";
+import SurvivalExplorer from "@/components/SurvivalExplorer";
 import { useAIContext } from "@/components/ai/AIProvider";
 import { RankedGene } from "@/utils/pathwayEngine";
 import { DegTransferMetadata } from "@/components/GeneTable";
@@ -55,7 +58,7 @@ interface SnCell {
   expressions: { [gene: string]: number };
 }
 
-// Available study options (added TCGA vs GTEx study)
+// Available study options (added TCGA vs GTEx)
 const STUDIES = [
   { id: "GSE225767", name: "GSE225767: Ductal Adenocarcinoma Bulk RNA-seq", type: "Bulk RNA-seq" },
   { id: "TCGA_GTEX", name: "TCGA-PAAD vs GTEx Pancreas (Normal Reference)", type: "Tumor vs Normal" },
@@ -67,7 +70,7 @@ export default function Dashboard() {
   const [activeStudy, setActiveStudy] = useState<string>("GSE225767");
   // Hard‑coded base path for static export
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
-  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "about" | "pathway">("de");
+  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "survival" | "about" | "pathway">("de");
   const [pathwayInputGenes, setPathwayInputGenes] = useState<string[] | undefined>(undefined);
   const [pathwayInputRankedGenes, setPathwayInputRankedGenes] = useState<RankedGene[] | undefined>(undefined);
   const [pathwayInputMetadata, setPathwayInputMetadata] = useState<DegTransferMetadata | undefined>(undefined);
@@ -117,6 +120,8 @@ export default function Dashboard() {
       } else if (action.includes("SPATIAL") || target === "spatial" || target === "tme") {
         setActiveTab("tme");
         setActiveStudy("GSE274103");
+      } else if (action.includes("SURVIVAL") || action.includes("KM") || target === "survival") {
+        setActiveTab("survival");
       } else if (action.includes("GSEA") || action.includes("PATHWAY") || target === "pathway") {
         setActiveTab("pathway");
       } else if (action.includes("CORRELATION") || action.includes("HEATMAP") || target === "correlation") {
@@ -142,6 +147,8 @@ export default function Dashboard() {
       } else if (hash === "spatial" || hash === "tme") {
         setActiveTab("tme");
         setActiveStudy("GSE274103");
+      } else if (hash === "survival" || hash === "km" || hash === "kaplan-meier") {
+        setActiveTab("survival");
       } else if (hash === "pathways" || hash === "pathway" || hash === "gsea") {
         setActiveTab("pathway");
       } else if (hash === "correlation" || hash === "heatmap") {
@@ -271,12 +278,19 @@ export default function Dashboard() {
     }
   };
 
-  // Trigger lazy loading of binary matrix when correlation or heatmap is viewed in TCGA-GTEx mode
+  // Trigger lazy loading of binary matrix when correlation or survival is viewed
   useEffect(() => {
-    if (activeStudy === "TCGA_GTEX" && activeTab === "correlation" && !tcgaGtexExpressions) {
+    if (activeTab === "survival") {
+      if (tcgaGtexData.length === 0 && !isTcgaGtexDataLoading) {
+        loadTcgaGtexData();
+      }
+      if (!tcgaGtexExpressions && !isTcgaGtexExpressionsLoading) {
+        lazyLoadTcgaGtexExpressions();
+      }
+    } else if (activeStudy === "TCGA_GTEX" && activeTab === "correlation" && !tcgaGtexExpressions) {
       lazyLoadTcgaGtexExpressions();
     }
-  }, [activeStudy, activeTab, tcgaGtexExpressions]);
+  }, [activeStudy, activeTab, tcgaGtexExpressions, tcgaGtexData.length, isTcgaGtexDataLoading, isTcgaGtexExpressionsLoading]);
 
   // Sync activeStudy selection to tabs
   const handleStudyChange = (studyId: string) => {
@@ -396,6 +410,17 @@ export default function Dashboard() {
     return Array.from(new Float32Array(tcgaGtexExpressions, offset, 349));
   }, [activeStudy, tcgaGtexExpressions, tcgaGtexData, tcgaGtexCorrelationGene2]);
 
+  // Fast map lookup for TCGA-GTEx gene indexes
+  const tcgaGtexGeneIndexLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const g of tcgaGtexData) {
+      if (g.gene_name && g.gene_index !== undefined) {
+        map.set(g.gene_name, g.gene_index);
+      }
+    }
+    return map;
+  }, [tcgaGtexData]);
+
   // Stats calculation
   const stats = useMemo(() => {
     if (activeBulkData.length === 0) return { total: 0, up: 0, down: 0, sig: 0 };
@@ -444,6 +469,11 @@ export default function Dashboard() {
           "Volcano Plot",
           "Differential Expression Table"
         ];
+      case "survival":
+        return [
+          "Kaplan-Meier Survival Plot",
+          "Pathologic Response Bar Chart"
+        ];
       case "sn":
         return [
           "Single-Nucleus UMAP Atlas",
@@ -471,6 +501,7 @@ export default function Dashboard() {
     switch (activeTab) {
       case "correlation": return "Correlation Scatter Plot";
       case "de": return "Volcano Plot";
+      case "survival": return "Kaplan-Meier Survival Plot";
       case "sn": return "Single-Nucleus UMAP Atlas";
       case "tme": return "Spatial Visium Spot Map";
       case "pathway": return "Pathway Enrichment Dot Plot";
@@ -865,6 +896,24 @@ export default function Dashboard() {
             <GitFork className="w-4 h-4 text-teal-400" />
             Pathway Explorer
           </button>
+
+          <button
+            onClick={() => {
+              setActiveTab("survival");
+              if (activeStudy === "TCGA_GTEX") {
+                if (tcgaGtexData.length === 0) loadTcgaGtexData();
+                if (!tcgaGtexExpressions) lazyLoadTcgaGtexExpressions();
+              }
+            }}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === "survival"
+                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Activity className="w-4 h-4 text-emerald-400" />
+            Treatment Response & Survival
+          </button>
           
           <button
             onClick={() => { setActiveTab("sn"); setActiveStudy("GSE202051"); }}
@@ -1123,6 +1172,20 @@ export default function Dashboard() {
                 initialDegList={pathwayInputGenes}
                 initialRankedGenes={pathwayInputRankedGenes}
                 initialMetadata={pathwayInputMetadata}
+                onSelectGene={handleSelectGene}
+              />
+            </div>
+          )}
+
+          {activeTab === "survival" && (
+            <div className="flex-1">
+              <SurvivalExplorer
+                basePath={basePath}
+                activeStudy={activeStudy}
+                allGenes={activeStudy === "TCGA_GTEX" ? tcgaGtexData.map((d) => d.gene_name) : bulkData.map((d) => d.gene_name)}
+                tcgaGtexExpressions={tcgaGtexExpressions}
+                geneIndexLookup={tcgaGtexGeneIndexLookup}
+                sbrtExpressionData={expressionData}
                 onSelectGene={handleSelectGene}
               />
             </div>
