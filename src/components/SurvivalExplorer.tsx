@@ -70,13 +70,6 @@ const PRESET_SIGNATURES: {
     badge: "TORRES-ROCA RSI",
   },
   {
-    id: "pdac_radioresistance",
-    name: "PDAC Radioresistance Signature",
-    genes: ["DUSP4", "ADORA2B", "HIF1A", "CA9", "VEGFA", "VIM", "CD44", "LOX", "ACTA2", "GPX4", "TGFBR1", "TGFBR2", "SGK1", "MAPKAPK2"],
-    description: "Pancreatic ductal adenocarcinoma radioresistance and hypoxia/fibrosis drivers (BMC Cancer 2024)",
-    badge: "RADIORESISTANCE",
-  },
-  {
     id: "serine_transport",
     name: "Serine Transport Index",
     genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC38A1", "SLC38A2"],
