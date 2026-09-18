@@ -145,7 +145,7 @@ export default function SurvivalExplorer({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Stratification cutoff mode for TCGA KM
-  const [stratMethod, setStratMethod] = useState<"median" | "quartile" | "tertile">("median");
+  const [stratMethod, setStratMethod] = useState<"median" | "quartile" | "tertile" | "optimal">("median");
 
   // Matched survival clinical records for TCGA
   const [tcgaSurvivalSamples, setTcgaSurvivalSamples] = useState<MatchedSurvivalSample[]>([]);
@@ -763,8 +763,16 @@ export default function SurvivalExplorer({
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
     ctx.font = "bold 32px monospace";
+    const stratLabel =
+      stratMethod === "optimal"
+        ? `Optimal Cutpoint (surv_cutpoint, cutoff = ${tcgaResult.cutoff_value ?? "NA"}, split: ${100 - (tcgaResult.cutoff_percentile ?? 50)}% High / ${tcgaResult.cutoff_percentile ?? 50}% Low)`
+        : stratMethod === "tertile"
+        ? "Tertiles (Top 33% vs Bottom 33%)"
+        : stratMethod === "quartile"
+        ? "Quartiles (Top 25% vs Bottom 25%)"
+        : "Median (50/50 Split)";
     ctx.fillText(
-      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Stratification: ${stratMethod} (N = 177)`,
+      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Stratification: ${stratLabel} (N = 177)`,
       120,
       155
     );
@@ -1152,9 +1160,9 @@ export default function SurvivalExplorer({
 
             {/* If in TCGA mode: show stratification options */}
             {cohortMode === "tcga" && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-slate-400">Stratify By:</span>
-                <div className="inline-flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs sm:text-sm text-slate-400 font-medium">Stratify By:</span>
+                <div className="inline-flex flex-wrap bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs sm:text-sm gap-0.5">
                   <button
                     onClick={() => setStratMethod("median")}
                     className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
@@ -1162,8 +1170,20 @@ export default function SurvivalExplorer({
                         ? "bg-teal-500 text-slate-950 font-bold shadow-sm"
                         : "text-slate-400 hover:text-slate-200"
                     }`}
+                    title="Fixed Median Cutoff (Top 50% vs Bottom 50%)"
                   >
                     Median (50/50)
+                  </button>
+                  <button
+                    onClick={() => setStratMethod("tertile")}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                      stratMethod === "tertile"
+                        ? "bg-teal-500 text-slate-950 font-bold shadow-sm"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                    title="Extreme Tertiles (Top 33.3% vs Bottom 33.3%, excludes middle 33%)"
+                  >
+                    Tertiles (33/33)
                   </button>
                   <button
                     onClick={() => setStratMethod("quartile")}
@@ -1172,9 +1192,23 @@ export default function SurvivalExplorer({
                         ? "bg-teal-500 text-slate-950 font-bold shadow-sm"
                         : "text-slate-400 hover:text-slate-200"
                     }`}
-                    title="Extreme Quartiles (Top 25% vs Bottom 25%)"
+                    title="Extreme Quartiles (Top 25% vs Bottom 25%, excludes middle 50%)"
                   >
                     Quartiles (25/25)
+                  </button>
+                  <button
+                    onClick={() => setStratMethod("optimal")}
+                    className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                      stratMethod === "optimal"
+                        ? "bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-bold shadow-sm"
+                        : "text-amber-400/90 hover:text-amber-300 hover:bg-amber-950/30"
+                    }`}
+                    title="Maximally Selected Rank Statistics (survminer::surv_cutpoint) - Dynamically identifies threshold maximizing log-rank separation"
+                  >
+                    <span>Optimal (surv_cutpoint)</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-1 py-0.2 rounded bg-amber-950/80 text-amber-200 border border-amber-500/30">
+                      R-stat
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1656,6 +1690,25 @@ export default function SurvivalExplorer({
               </div>
             </div>
 
+            {/* Optimal Cutpoint Diagnostic Info Banner */}
+            {stratMethod === "optimal" && tcgaResult.cutoff_value !== undefined && (
+              <div className="p-3.5 bg-amber-950/30 border border-amber-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+                  <div>
+                    <span className="font-semibold text-amber-300">Optimal Cutpoint Detected: </span>
+                    <span className="text-slate-200 font-mono">Score threshold = {tcgaResult.cutoff_value}</span>
+                    <span className="text-slate-400 ml-1.5 font-mono">
+                      (Split at {tcgaResult.cutoff_percentile}% percentile: {tcgaResult.high_n} High vs {tcgaResult.low_n} Low)
+                    </span>
+                  </div>
+                </div>
+                <div className="text-slate-400 text-xs">
+                  Maximally selected rank statistic (<span className="font-mono text-amber-300/90">survminer::surv_cutpoint</span>)
+                </div>
+              </div>
+            )}
+
             {/* Publication KM Plot Card */}
             <div
               className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden"
@@ -1667,7 +1720,15 @@ export default function SurvivalExplorer({
                     Kaplan-Meier Overall Survival Probability
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
-                    TCGA-PAAD Cohort (n={tcgaSurvivalSamples.length}) | Stratification: {stratMethod} | Signature: {selectedGenes.join(", ")}
+                    TCGA-PAAD Cohort (n={tcgaSurvivalSamples.length}) | Stratification: {
+                      stratMethod === "optimal"
+                        ? `Optimal Cutpoint (cutoff = ${tcgaResult.cutoff_value})`
+                        : stratMethod === "tertile"
+                        ? "Tertiles (33/33)"
+                        : stratMethod === "quartile"
+                        ? "Quartiles (25/25)"
+                        : "Median (50/50)"
+                    } | Signature: {selectedGenes.join(", ")}
                   </p>
                 </div>
 

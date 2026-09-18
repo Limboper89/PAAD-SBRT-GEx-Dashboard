@@ -56,6 +56,9 @@ export interface SurvivalAnalysisResult {
   hr_ci_upper: number;
   risk_table: RiskTableRow[];
   patient_records: PatientSurvivalRecord[];
+  cutoff_value?: number;
+  cutoff_percentile?: number;
+  strat_method?: "median" | "quartile" | "tertile" | "optimal";
 }
 
 /**
@@ -289,12 +292,80 @@ export function computeLogRankAndHR(
 }
 
 /**
+ * Find the optimal cutpoint that maximizes the log-rank chi-square statistic
+ * (Maximally Selected Rank Statistics / survminer::surv_cutpoint implementation)
+ */
+export function findOptimalCutpoint(
+  durations: number[],
+  events: number[],
+  scores: Float64Array | number[],
+  minProp: number = 0.15,
+  maxProp: number = 0.85
+): {
+  cutoff: number;
+  cutIndex: number;
+  percentile: number;
+  chi2: number;
+} {
+  const n = scores.length;
+  const indexed = Array.from({ length: n }, (_, i) => ({
+    score: scores[i],
+    time: durations[i],
+    event: events[i],
+  })).sort((a, b) => a.score - b.score);
+
+  const minIdx = Math.max(5, Math.floor(n * minProp));
+  const maxIdx = Math.min(n - 5, Math.floor(n * maxProp));
+
+  let bestCutoff = indexed[Math.floor(n * 0.5)].score;
+  let bestIdx = Math.floor(n * 0.5);
+  let bestChi2 = -1;
+
+  for (let i = minIdx; i <= maxIdx; i++) {
+    // Avoid splitting identical scores
+    if (i < n - 1 && indexed[i].score === indexed[i + 1].score) continue;
+
+    const threshold = indexed[i].score;
+    const highDur: number[] = [];
+    const highEv: number[] = [];
+    const lowDur: number[] = [];
+    const lowEv: number[] = [];
+
+    for (let j = 0; j < n; j++) {
+      if (indexed[j].score >= threshold) {
+        highDur.push(indexed[j].time);
+        highEv.push(indexed[j].event);
+      } else {
+        lowDur.push(indexed[j].time);
+        lowEv.push(indexed[j].event);
+      }
+    }
+
+    if (highDur.length < 5 || lowDur.length < 5) continue;
+
+    const { logrank_chi2 } = computeLogRankAndHR(highDur, highEv, lowDur, lowEv);
+    if (logrank_chi2 > bestChi2) {
+      bestChi2 = logrank_chi2;
+      bestCutoff = threshold;
+      bestIdx = i;
+    }
+  }
+
+  return {
+    cutoff: bestCutoff,
+    cutIndex: bestIdx,
+    percentile: Number(((bestIdx / n) * 100).toFixed(1)),
+    chi2: bestChi2,
+  };
+}
+
+/**
  * Perform complete dynamic multi-gene survival analysis
  */
 export function runCustomSurvivalAnalysis(
   survivalSamples: MatchedSurvivalSample[],
   geneExpressions: number[][],
-  method: "median" | "quartile" | "tertile" = "median"
+  method: "median" | "quartile" | "tertile" | "optimal" = "median"
 ): SurvivalAnalysisResult {
   const nPatients = survivalSamples.length;
   if (nPatients === 0 || geneExpressions.length === 0) {
@@ -325,22 +396,42 @@ export function runCustomSurvivalAnalysis(
   const sortedScores = Array.from(compositeScores).sort((a, b) => a - b);
   let highCutoff: number;
   let lowCutoff: number;
+  let reportedCutoffVal: number | undefined;
+  let reportedPercentile: number | undefined;
 
-  if (method === "quartile") {
+  if (method === "optimal") {
+    const opt = findOptimalCutpoint(
+      survivalSamples.map((s) => s.os_months),
+      survivalSamples.map((s) => s.os_event),
+      compositeScores,
+      0.15,
+      0.85
+    );
+    highCutoff = opt.cutoff;
+    lowCutoff = opt.cutoff;
+    reportedCutoffVal = Number(opt.cutoff.toFixed(4));
+    reportedPercentile = opt.percentile;
+  } else if (method === "quartile") {
     const q1Idx = Math.floor(nPatients * 0.25);
     const q3Idx = Math.floor(nPatients * 0.75);
     lowCutoff = sortedScores[q1Idx];
     highCutoff = sortedScores[q3Idx];
+    reportedCutoffVal = Number(highCutoff.toFixed(4));
+    reportedPercentile = 75;
   } else if (method === "tertile") {
     const t1Idx = Math.floor(nPatients * 0.333);
     const t2Idx = Math.floor(nPatients * 0.667);
     lowCutoff = sortedScores[t1Idx];
     highCutoff = sortedScores[t2Idx];
+    reportedCutoffVal = Number(highCutoff.toFixed(4));
+    reportedPercentile = 66.7;
   } else {
     const medIdx = Math.floor(nPatients * 0.5);
     const med = sortedScores[medIdx];
     highCutoff = med;
     lowCutoff = med;
+    reportedCutoffVal = Number(med.toFixed(4));
+    reportedPercentile = 50;
   }
 
   const patientRecords: PatientSurvivalRecord[] = [];
@@ -354,7 +445,7 @@ export function runCustomSurvivalAnalysis(
     const score = Number(compositeScores[i].toFixed(4));
     let grp: "High" | "Low" | "Intermediate";
 
-    if (method === "median") {
+    if (method === "median" || method === "optimal") {
       if (score >= highCutoff) {
         grp = "High";
         highDurations.push(s.os_months);
@@ -365,6 +456,7 @@ export function runCustomSurvivalAnalysis(
         lowEvents.push(s.os_event);
       }
     } else {
+      // Quartiles or Tertiles: exclude middle patients from the KM comparison
       if (score >= highCutoff) {
         grp = "High";
         highDurations.push(s.os_months);
@@ -422,6 +514,9 @@ export function runCustomSurvivalAnalysis(
     hr_ci_upper,
     risk_table: riskTable,
     patient_records: patientRecords,
+    cutoff_value: reportedCutoffVal,
+    cutoff_percentile: reportedPercentile,
+    strat_method: method,
   };
 }
 
