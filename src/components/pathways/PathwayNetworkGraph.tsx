@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
 import { Share2, Info } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
@@ -10,10 +11,26 @@ interface PathwayNetworkGraphProps {
   results: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
   analysisMode?: "ORA" | "GSEA";
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
-export default function PathwayNetworkGraph({ results, onSelectPathway, analysisMode }: PathwayNetworkGraphProps) {
+export default function PathwayNetworkGraph({
+  results,
+  onSelectPathway,
+  analysisMode,
+  datasetName,
+  comparisonLabel
+}: PathwayNetworkGraphProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || results[0]?.comparisonLabel,
+      datasetName || results[0]?.datasetName,
+      results[0]?.datasetId
+    );
+  }, [comparisonLabel, datasetName, results]);
 
   if (!results || results.length === 0) {
     return (
@@ -88,17 +105,20 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(isGsea ? "Leading-Edge Pathway Crosstalk Network" : "Pathway Overlap Network (ORA)", 80, 80);
+    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(contrast.shortTitle, 80, 82);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
+    ctx.font = "bold 28px monospace";
     ctx.fillText(
-      `Top ${topPathways.length} Enriched Pathways • ${edges.length} Inter-Pathway Shared Gene Connections`,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • ${isGsea ? "Crosstalk Network" : "Overlap Network"} • Top ${topPathways.length} Pathways`,
       80,
       130
     );
+
+
 
     const cX = size / 2;
     const cY = size / 2 + 30;
@@ -178,7 +198,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
     if (isGsea) {
       // Red dot
       ctx.beginPath();
-      ctx.arc(cX - 480, legY, 16, 0, 2 * Math.PI);
+      ctx.arc(cX - 560, legY, 16, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#991b1b";
@@ -186,18 +206,18 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.fillText("Upregulated NES", cX - 450, legY + 8);
+      ctx.fillText(`Positive NES: ${contrast.posShort}`, cX - 530, legY + 8);
 
       // Blue dot
       ctx.beginPath();
-      ctx.arc(cX - 100, legY, 16, 0, 2 * Math.PI);
+      ctx.arc(cX - 60, legY, 16, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillText("Downregulated NES", cX - 70, legY + 8);
+      ctx.fillText(`Negative NES: ${contrast.negShort}`, cX - 30, legY + 8);
     }
 
     // Edge thickness text
@@ -205,7 +225,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
     ctx.font = "20px monospace";
     ctx.fillText(
       isGsea ? "• Edge Width ∝ Shared Leading-Edge Genes" : "• Edge Width ∝ Shared Overlapping DEGs",
-      isGsea ? cX + 260 : cX - 200,
+      isGsea ? cX + 460 : cX - 200,
       legY + 7
     );
 
@@ -214,14 +234,19 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-4 shadow-xl font-sans text-slate-100">
-      <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <Share2 className="w-4 h-4 text-teal-400" />
-            <span>{isGsea ? "Leading-Edge Pathway Network" : "Pathway Overlap Network"}</span>
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-teal-400" />
+              <span>{isGsea ? "Leading-Edge Pathway Network" : "Pathway Overlap Network"}</span>
+            </h3>
+            <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${contrast.badgeColor}`}>
+              Contrast: {contrast.shortTitle}
+            </span>
+          </div>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Nodes: Top Pathways &bull; Edges: {isGsea ? "Shared Leading-Edge Genes" : "Shared Overlapping DEGs"} &bull; Click node to inspect
+            Cohort: <span className="text-slate-200">{contrast.datasetName}</span> &bull; Nodes: Top Pathways &bull; Edges: {isGsea ? "Shared Leading-Edge Genes" : "Shared Overlapping DEGs"}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -231,10 +256,12 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
           <ExportButton
             onExportCSV={() => {
               exportToCSV({
-                filename: isGsea ? "Pathway_LeadingEdge_Network_Edges.csv" : "Pathway_Overlap_Network_Edges.csv",
+                filename: `Pathway_${isGsea ? "LeadingEdge" : "Overlap"}_Network_Edges_${contrast.slug}.csv`,
                 metadata: {
                   module: isGsea ? "Pathway Leading Edge Network Graph" : "Pathway Overlap Network Graph",
                   mode: isGsea ? "GSEA" : "ORA",
+                  contrast: contrast.shortTitle,
+                  dataset: contrast.datasetName,
                   totalNodes: String(topPathways.length),
                   totalEdges: String(edges.length),
                 },
@@ -246,7 +273,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
               const exportCanvas = generateHighResNetworkCanvas(theme, 2400);
               exportCanvasToPNG({
                 canvas: exportCanvas,
-                filename: isGsea ? "Pathway_LeadingEdge_Network.png" : "Pathway_Overlap_Network.png",
+                filename: `Pathway_${isGsea ? "LeadingEdge" : "Overlap"}_Network_${contrast.slug}.png`,
                 theme,
               });
             }}
@@ -254,7 +281,7 @@ export default function PathwayNetworkGraph({ results, onSelectPathway, analysis
               const exportCanvas = generateHighResNetworkCanvas(theme, 1200);
               exportCanvasToSVG({
                 canvas: exportCanvas,
-                filename: isGsea ? "Pathway_LeadingEdge_Network.svg" : "Pathway_Overlap_Network.svg",
+                filename: `Pathway_${isGsea ? "LeadingEdge" : "Overlap"}_Network_${contrast.slug}.svg`,
                 theme,
               });
             }}

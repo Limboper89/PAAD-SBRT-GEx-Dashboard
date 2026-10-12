@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
 import { Layers, Sparkles } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
@@ -11,15 +12,27 @@ interface PathwayGeneMatrixProps {
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
   onSelectGene?: (gene: string) => void;
   analysisMode?: "ORA" | "GSEA";
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
 export default function PathwayGeneMatrix({
   results,
   onSelectPathway,
   onSelectGene,
-  analysisMode
+  analysisMode,
+  datasetName,
+  comparisonLabel
 }: PathwayGeneMatrixProps) {
   const matrixRef = useRef<HTMLDivElement>(null);
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || results[0]?.comparisonLabel,
+      datasetName || results[0]?.datasetName,
+      results[0]?.datasetId
+    );
+  }, [comparisonLabel, datasetName, results]);
 
   if (!results || results.length === 0) {
     return (
@@ -69,17 +82,20 @@ export default function PathwayGeneMatrix({
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(isGsea ? "Leading-Edge Gene Overlap Matrix" : "Gene Overlap Matrix (ORA)", 80, 80);
+    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(contrast.shortTitle, 80, 82);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
+    ctx.font = "bold 28px monospace";
     ctx.fillText(
-      `Top ${topPathways.length} Enriched Pathways × Top ${topGenes.length} ${isGsea ? "Leading-Edge Genes" : "Overlapping Genes"}`,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • ${isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"} • Top ${topPathways.length} Pathways × Top ${topGenes.length} Genes`,
       80,
       130
     );
+
+
 
     const padLeft = 880;
     const padRight = 80;
@@ -156,24 +172,31 @@ export default function PathwayGeneMatrix({
 
   return (
     <div ref={matrixRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-xl font-sans text-slate-100">
-      <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
         <div>
-          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-teal-400" />
-            <span>{isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"}</span>
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-teal-400" />
+              <span>{isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"}</span>
+            </h3>
+            <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${contrast.badgeColor}`}>
+              Contrast: {contrast.shortTitle}
+            </span>
+          </div>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Top {topPathways.length} Enriched Pathways &bull; Top {topGenes.length} {isGsea ? "Leading-Edge Core Genes" : "Overlapping DEGs"}
+            Cohort: <span className="text-slate-200">{contrast.datasetName}</span> &bull; Top {topPathways.length} Enriched Pathways &bull; Top {topGenes.length} {isGsea ? "Leading-Edge Core Genes" : "Overlapping DEGs"}
           </p>
         </div>
 
         <ExportButton
           onExportCSV={() => {
             exportToCSV({
-              filename: isGsea ? "Pathway_LeadingEdge_Gene_Matrix.csv" : "Pathway_Gene_Overlap_Matrix.csv",
+              filename: `Pathway_${isGsea ? "LeadingEdge" : "GeneOverlap"}_Matrix_${contrast.slug}.csv`,
               metadata: {
                 module: isGsea ? "Pathway Leading Edge Matrix" : "Pathway Gene Overlap Matrix",
                 mode: isGsea ? "GSEA" : "ORA",
+                contrast: contrast.shortTitle,
+                dataset: contrast.datasetName,
                 topPathways: String(topPathways.length),
                 topGenes: String(topGenes.length),
               },
@@ -188,7 +211,7 @@ export default function PathwayGeneMatrix({
             const exportCanvas = generateHighResMatrixCanvas(theme, 2400);
             exportCanvasToPNG({
               canvas: exportCanvas,
-              filename: "Pathway_LeadingEdge_Gene_Matrix.png",
+              filename: `Pathway_${isGsea ? "LeadingEdge" : "GeneOverlap"}_Matrix_${contrast.slug}.png`,
               theme,
             });
           }}
@@ -196,7 +219,7 @@ export default function PathwayGeneMatrix({
             const exportCanvas = generateHighResMatrixCanvas(theme, 1200);
             exportCanvasToSVG({
               canvas: exportCanvas,
-              filename: "Pathway_LeadingEdge_Gene_Matrix.svg",
+              filename: `Pathway_${isGsea ? "LeadingEdge" : "GeneOverlap"}_Matrix_${contrast.slug}.svg`,
               theme,
             });
           }}

@@ -1,19 +1,79 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
-import { CheckCircle2, ExternalLink, Zap, Info } from "lucide-react";
+import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
+import { CheckCircle2, ExternalLink, Zap, Info, Layers } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
 import ExportButton from "@/components/ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
 interface GSEAEnrichmentCurveProps {
   pathway: PathwayEnrichmentResult | null;
+  availablePathways?: PathwayEnrichmentResult[];
+  onSelectPathway?: (pathway: PathwayEnrichmentResult) => void;
+  onOpenDetailModal?: (pathway: PathwayEnrichmentResult) => void;
   onClose?: () => void;
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
-export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichmentCurveProps) {
+export default function GSEAEnrichmentCurve({ 
+  pathway, 
+  availablePathways, 
+  onSelectPathway, 
+  onOpenDetailModal,
+  onClose, 
+  datasetName, 
+  comparisonLabel 
+}: GSEAEnrichmentCurveProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || pathway?.comparisonLabel,
+      datasetName || pathway?.datasetName,
+      pathway?.datasetId
+    );
+  }, [comparisonLabel, datasetName, pathway]);
+
+  const computedExternalUrl = useMemo(() => {
+    if (pathway?.externalUrl) return pathway.externalUrl;
+    if (!pathway) return "";
+    const name = pathway.pathwayName || "";
+    const id = pathway.pathwayId || "";
+    const db = pathway.database || "";
+    
+    if (db === "Hallmark" || name.startsWith("Hallmark") || id.startsWith("HALLMARK_")) {
+      const canonical = (id || name).toUpperCase()
+        .replace(/^HALLMARK[\s_:-]*/, "")
+        .replace("TNF-ALPHA_SIGNALING_VIA_NF-KB", "TNFA_SIGNALING_VIA_NFKB")
+        .replace("TNF-ALPHA SIGNALING VIA NF-KB", "TNFA_SIGNALING_VIA_NFKB")
+        .replace("TNF_ALPHA_SIGNALING_VIA_NF_KB", "TNFA_SIGNALING_VIA_NFKB")
+        .replace("TGF-BETA_SIGNALING", "TGF_BETA_SIGNALING")
+        .replace("TGF-BETA SIGNALING", "TGF_BETA_SIGNALING")
+        .replace("IL-6/JAK/STAT3_SIGNALING", "IL6_JAK_STAT3_SIGNALING")
+        .replace("IL-6/JAK/STAT3 SIGNALING", "IL6_JAK_STAT3_SIGNALING")
+        .replace("IL-2/STAT5_SIGNALING", "IL2_STAT5_SIGNALING")
+        .replace("IL-2/STAT5 SIGNALING", "IL2_STAT5_SIGNALING")
+        .replace("G2-M_CHECKPOINT", "G2M_CHECKPOINT")
+        .replace("G2-M CHECKPOINT", "G2M_CHECKPOINT")
+        .replace("WNT-BETA_CATENIN_SIGNALING", "WNT_BETA_CATENIN_SIGNALING")
+        .replace("WNT-BETA CATENIN SIGNALING", "WNT_BETA_CATENIN_SIGNALING")
+        .replace(/[^A-Z0-9_]/g, "_")
+        .replace(/_+/g, "_");
+      return `https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/HALLMARK_${canonical}.html`;
+    }
+    if (db === "Reactome" || name.startsWith("Reactome") || id.includes("R-HSA-")) {
+      const match = id.match(/R-HSA-\d+/) || name.match(/R-HSA-\d+/);
+      if (match) return `https://reactome.org/content/detail/${match[0]}`;
+    }
+    if (db === "GO_BP" || name.startsWith("GO") || id.startsWith("GO:")) {
+      const match = id.match(/GO:\d+/) || name.match(/GO:\d+/);
+      if (match) return `https://amigo.geneontology.org/amigo/term/${match[0]}`;
+    }
+    return "";
+  }, [pathway]);
 
 
   if (!pathway) {
@@ -71,17 +131,33 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
 
     // Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(pathway.pathwayName, 80, 80);
+    ctx.fillText(pathway.pathwayName, 80, 75);
 
+    // Subtitle 1: Cohort & Contrast
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 28px monospace";
+    ctx.font = "bold 26px monospace";
     ctx.fillText(
-      `Database: ${pathway.database} | NES: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Leading Edge: ${leadingEdgeGenes.length} genes`,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast})`,
       80,
-      130
+      118
     );
+
+    const totalHits = pathway.geneSetSize || pathway.contributingGenes?.length || curveData?.geneHitsIndices?.length || 0;
+    const leadingHits = leadingEdgeGenes.length;
+    const pctLeading = totalHits > 0 ? Math.round((leadingHits / totalHits) * 100) : 0;
+
+    // Subtitle 2: Metrics
+    ctx.fillStyle = isLight ? "#475569" : "#64748b";
+    ctx.font = "bold 24px monospace";
+    ctx.fillText(
+      `Database: ${pathway.database} | NES: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Total Hits: ${totalHits} genes | Leading Edge: ${leadingHits} / ${totalHits} (${pctLeading}%)`,
+      80,
+      155
+    );
+
+
 
     const padLeft = 200;
     const padRight = 80;
@@ -188,16 +264,29 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     ctx.lineWidth = 2.5;
     ctx.strokeRect(padLeft, panelBTop, plotW, panelBH);
 
-    chartData.forEach((d) => {
-      if (d.isHit) {
-        const x = getX(d.rankIndex);
-        ctx.strokeStyle = d.isLeadingEdge ? (isUp ? "#dc2626" : "#2563eb") : (isLight ? "#334155" : "#94a3b8");
-        ctx.lineWidth = d.isLeadingEdge ? 4 : 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x, panelBTop + 8);
-        ctx.lineTo(x, panelBTop + panelBH - 8);
-        ctx.stroke();
-      }
+    // Panel B Header / Legend over Barcode
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = "bold 22px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(
+      `Total Mapped Hits: ${totalHits} genes  (● ${leadingHits} Core Leading Edge [${isUp ? "Red" : "Blue"}]  |  ● ${totalHits - leadingHits} Trailing Hits [Slate])`,
+      padLeft,
+      panelBTop - 12
+    );
+
+    const hitRanks = curveData?.geneHitsIndices && curveData.geneHitsIndices.length > 0 
+      ? curveData.geneHitsIndices 
+      : chartData.filter(d => d.isHit).map(d => d.rankIndex);
+
+    hitRanks.forEach((rankIdx) => {
+      const x = getX(rankIdx);
+      const isLeading = isUp ? rankIdx <= peakIndex : rankIdx >= peakIndex;
+      ctx.strokeStyle = isLeading ? (isUp ? "#dc2626" : "#2563eb") : (isLight ? "#64748b" : "#475569");
+      ctx.lineWidth = isLeading ? 3.5 : 2;
+      ctx.beginPath();
+      ctx.moveTo(x, panelBTop + 8);
+      ctx.lineTo(x, panelBTop + panelBH - 8);
+      ctx.stroke();
     });
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
@@ -273,15 +362,54 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
     }
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Rank in Ordered Gene List", padLeft + plotW / 2, panelCTop + panelCH + 115);
+    ctx.fillText(`Rank in Ordered Gene List (${maxRank.toLocaleString()} genes)`, padLeft + plotW / 2, panelCTop + panelCH + 115);
+
+    // Directional Phenotype Indicators on bottom axis of Canvas
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = isLight ? "#dc2626" : "#f87171";
+    ctx.textAlign = "left";
+    ctx.fillText(`◄ ${contrast.posShort}`, padLeft + 10, panelCTop + panelCH + 115);
+
+    ctx.fillStyle = isLight ? "#2563eb" : "#60a5fa";
+    ctx.textAlign = "right";
+    ctx.fillText(`${contrast.negShort} ►`, padLeft + plotW - 10, panelCTop + panelCH + 115);
 
     return offscreen;
   };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 shadow-2xl font-sans text-slate-100 relative">
+      {/* Interactive Pathway Selector Bar */}
+      {availablePathways && availablePathways.length > 1 && onSelectPathway && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-3 shadow-inner">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-teal-400 shrink-0" />
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold">
+              Switch Pathway:
+            </span>
+            <span className="text-xxs font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+              {availablePathways.length.toLocaleString()} available
+            </span>
+          </div>
+          <select
+            value={pathway.pathwayName}
+            onChange={(e) => {
+              const selected = availablePathways.find(p => p.pathwayName === e.target.value);
+              if (selected) onSelectPathway(selected);
+            }}
+            className="bg-slate-900 hover:bg-slate-850 border border-slate-700 hover:border-teal-500/50 text-slate-200 text-xs rounded-lg px-3 py-2 font-mono focus:outline-none focus:border-teal-500 transition-colors w-full sm:max-w-xl truncate cursor-pointer shadow-sm"
+          >
+            {availablePathways.map((p) => (
+              <option key={`${p.database}-${p.pathwayName}`} value={p.pathwayName}>
+                [{p.database}] {p.pathwayName} {p.nes !== undefined ? `(NES: ${p.nes > 0 ? '+' : ''}${p.nes.toFixed(2)})` : ''} — FDR: {p.adjPValue < 0.0001 ? p.adjPValue.toExponential(1) : p.adjPValue.toFixed(4)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Header Metadata Card */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-1 max-w-2xl">
@@ -292,22 +420,39 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
             <span className={`text-xxs px-2 py-0.5 rounded border font-mono font-bold ${accentBg}`}>
               {pathway.direction}
             </span>
+            <span className={`text-xxs px-2.5 py-0.5 rounded-full border font-mono font-bold ${contrast.badgeColor}`}>
+              Contrast: {contrast.shortTitle}
+            </span>
             <span className="text-xxs text-slate-400 font-mono">
-              {isGsea ? "GSEA Canonical Enrichment View" : "ORA Gene Set View"}
+              Cohort: {contrast.datasetName}
+            </span>
+            <span className="text-xxs text-slate-500 font-mono">
+              ({isGsea ? "GSEA Canonical Enrichment View" : "ORA Gene Set View"})
             </span>
           </div>
           <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
             <span>{pathway.pathwayName}</span>
-            {pathway.externalUrl && (
+            {(pathway.externalUrl || computedExternalUrl) && (
               <a
-                href={pathway.externalUrl}
+                href={pathway.externalUrl || computedExternalUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-slate-500 hover:text-teal-400 transition"
-                title="Open External Database Link"
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-teal-200 border border-slate-700 hover:border-teal-500/50 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-mono transition shadow-sm"
+                title="View Official Gene Set on UCSD MSigDB / External Database"
               >
-                <ExternalLink className="w-4 h-4" />
+                <span>{pathway.database === "Hallmark" ? "UCSD MSigDB Card" : `${pathway.database} Card`}</span>
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
+            )}
+            {onOpenDetailModal && (
+              <button
+                onClick={() => onOpenDetailModal(pathway)}
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-600 px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-mono transition shadow-sm cursor-pointer"
+                title="Open Detailed Genes Analysis Window"
+              >
+                <span>Full Gene Analysis Window</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
             )}
           </h2>
           {pathway.description && (
@@ -336,7 +481,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
             </span>
           </div>
           <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
-            <span className="text-xxs text-slate-500 block uppercase">Leading Edge</span>
+            <span className="text-xxs text-slate-500 block uppercase">Leading Edge / Hits</span>
             <span className="text-sm font-bold text-amber-400">
               {leadingEdgeGenes.length} / {pathway.geneSetSize || pathway.contributingGenes?.length || 0}
             </span>
@@ -361,9 +506,12 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
             <ExportButton
               onExportCSV={() => {
                 exportToCSV({
-                  filename: `GSEA_Curve_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.csv`,
+                  filename: `GSEA_Curve_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}_${contrast.slug}.csv`,
                   metadata: {
                     dataset: pathway.database,
+                    cohort: contrast.datasetName,
+                    contrast: contrast.shortTitle,
+                    comparison: contrast.fullContrast,
                     module: "GSEA Enrichment Curve",
                     pathway: pathway.pathwayName,
                     nes: String(pathway.nes ?? "N/A"),
@@ -377,7 +525,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
                 const exportCanvas = generateHighResGseaMountainCanvas(theme, 2400);
                 exportCanvasToPNG({
                   canvas: exportCanvas,
-                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.png`,
+                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}_${contrast.slug}.png`,
                   theme,
                 });
               }}
@@ -385,7 +533,7 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
                 const exportCanvas = generateHighResGseaMountainCanvas(theme, 1200);
                 exportCanvasToSVG({
                   canvas: exportCanvas,
-                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}.svg`,
+                  filename: `GSEA_Mountain_${pathway.pathwayName.replace(/[^a-zA-Z0-9]/g, "_")}_${contrast.slug}.svg`,
                   theme,
                 });
               }}
@@ -448,7 +596,9 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
           {/* Panel B: Gene-Set Member Barcode Hits */}
           <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-1.5">
             <div className="flex justify-between items-center text-xxs text-slate-400">
-              <span>Gene Set Member Hits Barcode ({pathway.contributingGenes?.length || 0} genes)</span>
+              <span>
+                Gene Set Member Hits Barcode: <strong className="text-slate-200">{pathway.geneSetSize || pathway.contributingGenes?.length || curveData?.geneHitsIndices?.length || 0} total mapped genes</strong> (<span className="text-rose-400 font-bold">{leadingEdgeGenes.length} leading-edge</span> + <span className="text-slate-400 font-semibold">{(pathway.geneSetSize || pathway.contributingGenes?.length || curveData?.geneHitsIndices?.length || 0) - leadingEdgeGenes.length} trailing</span>)
+              </span>
               <span className="text-rose-400 font-bold">Leading Edge Region: Ranks #0 to #{peakIndex}</span>
             </div>
             {/* SVG Barcode Strip */}
@@ -504,6 +654,21 @@ export default function GSEAEnrichmentCurve({ pathway, onClose }: GSEAEnrichment
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          {/* Directional axis indicators for UI */}
+          <div className="flex flex-col sm:flex-row justify-between items-center px-4 py-2 bg-slate-950 rounded-xl text-xxs font-mono border border-slate-800 text-slate-400 gap-2">
+            <span className="text-rose-400 font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              ◄ High in {contrast.posShort} (Positively Correlated / Rank #0)
+            </span>
+            <span className="text-slate-400 font-semibold">
+              Rank in Ordered Dataset ({totalGenes.toLocaleString()} genes)
+            </span>
+            <span className="text-sky-400 font-bold flex items-center gap-1.5">
+              High in {contrast.negShort} (Negatively Correlated / Rank #{totalGenes.toLocaleString()}) ►
+              <span className="w-2 h-2 rounded-full bg-sky-500" />
+            </span>
           </div>
         </div>
       ) : (

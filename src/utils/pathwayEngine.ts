@@ -492,3 +492,176 @@ export function runGSEA(
     };
   });
 }
+
+export interface ContrastDisplayInfo {
+  type: "tcga" | "sbrt" | "custom";
+  shortTitle: string;
+  badgeText: string;
+  fullContrast: string;
+  datasetName: string;
+  posPhenotype: string;
+  negPhenotype: string;
+  posShort: string;
+  negShort: string;
+  posLegend: string;
+  negLegend: string;
+  slug: string;
+  badgeColor: string;
+}
+
+export function getContrastDisplayInfo(
+  comparisonLabel?: string,
+  datasetName?: string,
+  datasetId?: string
+): ContrastDisplayInfo {
+  const comp = (comparisonLabel || "").toLowerCase();
+  const ds = (datasetName || "").toLowerCase();
+  const id = (datasetId || "").toLowerCase();
+
+  const isTcga =
+    id === "tcga_gtex" ||
+    id.includes("tcga") ||
+    comp.includes("tumor") ||
+    comp.includes("normal") ||
+    comp.includes("gtex") ||
+    ds.includes("tcga") ||
+    ds.includes("gtex");
+
+  const isSbrt =
+    id === "gse225767" ||
+    id.includes("sbrt") ||
+    comp.includes("sbrt") ||
+    comp.includes("pre-sbrt") ||
+    comp.includes("post-sbrt") ||
+    comp.includes("pre vs post") ||
+    comp.includes("post vs pre") ||
+    ds.includes("sbrt") ||
+    ds.includes("gse225767");
+
+  if (isTcga) {
+    return {
+      type: "tcga",
+      shortTitle: "Tumor vs Normal",
+      badgeText: "TCGA: TUMOR VS NORMAL",
+      fullContrast: comparisonLabel || "Primary Tumor (n=178) vs Normal Pancreas (n=167)",
+      datasetName: datasetName || "TCGA-PAAD & GTEx Pancreas",
+      posPhenotype: "Primary Tumor (Upregulated)",
+      negPhenotype: "Normal Reference (Downregulated)",
+      posShort: "Enriched in Tumor",
+      negShort: "Enriched in Normal",
+      posLegend: "Positive NES: Enriched in Tumor ▶",
+      negLegend: "◀ Negative NES: Enriched in Normal",
+      slug: "Tumor_vs_Normal",
+      badgeColor: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+    };
+  }
+
+  if (isSbrt) {
+    return {
+      type: "sbrt",
+      shortTitle: "SBRT Pre vs Post",
+      badgeText: "GSE225767: PRE VS POST SBRT",
+      fullContrast: comparisonLabel || "Post-SBRT Resection (n=29) vs Pre-SBRT Biopsy (n=26)",
+      datasetName: datasetName || "GSE225767 SBRT Response Cohort",
+      posPhenotype: "Post-SBRT Resection (Upregulated)",
+      negPhenotype: "Pre-SBRT Biopsy (Downregulated)",
+      posShort: "Enriched Post-SBRT",
+      negShort: "Enriched Pre-SBRT",
+      posLegend: "Positive NES: Enriched Post-SBRT ▶",
+      negLegend: "◀ Negative NES: Enriched Pre-SBRT",
+      slug: "SBRT_Pre_vs_Post",
+      badgeColor: "bg-amber-500/15 text-amber-300 border-amber-500/40"
+    };
+  }
+
+  return {
+    type: "custom",
+    shortTitle: comparisonLabel || "Custom Analysis",
+    badgeText: "CUSTOM ANALYSIS",
+    fullContrast: comparisonLabel || "User Supplied Gene List",
+    datasetName: datasetName || "Custom Input",
+    posPhenotype: "Positive Direction",
+    negPhenotype: "Negative Direction",
+    posShort: "Positive Direction",
+    negShort: "Negative Direction",
+    posLegend: "Positive NES ▶",
+    negLegend: "◀ Negative NES",
+    slug: "Custom_Analysis",
+    badgeColor: "bg-indigo-500/15 text-indigo-300 border-indigo-500/40"
+  };
+}
+
+export interface NiceTickInfo {
+  min: number;
+  max: number;
+  ticks: number[];
+  step: number;
+}
+
+/**
+ * Calculates clean, publication-ready tick values for continuous axes.
+ * When isSymmetric=true (e.g. GSEA NES), ticks are strictly symmetric around 0.
+ */
+export function calculateNiceTicks(
+  minVal: number,
+  maxVal: number,
+  isSymmetric: boolean = false
+): NiceTickInfo {
+  if (isSymmetric) {
+    const maxAbs = Math.max(Math.abs(minVal), Math.abs(maxVal), 1.0);
+    // Aim for 3-4 steps on each side of zero
+    const rawStep = maxAbs / 3.5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+    let niceStepNorm = 1;
+    if (normalized > 5) niceStepNorm = 10;
+    else if (normalized > 2.5) niceStepNorm = 5;
+    else if (normalized > 2) niceStepNorm = 2.5;
+    else if (normalized > 1) niceStepNorm = 2;
+    else niceStepNorm = 1;
+    const step = niceStepNorm * magnitude;
+
+    let countPerSide = Math.ceil(maxAbs / step);
+    // Add margin if points are right on boundary
+    if (maxAbs / (countPerSide * step) > 0.94) {
+      countPerSide += 1;
+    }
+    const bound = countPerSide * step;
+    const ticks: number[] = [];
+    for (let i = -countPerSide; i <= countPerSide; i++) {
+      ticks.push(Math.round(i * step * 1000) / 1000);
+    }
+    return { min: -bound, max: bound, ticks, step };
+  } else {
+    const span = Math.max(0.1, maxVal - minVal);
+    const rawStep = span / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+    let niceStepNorm = 1;
+    if (normalized > 5) niceStepNorm = 10;
+    else if (normalized > 2.5) niceStepNorm = 5;
+    else if (normalized > 2) niceStepNorm = 2.5;
+    else if (normalized > 1) niceStepNorm = 2;
+    else niceStepNorm = 1;
+    const step = niceStepNorm * magnitude;
+
+    const niceMin = Math.floor(minVal / step) * step;
+    const niceMax = Math.ceil(maxVal / step) * step;
+    const ticks: number[] = [];
+    for (let v = niceMin; v <= niceMax + step * 0.001; v += step) {
+      ticks.push(Math.round(v * 1000) / 1000);
+    }
+    return { min: niceMin, max: niceMax, ticks, step };
+  }
+}
+
+/**
+ * Cleanly formats a numeric tick value without unnecessary trailing zeroes.
+ */
+export function formatTickValue(val: number): string {
+  if (Math.abs(val) < 1e-9) return "0";
+  if (Math.abs(val) >= 10000) return val.toLocaleString();
+  if (Number.isInteger(val)) return val.toString();
+  return Number(val.toFixed(2)).toString();
+}
+

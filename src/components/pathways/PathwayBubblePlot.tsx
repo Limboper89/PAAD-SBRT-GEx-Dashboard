@@ -3,6 +3,7 @@
 import React, { useState, useRef, useMemo } from "react";
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Cell, ReferenceLine } from "recharts";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import { getContrastDisplayInfo, calculateNiceTicks, formatTickValue } from "@/utils/pathwayEngine";
 import ExportButton from "@/components/ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
@@ -10,6 +11,8 @@ interface PathwayBubblePlotProps {
   results: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
   analysisMode: "ORA" | "GSEA";
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
 function CustomDotTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { rawResult: PathwayEnrichmentResult } }> }) {
@@ -63,10 +66,20 @@ function CustomDotTooltip({ active, payload }: { active?: boolean; payload?: Arr
 export default function PathwayBubblePlot({
   results,
   onSelectPathway,
-  analysisMode
+  analysisMode,
+  datasetName,
+  comparisonLabel
 }: PathwayBubblePlotProps) {
   const [topCount, setTopCount] = useState<number>(20);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || results[0]?.comparisonLabel,
+      datasetName || results[0]?.datasetName,
+      results[0]?.datasetId
+    );
+  }, [comparisonLabel, datasetName, results]);
 
   if (!results || results.length === 0) {
     return (
@@ -158,39 +171,37 @@ export default function PathwayBubblePlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
+    // Main Title: Contrast & Analysis Method (e.g. Tumor vs Normal (GSEA))
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(isGsea ? "GSEA Pathway Enrichment Summary" : "Pathway Over-Representation Analysis (ORA)", 80, 80);
+    ctx.fillText(`${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 82);
 
-    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
+    // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.fillText(
-      `Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • Top ${displayResults.length} Pathways`,
       80,
-      130
+      132
     );
 
     const padLeft = 880;
-    const padRight = 100;
+    const padRight = 120;
     const padTop = 200;
-    const padBottom = 240;
+    const padBottom = 340;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
+    const axisY = padTop + plotH;
 
-    const xValues = chartData.map((d) => d.xValue);
-    let minX = Math.min(...xValues);
-    let maxX = Math.max(...xValues);
+    const rawXValues = chartData.map((d) => d.xValue);
+    const rawMinX = Math.min(...rawXValues);
+    const rawMaxX = Math.max(...rawXValues);
 
-    if (isGsea) {
-      const maxAbs = Math.max(Math.abs(minX), Math.abs(maxX), 1.5);
-      minX = -maxAbs * 1.15;
-      maxX = maxAbs * 1.15;
-    } else {
-      minX = Math.max(0, Math.floor(minX * 0.9));
-      maxX = Math.ceil(maxX * 1.1);
-    }
+    const tickInfo = calculateNiceTicks(rawMinX, rawMaxX, isGsea);
+    const minX = tickInfo.min;
+    const maxX = tickInfo.max;
 
     const getXCoord = (val: number) => {
       return padLeft + ((val - minX) / (maxX - minX)) * plotW;
@@ -211,12 +222,15 @@ export default function PathwayBubblePlot({
 
     if (isGsea) {
       const zeroX = getXCoord(0);
+      ctx.save();
+      ctx.setLineDash([10, 8]);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(zeroX, padTop);
-      ctx.lineTo(zeroX, padTop + plotH);
+      ctx.lineTo(zeroX, axisY);
       ctx.stroke();
+      ctx.restore();
     }
 
     chartData.forEach((d, idx) => {
@@ -249,74 +263,120 @@ export default function PathwayBubblePlot({
       ctx.stroke();
     });
 
+    // Axis Border Lines (Left Y and Bottom X)
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(padLeft, padTop + plotH);
-    ctx.lineTo(padLeft + plotW, padTop + plotH);
+    ctx.moveTo(padLeft, axisY);
+    ctx.lineTo(padLeft + plotW, axisY);
     ctx.moveTo(padLeft, padTop);
-    ctx.lineTo(padLeft, padTop + plotH);
+    ctx.lineTo(padLeft, axisY);
     ctx.stroke();
 
-    const numXTicks = 8;
-    const xStep = (maxX - minX) / numXTicks;
-
+    // Clean Integer / Half Ticks
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px monospace";
+    ctx.font = "bold 32px monospace";
     ctx.textAlign = "center";
 
-    for (let i = 0; i <= numXTicks; i++) {
-      const val = minX + i * xStep;
+    tickInfo.ticks.forEach((val) => {
       const xPos = getXCoord(val);
       ctx.beginPath();
-      ctx.moveTo(xPos, padTop + plotH);
-      ctx.lineTo(xPos, padTop + plotH + 10);
+      ctx.moveTo(xPos, axisY);
+      ctx.lineTo(xPos, axisY + 14);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 46);
-    }
+      ctx.fillText(formatTickValue(val), xPos, axisY + 52);
+    });
 
+    // X-Axis Metric Title in Center (sole occupant of this line — no collisions)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
-      isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+      isGsea ? "Normalized Enrichment Score (NES)" : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      padTop + plotH + 106
+      axisY + 105
     );
 
+    // Dedicated Legend Container Box (spanning plot width)
+    const legBoxY = axisY + 155;
+    const legBoxH = 80;
+    const midY = legBoxY + 44;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(padLeft, legBoxY, plotW, legBoxH, 12);
+    ctx.fill();
+    ctx.stroke();
+
     if (isGsea) {
+      // 1. Negative NES (Blue circle on left, pointing left)
       ctx.beginPath();
-      ctx.arc(padLeft + 40, padTop + plotH + 128, 14, 0, 2 * Math.PI);
-      ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
-      ctx.fill();
-      ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 26px sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Upregulated in Phenotype", padLeft + 64, padTop + plotH + 135);
-
-      ctx.beginPath();
-      ctx.arc(padLeft + 450, padTop + plotH + 128, 14, 0, 2 * Math.PI);
+      ctx.arc(padLeft + 45, midY, 14, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(contrast.negLegend, padLeft + 72, midY + 8);
+
+      // 2. Positive NES (Red circle in middle, pointing right)
+      ctx.beginPath();
+      ctx.arc(padLeft + 540, midY, 14, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#991b1b";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText(contrast.posLegend, padLeft + 567, midY + 8);
+
+      // 3. Bubble Size (Gray sample bubbles on right)
+      ctx.beginPath();
+      ctx.arc(padLeft + 1030, midY, 8, 0, 2 * Math.PI);
+      ctx.arc(padLeft + 1055, midY, 15, 0, 2 * Math.PI);
+      ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
+      ctx.fill();
+      ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillText("Downregulated in Phenotype", padLeft + 474, padTop + plotH + 135);
-    }
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = "23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Bubble Size ∝ Leading-Edge Genes", padLeft + 1080, midY + 8);
+    } else {
+      ctx.beginPath();
+      ctx.arc(padLeft + 45, midY, 14, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
+      ctx.fill();
+      ctx.strokeStyle = "#0d9488";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "24px monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(
-      isGsea ? "• Bubble Area ∝ Leading-Edge Gene Count" : "• Bubble Area ∝ Overlapping Gene Count",
-      isGsea ? padLeft + 900 : padLeft + 40,
-      padTop + plotH + 135
-    );
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Significant Overlap (BH FDR < 0.05)", padLeft + 72, midY + 8);
+
+      ctx.beginPath();
+      ctx.arc(padLeft + 700, midY, 8, 0, 2 * Math.PI);
+      ctx.arc(padLeft + 725, midY, 15, 0, 2 * Math.PI);
+      ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
+      ctx.fill();
+      ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = "23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Bubble Size ∝ Overlapping Genes", padLeft + 750, midY + 8);
+    }
 
     return offscreen;
   };
@@ -325,16 +385,19 @@ export default function PathwayBubblePlot({
     <div ref={chartRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[520px] shadow-xl font-sans">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b border-slate-800 pb-4">
         <div>
-          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <span>{isGsea ? "GSEA Enrichment Summary" : "ORA Enrichment Summary"}</span>
-            <span className="text-xxs font-mono text-slate-400 font-normal">
-              (Top {displayResults.length} Enriched Pathways)
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <span>{isGsea ? "GSEA Enrichment Summary" : "ORA Enrichment Summary"}</span>
+              <span className="text-xxs font-mono text-slate-400 font-normal">
+                (Top {displayResults.length} Pathways)
+              </span>
+            </h3>
+            <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${contrast.badgeColor}`}>
+              Contrast: {contrast.shortTitle}
             </span>
-          </h3>
+          </div>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            {isGsea
-              ? "Normalized Enrichment Score (NES) • Statistical Significance • Leading-Edge Genes"
-              : "Fold Enrichment • Hypergeometric Significance (BH FDR) • Overlapping DEGs"}
+            Cohort: <span className="text-slate-200">{contrast.datasetName}</span> &bull; {contrast.fullContrast}
           </p>
         </div>
 
@@ -362,10 +425,12 @@ export default function PathwayBubblePlot({
           <ExportButton
             onExportCSV={() => {
               exportToCSV({
-                filename: `Pathway_BubblePlot_${analysisMode}.csv`,
+                filename: `Pathway_BubblePlot_${analysisMode}_${contrast.slug}.csv`,
                 metadata: {
                   module: "Pathway Bubble Plot",
                   mode: analysisMode,
+                  contrast: contrast.shortTitle,
+                  dataset: contrast.datasetName,
                   totalPathways: String(displayResults.length),
                 },
                 headers: ["Pathway ID", "Pathway Name", "Database", isGsea ? "NES" : "Fold Enrichment", "BH FDR", "Nominal P", isGsea ? "Leading-Edge Count" : "Overlap Count"],
@@ -384,7 +449,7 @@ export default function PathwayBubblePlot({
               const exportCanvas = generateHighResBubbleCanvas(theme, 2400);
               exportCanvasToPNG({
                 canvas: exportCanvas,
-                filename: `Pathway_BubblePlot_${analysisMode}.png`,
+                filename: `Pathway_BubblePlot_${analysisMode}_${contrast.slug}.png`,
                 theme,
               });
             }}
@@ -392,7 +457,7 @@ export default function PathwayBubblePlot({
               const exportCanvas = generateHighResBubbleCanvas(theme, 1200);
               exportCanvasToSVG({
                 canvas: exportCanvas,
-                filename: `Pathway_BubblePlot_${analysisMode}.svg`,
+                filename: `Pathway_BubblePlot_${analysisMode}_${contrast.slug}.svg`,
                 theme,
               });
             }}
@@ -401,9 +466,9 @@ export default function PathwayBubblePlot({
       </div>
 
       {/* Main Scatter / Dot Chart */}
-      <div className="w-full h-[450px] min-h-[450px] relative">
-        <ResponsiveContainer width="100%" height={450}>
-          <ScatterChart margin={{ top: 20, right: 35, bottom: 45, left: 190 }}>
+      <div className="w-full h-[460px] min-h-[460px] relative">
+        <ResponsiveContainer width="100%" height={460}>
+          <ScatterChart margin={{ top: 20, right: 35, bottom: 52, left: 190 }}>
             <XAxis
               type="number"
               dataKey="xValue"
@@ -412,9 +477,11 @@ export default function PathwayBubblePlot({
               tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
               domain={['auto', 'auto']}
               label={{
-                value: isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+                value: isGsea
+                  ? "Normalized Enrichment Score (NES)"
+                  : `Fold Enrichment (${contrast.shortTitle})`,
                 position: "insideBottom",
-                offset: -14,
+                offset: -12,
                 fill: "#94a3b8",
                 fontSize: 11,
                 fontWeight: "bold",
@@ -471,6 +538,44 @@ export default function PathwayBubblePlot({
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Interactive On-Screen Legend & Contrast Card */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-800 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-5">
+          {isGsea ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded-full bg-red-500/90 border border-red-400 inline-block shadow-sm"></span>
+                <span className="text-slate-300">
+                  Positive NES: <span className="text-red-400 font-bold">{contrast.posShort}</span>
+                  <span className="text-slate-400 text-xxs ml-1">({contrast.posPhenotype})</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded-full bg-blue-500/90 border border-blue-400 inline-block shadow-sm"></span>
+                <span className="text-slate-300">
+                  Negative NES: <span className="text-blue-400 font-bold">{contrast.negShort}</span>
+                  <span className="text-slate-400 text-xxs ml-1">({contrast.negPhenotype})</span>
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded-full bg-teal-500 border border-teal-400 inline-block"></span>
+              <span className="text-slate-300 font-medium">Over-represented Pathways</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-slate-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span>
+            <span>Bubble Size ∝ {isGsea ? "Leading-Edge Count" : "Overlap Count"}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xxs text-slate-400">
+          <span>Contrast:</span>
+          <span className="text-slate-200 font-semibold">{contrast.fullContrast}</span>
+        </div>
       </div>
     </div>
   );

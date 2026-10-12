@@ -158,6 +158,7 @@ export default function PathwayExplorer({
   // ── UI state ──────────────────────────────────────────────
   const [activeView, setActiveView] = useState<"bubble" | "curve" | "bar" | "table" | "matrix" | "network" | "compare">("bubble");
   const [selectedPathway, setSelectedPathway] = useState<PathwayEnrichmentResult | null>(null);
+  const [detailModalPathway, setDetailModalPathway] = useState<PathwayEnrichmentResult | null>(null);
   const [showMethodology, setShowMethodology] = useState<boolean>(false);
 
   // ── Data Loading ──────────────────────────────────────────
@@ -557,6 +558,32 @@ export default function PathwayExplorer({
 
     return afterSearch;
   }, [rawActiveResults, fdrThreshold, minOverlap, dbFilter, directionFilter, keywordSearch, analysisMode, workflow]);
+
+  const activeDatasetName = useMemo(() => {
+    if (workflow === "cohort_ora") {
+      return activePrecomputed?.metadata?.datasetName || (datasetId === "tcga_gtex" ? "TCGA-PAAD vs GTEx Pancreas" : "GSE225767 SBRT Response");
+    }
+    if (workflow === "cohort_gsea") {
+      return DATASET_CONFIG[datasetId]?.label || (datasetId === "tcga_gtex" ? "TCGA-PAAD vs GTEx Pancreas" : "GSE225767 SBRT Response");
+    }
+    return initialMetadata?.datasetName || "Custom Input";
+  }, [workflow, activePrecomputed, datasetId, initialMetadata]);
+
+  const activeComparisonLabel = useMemo(() => {
+    if (workflow === "cohort_ora") {
+      return activePrecomputed?.metadata?.comparisonLabel || (datasetId === "tcga_gtex" ? "Primary Tumor vs Normal Reference" : "Post-SBRT vs Pre-SBRT");
+    }
+    if (workflow === "cohort_gsea") {
+      return DATASET_CONFIG[datasetId]?.contrast || (datasetId === "tcga_gtex" ? "Primary Tumor vs Normal Reference" : "Post-SBRT vs Pre-SBRT");
+    }
+    if (workflow === "custom_ora") {
+      return initialMetadata?.datasetName ? `${initialMetadata.datasetName} (DEG Selection)` : "Custom Gene List (ORA)";
+    }
+    if (workflow === "custom_gsea") {
+      return initialMetadata?.datasetName ? `${initialMetadata.datasetName} (Ranked DEGs)` : "Custom Ranked GSEA";
+    }
+    return filteredResults[0]?.comparisonLabel || (datasetId === "tcga_gtex" ? "Tumor vs Normal" : "SBRT Pre vs Post");
+  }, [workflow, activePrecomputed, datasetId, initialMetadata, filteredResults]);
 
   let aiCtx: any = null;
   try {
@@ -1196,12 +1223,19 @@ export default function PathwayExplorer({
                   setActiveView("curve");
                 }}
                 analysisMode={analysisMode}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
             {activeView === "curve" && (
               <GSEAEnrichmentCurve
                 pathway={selectedPathway || filteredResults[0]}
+                availablePathways={filteredResults}
+                onSelectPathway={setSelectedPathway}
+                onOpenDetailModal={setDetailModalPathway}
                 onClose={() => setSelectedPathway(null)}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
             {activeView === "bar" && (
@@ -1212,6 +1246,8 @@ export default function PathwayExplorer({
                   setActiveView("curve");
                 }}
                 analysisMode={analysisMode}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
             {activeView === "table" && (
@@ -1233,6 +1269,8 @@ export default function PathwayExplorer({
                 }}
                 onSelectGene={onSelectGene}
                 analysisMode={analysisMode}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
             {activeView === "network" && (
@@ -1243,6 +1281,8 @@ export default function PathwayExplorer({
                   setActiveView("curve");
                 }}
                 analysisMode={analysisMode}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
             {activeView === "compare" && (
@@ -1254,6 +1294,8 @@ export default function PathwayExplorer({
                   setSelectedPathway(p);
                   setActiveView("curve");
                 }}
+                datasetName={activeDatasetName}
+                comparisonLabel={activeComparisonLabel}
               />
             )}
           </>
@@ -1261,11 +1303,11 @@ export default function PathwayExplorer({
       </div>
 
       {/* ── PATHWAY DETAIL MODAL ── */}
-      {selectedPathway && (
+      {detailModalPathway && (
         <PathwayDetailModal
-          pathway={selectedPathway}
+          pathway={detailModalPathway}
           mappingQC={customOraMappingQC}
-          onClose={() => setSelectedPathway(null)}
+          onClose={() => setDetailModalPathway(null)}
           onSelectGene={onSelectGene}
         />
       )}

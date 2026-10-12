@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Info, ArrowRightLeft } from "lucide-react";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
 import ExportButton from "@/components/ExportButton";
 import { exportToCSV } from "@/utils/exportUtils";
 
@@ -11,15 +12,27 @@ interface PathwayComparisonViewProps {
   tcgaResults: PathwayEnrichmentResult[];
   sbrtResults: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
 export default function PathwayComparisonView({
   currentResults,
   tcgaResults,
   sbrtResults,
-  onSelectPathway
+  onSelectPathway,
+  datasetName,
+  comparisonLabel
 }: PathwayComparisonViewProps) {
   const [compMode, setCompMode] = useState<"up_down" | "cross_cohort">("up_down");
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || currentResults[0]?.comparisonLabel,
+      datasetName || currentResults[0]?.datasetName,
+      currentResults[0]?.datasetId
+    );
+  }, [comparisonLabel, datasetName, currentResults]);
 
   const upPathways = currentResults.filter((r) => r.direction === "Upregulated" || (r.nes && r.nes > 0));
   const downPathways = currentResults.filter((r) => r.direction === "Downregulated" || (r.nes && r.nes < 0));
@@ -38,12 +51,21 @@ export default function PathwayComparisonView({
       {/* Selector bar */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-b border-slate-800 pb-4">
         <div>
-          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-            <ArrowRightLeft className="w-4 h-4 text-teal-400" />
-            <span>Comparative Pathway Analysis</span>
-          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4 text-teal-400" />
+              <span>Comparative Pathway Analysis</span>
+            </h3>
+            {compMode === "up_down" && (
+              <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${contrast.badgeColor}`}>
+                Contrast: {contrast.shortTitle}
+              </span>
+            )}
+          </div>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Evaluate directional pathway divergence or cross-cohort observations
+            {compMode === "up_down"
+              ? `Cohort: ${contrast.datasetName} • Directional pathway divergence`
+              : "Cross-cohort concordance: TCGA-PAAD (Tumor vs Normal) vs GSE225767 (Post vs Pre SBRT)"}
           </p>
         </div>
 

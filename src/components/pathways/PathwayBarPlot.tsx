@@ -3,6 +3,7 @@
 import React, { useRef, useMemo } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 import { PathwayEnrichmentResult } from "@/types/pathway";
+import { getContrastDisplayInfo, calculateNiceTicks, formatTickValue } from "@/utils/pathwayEngine";
 import ExportButton from "@/components/ExportButton";
 import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
 
@@ -10,6 +11,8 @@ interface PathwayBarPlotProps {
   results: PathwayEnrichmentResult[];
   onSelectPathway: (pathway: PathwayEnrichmentResult) => void;
   analysisMode: "ORA" | "GSEA";
+  datasetName?: string;
+  comparisonLabel?: string;
 }
 
 function CustomBarTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { rawResult: PathwayEnrichmentResult } }> }) {
@@ -38,9 +41,19 @@ function CustomBarTooltip({ active, payload }: { active?: boolean; payload?: Arr
 export default function PathwayBarPlot({
   results,
   onSelectPathway,
-  analysisMode
+  analysisMode,
+  datasetName,
+  comparisonLabel
 }: PathwayBarPlotProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+
+  const contrast = useMemo(() => {
+    return getContrastDisplayInfo(
+      comparisonLabel || results[0]?.comparisonLabel,
+      datasetName || results[0]?.datasetName,
+      results[0]?.datasetId
+    );
+  }, [comparisonLabel, datasetName, results]);
 
   if (results.length === 0) {
     return (
@@ -105,35 +118,37 @@ export default function PathwayBarPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title
+    // Main Title: Contrast & Analysis Method (e.g. Tumor vs Normal (GSEA))
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pathway Enrichment Ranking", 80, 80);
+    ctx.fillText(`${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 82);
 
-    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
-    ctx.fillText(`Top ${displayResults.length} Enriched Pathways (${isGsea ? "Normalized Enrichment Score" : "Fold Enrichment"})`, 80, 130);
+    // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
+    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • Top ${displayResults.length} Pathways`,
+      80,
+      132
+    );
 
     const padLeft = 880;
     const padRight = 240;
     const padTop = 200;
-    const padBottom = 220;
+    const padBottom = 340;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
+    const axisY = padTop + plotH;
 
     const metrics = chartData.map((d) => d.metric);
-    let minVal = Math.min(0, ...metrics);
-    let maxVal = Math.max(...metrics);
-    if (isGsea) {
-      const maxAbs = Math.max(Math.abs(minVal), Math.abs(maxVal), 1.5);
-      minVal = -maxAbs * 1.15;
-      maxVal = maxAbs * 1.15;
-    } else {
-      minVal = 0;
-      maxVal = Math.ceil(maxVal * 1.15);
-    }
+    const rawMin = Math.min(...metrics);
+    const rawMax = Math.max(...metrics);
+
+    const tickInfo = calculateNiceTicks(rawMin, rawMax, isGsea);
+    const minVal = tickInfo.min;
+    const maxVal = tickInfo.max;
 
     const getX = (val: number) => padLeft + ((val - minVal) / (maxVal - minVal)) * plotW;
     const zeroX = getX(0);
@@ -180,35 +195,99 @@ export default function PathwayBarPlot({
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(zeroX, padTop);
-    ctx.lineTo(zeroX, padTop + plotH);
+    ctx.lineTo(zeroX, axisY);
     ctx.stroke();
 
-    // X Axis ticks
-    const numTicks = 8;
-    const step = (maxVal - minVal) / numTicks;
-    ctx.font = "bold 34px monospace";
+    // Axis Border Lines
+    ctx.beginPath();
+    ctx.moveTo(padLeft, axisY);
+    ctx.lineTo(padLeft + plotW, axisY);
+    ctx.stroke();
+
+    // Clean Integer / Half Ticks
+    ctx.font = "bold 32px monospace";
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
 
-    for (let i = 0; i <= numTicks; i++) {
-      const val = minVal + i * step;
+    tickInfo.ticks.forEach((val) => {
       const xPos = getX(val);
       ctx.beginPath();
-      ctx.moveTo(xPos, padTop + plotH);
-      ctx.lineTo(xPos, padTop + plotH + 10);
+      ctx.moveTo(xPos, axisY);
+      ctx.lineTo(xPos, axisY + 14);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), xPos, padTop + plotH + 46);
-    }
+      ctx.fillText(formatTickValue(val), xPos, axisY + 52);
+    });
 
-    // X Axis Title
+    // X Axis Title (sole occupant of this line — no collisions)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
-      isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+      isGsea
+        ? "Normalized Enrichment Score (NES)"
+        : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      padTop + plotH + 115
+      axisY + 105
     );
+
+    // Dedicated Legend Container Box
+    const legBoxY = axisY + 155;
+    const legBoxH = 80;
+    const midY = legBoxY + 44;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(padLeft, legBoxY, plotW, legBoxH, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    if (isGsea) {
+      // 1. Negative NES (Blue swatch on left, pointing left)
+      ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+      ctx.fillRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.strokeStyle = "#1e40af";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(padLeft + 45, midY - 12, 24, 24);
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(contrast.negLegend, padLeft + 80, midY + 7);
+
+      // 2. Positive NES (Red swatch in middle, pointing right)
+      ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
+      ctx.fillRect(padLeft + 540, midY - 12, 24, 24);
+      ctx.strokeStyle = "#991b1b";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(padLeft + 540, midY - 12, 24, 24);
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.fillText(contrast.posLegend, padLeft + 575, midY + 7);
+
+      // 3. Metric Note
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = "22px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText("Bar Length = |NES| • q = BH FDR", padLeft + plotW - 40, midY + 6);
+    } else {
+      ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
+      ctx.fillRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.strokeStyle = "#0d9488";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(padLeft + 45, midY - 12, 24, 24);
+
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Fold Enrichment (BH FDR < 0.05)", padLeft + 80, midY + 7);
+
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = "22px monospace";
+      ctx.textAlign = "right";
+      ctx.fillText("q = BH Adjusted P-value", padLeft + plotW - 40, midY + 6);
+    }
 
     return offscreen;
   };
@@ -217,19 +296,26 @@ export default function PathwayBarPlot({
     <div ref={chartRef} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col h-full min-h-[500px] shadow-xl">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-sm font-bold text-slate-100">Enrichment Bar Plot</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-100">Enrichment Bar Plot</h3>
+            <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${contrast.badgeColor}`}>
+              Contrast: {contrast.shortTitle}
+            </span>
+          </div>
           <p className="text-xxs text-slate-400 font-mono mt-0.5">
-            Ranked by {isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment"} &bull; Top {displayResults.length} Pathways
+            Cohort: <span className="text-slate-200">{contrast.datasetName}</span> &bull; Ranked by {isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment"} &bull; Top {displayResults.length} Pathways
           </p>
         </div>
 
         <ExportButton
           onExportCSV={() => {
             exportToCSV({
-              filename: `Pathway_BarPlot_${analysisMode}.csv`,
+              filename: `Pathway_BarPlot_${analysisMode}_${contrast.slug}.csv`,
               metadata: {
                 module: "Pathway Bar Plot",
                 mode: analysisMode,
+                contrast: contrast.shortTitle,
+                dataset: contrast.datasetName,
                 totalPathways: String(displayResults.length),
               },
               headers: ["Pathway ID", "Pathway Name", "Database", isGsea ? "NES" : "Fold Enrichment", "BH FDR"],
@@ -246,7 +332,7 @@ export default function PathwayBarPlot({
             const exportCanvas = generateHighResBarCanvas(theme, 2400);
             exportCanvasToPNG({
               canvas: exportCanvas,
-              filename: `Pathway_BarPlot_${analysisMode}.png`,
+              filename: `Pathway_BarPlot_${analysisMode}_${contrast.slug}.png`,
               theme,
             });
           }}
@@ -254,28 +340,30 @@ export default function PathwayBarPlot({
             const exportCanvas = generateHighResBarCanvas(theme, 1200);
             exportCanvasToSVG({
               canvas: exportCanvas,
-              filename: `Pathway_BarPlot_${analysisMode}.svg`,
+              filename: `Pathway_BarPlot_${analysisMode}_${contrast.slug}.svg`,
               theme,
             });
           }}
         />
       </div>
 
-      <div className="w-full h-[440px] min-h-[440px] relative">
-        <ResponsiveContainer width="100%" height={440}>
+      <div className="w-full h-[460px] min-h-[460px] relative">
+        <ResponsiveContainer width="100%" height={460}>
           <BarChart
             layout="vertical"
             data={chartData}
-            margin={{ top: 15, right: 35, bottom: 45, left: 190 }}
+            margin={{ top: 15, right: 35, bottom: 52, left: 190 }}
           >
             <XAxis
               type="number"
               stroke="#64748b"
               tick={{ fill: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}
               label={{
-                value: isGsea ? "Normalized Enrichment Score (NES)" : "Fold Enrichment",
+                value: isGsea
+                  ? "Normalized Enrichment Score (NES)"
+                  : `Fold Enrichment (${contrast.shortTitle})`,
                 position: "insideBottom",
-                offset: -14,
+                offset: -12,
                 fill: "#94a3b8",
                 fontSize: 11,
                 fontWeight: "bold",
@@ -321,6 +409,43 @@ export default function PathwayBarPlot({
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Interactive On-Screen Legend & Contrast Card */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-800 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-5">
+          {isGsea ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded bg-red-500/90 border border-red-400 inline-block shadow-sm"></span>
+                <span className="text-slate-300">
+                  Positive NES: <span className="text-red-400 font-bold">{contrast.posShort}</span>
+                  <span className="text-slate-400 text-xxs ml-1">({contrast.posPhenotype})</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded bg-blue-500/90 border border-blue-400 inline-block shadow-sm"></span>
+                <span className="text-slate-300">
+                  Negative NES: <span className="text-blue-400 font-bold">{contrast.negShort}</span>
+                  <span className="text-slate-400 text-xxs ml-1">({contrast.negPhenotype})</span>
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="w-3.5 h-3.5 rounded bg-teal-500 border border-teal-400 inline-block"></span>
+              <span className="text-slate-300 font-medium">Over-represented Pathways</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-slate-400">
+            <span>q = BH Adjusted P-value</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xxs text-slate-400">
+          <span>Contrast:</span>
+          <span className="text-slate-200 font-semibold">{contrast.fullContrast}</span>
+        </div>
       </div>
     </div>
   );

@@ -648,9 +648,19 @@ export default function SingleNucleusPathwayExplorer() {
                     {selectedPathwayDetail.divergence?.database || "MSigDB Hallmark"}
                   </span>
                 </div>
-                <h4 className="text-base font-bold text-white">
-                  {selectedPathwayDetail.divergence?.name || selectedPathwayId}
-                </h4>
+                <div className="mt-2">
+                  <select
+                    value={selectedPathwayId || ""}
+                    onChange={(e) => setSelectedPathwayId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-100 text-xs rounded-lg px-2.5 py-1.5 font-sans font-bold focus:outline-none focus:border-indigo-500 cursor-pointer shadow-sm"
+                  >
+                    {divergenceList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (CDS: {p.cds.toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* 3-Layer Metrics Card */}
