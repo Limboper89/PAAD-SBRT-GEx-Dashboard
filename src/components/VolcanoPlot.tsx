@@ -25,6 +25,7 @@ interface GeneData {
 interface VolcanoPlotProps {
   data: GeneData[];
   selectedGene: string | null;
+  selectedGenes?: Set<string>;
   onSelectGene: (geneName: string) => void;
   isTcgaGtex?: boolean;
 }
@@ -32,6 +33,7 @@ interface VolcanoPlotProps {
 export default function VolcanoPlot({
   data,
   selectedGene,
+  selectedGenes,
   onSelectGene,
   isTcgaGtex = false,
 }: VolcanoPlotProps) {
@@ -270,10 +272,15 @@ export default function VolcanoPlot({
       ctx.setLineDash([]);
     }
 
+    // Active set of genes to mark on plot (table checkbox selection takes priority when non-empty, otherwise single clicked gene)
+    const markedGeneNames = selectedGenes && selectedGenes.size > 0
+      ? selectedGenes
+      : new Set(selectedGene ? [selectedGene] : []);
+
     // Sort points so selected/hovered/highlighted are drawn last (on top)
     const sortedPoints = [...points].sort((a, b) => {
-      const aSel = a.gene.gene_name === selectedGene ? 1 : 0;
-      const bSel = b.gene.gene_name === selectedGene ? 1 : 0;
+      const aSel = markedGeneNames.has(a.gene.gene_name) || a.gene.gene_name === selectedGene ? 1 : 0;
+      const bSel = markedGeneNames.has(b.gene.gene_name) || b.gene.gene_name === selectedGene ? 1 : 0;
       if (aSel !== bSel) return aSel - bSel;
 
       const aRob = a.gene.robust_deg ? 1 : 0;
@@ -336,27 +343,141 @@ export default function VolcanoPlot({
       }
     }
 
-    // Draw active selected gene highlight & Label
-    if (selectedGene) {
-      const p = points.find((pt) => pt.gene.gene_name === selectedGene);
-      if (p) {
-        const scr = getScreenCoords(p.x, p.y);
-        ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 8, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#f59e0b"; // Amber highlight ring
-        ctx.lineWidth = 2.0;
-        ctx.stroke();
+    // Draw Marked Genes (from table checkboxes or active clicked gene) with collision-aware labels
+    const markedPoints = points
+      .filter((pt) => markedGeneNames.has(pt.gene.gene_name))
+      .sort((a, b) => b.y - a.y || Math.abs(b.x) - Math.abs(a.x));
 
-        ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "#f59e0b";
-        ctx.fill();
+    const maxInteractiveMarkers = 250;
+    const maxInteractiveLabels = 45;
+    const interactiveScreenPts = markedPoints.slice(0, maxInteractiveMarkers).map((pt) => ({
+      geneName: pt.gene.gene_name,
+      dataX: pt.x,
+      ...getScreenCoords(pt.x, pt.y),
+    }));
 
-        ctx.fillStyle = "#f59e0b";
-        ctx.font = "bold 11px sans-serif";
-        ctx.fillText(p.gene.gene_name, scr.x + 10, scr.y + 4);
+    // 1. Draw marker rings and dots for all marked points
+    interactiveScreenPts.forEach((sp) => {
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 7.5, 0, 2 * Math.PI);
+      ctx.strokeStyle = "rgba(2, 6, 23, 0.85)";
+      ctx.lineWidth = 3.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 7.5, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#f59e0b"; // Amber highlight ring
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 4.5, 0, 2 * Math.PI);
+      ctx.fillStyle = "#f59e0b";
+      ctx.fill();
+    });
+
+    // 2. Place and draw non-overlapping labels with leader lines
+    ctx.font = "bold 11px sans-serif";
+    const placedBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    const plotLeft = padding.left + 4;
+    const plotRight = dimensions.width - padding.right - 4;
+    const plotTop = padding.top + 4;
+    const plotBottom = dimensions.height - padding.bottom - 4;
+
+    interactiveScreenPts.slice(0, maxInteractiveLabels).forEach((sp) => {
+      if (sp.x < padding.left || sp.x > dimensions.width - padding.right || sp.y < padding.top || sp.y > dimensions.height - padding.bottom) {
+        return;
       }
-    }
+      const textWidth = ctx.measureText(sp.geneName).width;
+      const boxW = textWidth + 8;
+      const boxH = 16;
+      const dir = sp.dataX >= 0 ? 1 : -1;
+
+      const candidateOffsets = [
+        { dx: dir * (11 + boxW / 2), dy: 0 },
+        { dx: dir * (11 + boxW / 2), dy: -16 },
+        { dx: dir * (11 + boxW / 2), dy: 16 },
+        { dx: -dir * (11 + boxW / 2), dy: 0 },
+        { dx: 0, dy: -18 },
+        { dx: 0, dy: 18 },
+        { dx: dir * (22 + boxW / 2), dy: -26 },
+        { dx: dir * (22 + boxW / 2), dy: 26 },
+        { dx: -dir * (22 + boxW / 2), dy: -22 },
+        { dx: -dir * (22 + boxW / 2), dy: 22 },
+        { dx: dir * (34 + boxW / 2), dy: -38 },
+        { dx: dir * (34 + boxW / 2), dy: 38 },
+      ];
+
+      let bestBox = {
+        x1: sp.x + candidateOffsets[0].dx - boxW / 2,
+        y1: sp.y + candidateOffsets[0].dy - boxH / 2,
+        x2: sp.x + candidateOffsets[0].dx + boxW / 2,
+        y2: sp.y + candidateOffsets[0].dy + boxH / 2,
+      };
+      let bestScore = Infinity;
+
+      for (let i = 0; i < candidateOffsets.length; i++) {
+        const cand = candidateOffsets[i];
+        const cx = Math.min(Math.max(sp.x + cand.dx, plotLeft + boxW / 2), plotRight - boxW / 2);
+        const cy = Math.min(Math.max(sp.y + cand.dy, plotTop + boxH / 2), plotBottom - boxH / 2);
+        const x1 = cx - boxW / 2;
+        const y1 = cy - boxH / 2;
+        const x2 = cx + boxW / 2;
+        const y2 = cy + boxH / 2;
+
+        let penalty = i * 4;
+        // Check overlap with placed label boxes
+        for (const b of placedBoxes) {
+          const ox = Math.max(0, Math.min(x2 + 2, b.x2 + 2) - Math.max(x1 - 2, b.x1 - 2));
+          const oy = Math.max(0, Math.min(y2 + 2, b.y2 + 2) - Math.max(y1 - 2, b.y1 - 2));
+          if (ox > 0 && oy > 0) penalty += ox * oy * 50 + 5000;
+        }
+        // Check overlap with marked dots
+        for (const mp of interactiveScreenPts) {
+          const closestX = Math.max(x1, Math.min(mp.x, x2));
+          const closestY = Math.max(y1, Math.min(mp.y, y2));
+          const distSq = (mp.x - closestX) ** 2 + (mp.y - closestY) ** 2;
+          if (distSq < 81) penalty += 3000;
+        }
+
+        if (penalty < bestScore) {
+          bestScore = penalty;
+          bestBox = { x1, y1, x2, y2 };
+          if (penalty < 10) break;
+        }
+      }
+
+      placedBoxes.push(bestBox);
+
+      // Draw leader line if label is nudged away from point
+      const anchorX = Math.max(bestBox.x1, Math.min(sp.x, bestBox.x2));
+      const anchorY = Math.max(bestBox.y1, Math.min(sp.y, bestBox.y2));
+      const distToBox = Math.hypot(anchorX - sp.x, anchorY - sp.y);
+      if (distToBox > 9) {
+        const angle = Math.atan2(anchorY - sp.y, anchorX - sp.x);
+        ctx.beginPath();
+        ctx.moveTo(sp.x + Math.cos(angle) * 7.5, sp.y + Math.sin(angle) * 7.5);
+        ctx.lineTo(anchorX, anchorY);
+        ctx.strokeStyle = "rgba(245, 158, 11, 0.75)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Label pill background for legibility
+      ctx.fillStyle = "rgba(2, 6, 23, 0.85)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.55)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(bestBox.x1, bestBox.y1, boxW, boxH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sp.geneName, (bestBox.x1 + bestBox.x2) / 2, (bestBox.y1 + bestBox.y2) / 2 + 0.5);
+    });
+    ctx.textBaseline = "alphabetic";
 
     ctx.restore(); // Restore clipping region
 
@@ -386,7 +507,7 @@ export default function VolcanoPlot({
     ctx.fillText(isTcgaGtex ? "-log10(FDR / q-value)" : "-log10(p-value)", 0, 0);
     ctx.restore();
 
-  }, [dimensions, bounds, points, selectedGene, hoveredGene, zoom, offsetX, offsetY, isTcgaGtex, highlightRobust, fcThreshold]);
+  }, [dimensions, bounds, points, selectedGene, selectedGenes, hoveredGene, zoom, offsetX, offsetY, isTcgaGtex, highlightRobust, fcThreshold]);
 
   // Handle Dragging / Pan
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -460,11 +581,18 @@ export default function VolcanoPlot({
     const ctx = offscreen.getContext("2d");
     if (!ctx) return offscreen;
 
+    const virtualSize = 2400;
+    const scaleFactor = size / virtualSize;
+    ctx.scale(scaleFactor, scaleFactor);
+
     const isLight = theme === "light";
+    const markedGeneNames = selectedGenes && selectedGenes.size > 0
+      ? selectedGenes
+      : new Set(selectedGene ? [selectedGene] : []);
 
     // 1. Background
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, virtualSize, virtualSize);
 
     // 2. Title & Subtitle Header
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
@@ -474,11 +602,14 @@ export default function VolcanoPlot({
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     ctx.font = "bold 30px monospace";
-    ctx.fillText(`Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}`, 100, 136);
+    const markedSummary = markedGeneNames.size > 0
+      ? ` · Marked Genes: ${markedGeneNames.size}`
+      : "";
+    ctx.fillText(`Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}${markedSummary}`, 100, 136);
 
     const pad = { left: 240, right: 100, top: 220, bottom: 240 };
-    const plotW = size - pad.left - pad.right;
-    const plotH = size - pad.top - pad.bottom;
+    const plotW = virtualSize - pad.left - pad.right;
+    const plotH = virtualSize - pad.top - pad.bottom;
 
     const getExportScreenCoords = (xVal: number, yVal: number) => {
       const scrX = pad.left + ((xVal - bounds.minX) / (bounds.maxX - bounds.minX)) * plotW;
@@ -553,8 +684,8 @@ export default function VolcanoPlot({
 
     // Draw Points
     const sortedPoints = [...points].sort((a, b) => {
-      const aSel = a.gene.gene_name === selectedGene ? 1 : 0;
-      const bSel = b.gene.gene_name === selectedGene ? 1 : 0;
+      const aSel = markedGeneNames.has(a.gene.gene_name) ? 1 : 0;
+      const bSel = markedGeneNames.has(b.gene.gene_name) ? 1 : 0;
       return aSel - bSel;
     });
 
@@ -582,29 +713,145 @@ export default function VolcanoPlot({
       ctx.fill();
     });
 
-    // Draw Selected Gene Callout
-    if (selectedGene) {
-      const p = points.find((pt) => pt.gene.gene_name === selectedGene);
-      if (p) {
-        const scr = getExportScreenCoords(p.x, p.y);
-        ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 26, 0, 2 * Math.PI);
-        ctx.strokeStyle = "#d97706";
-        ctx.lineWidth = 6;
-        ctx.stroke();
+    // Draw Selected Genes Callouts & Labels (supports single or multiple table-selected genes)
+    const exportMarkedPoints = points
+      .filter((pt) => markedGeneNames.has(pt.gene.gene_name))
+      .sort((a, b) => b.y - a.y || Math.abs(b.x) - Math.abs(a.x));
 
-        ctx.beginPath();
-        ctx.arc(scr.x, scr.y, 12, 0, 2 * Math.PI);
-        ctx.fillStyle = "#d97706";
-        ctx.fill();
+    const maxExportMarkers = 300;
+    const maxExportLabels = 60;
+    const exportScreenPts = exportMarkedPoints.slice(0, maxExportMarkers).map((pt) => ({
+      geneName: pt.gene.gene_name,
+      dataX: pt.x,
+      ...getExportScreenCoords(pt.x, pt.y),
+    }));
 
-        // Label
-        ctx.fillStyle = isLight ? "#0f172a" : "#ffffff";
-        ctx.font = "bold 38px sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(selectedGene, scr.x + 32, scr.y + 12);
+    // 1. Draw callout rings and center dots for all marked points
+    exportScreenPts.forEach((sp) => {
+      // High-contrast outer halo
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 24, 0, 2 * Math.PI);
+      ctx.strokeStyle = isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(2, 6, 23, 0.9)";
+      ctx.lineWidth = 10;
+      ctx.stroke();
+
+      // Amber ring
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 24, 0, 2 * Math.PI);
+      ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Center dot
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 11, 0, 2 * Math.PI);
+      ctx.fillStyle = isLight ? "#d97706" : "#f59e0b";
+      ctx.fill();
+    });
+
+    // 2. Place and render non-overlapping gene labels with leader lines
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    const placedExportBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    const expLeft = pad.left + 14;
+    const expRight = pad.left + plotW - 14;
+    const expTop = pad.top + 14;
+    const expBottom = pad.top + plotH - 14;
+
+    exportScreenPts.slice(0, maxExportLabels).forEach((sp) => {
+      const textW = ctx.measureText(sp.geneName).width;
+      const boxW = textW + 28;
+      const boxH = 50;
+      const dir = sp.dataX >= 0 ? 1 : -1;
+
+      const candidateOffsets = [
+        { dx: dir * (36 + boxW / 2), dy: 0 },
+        { dx: dir * (36 + boxW / 2), dy: -54 },
+        { dx: dir * (36 + boxW / 2), dy: 54 },
+        { dx: -dir * (36 + boxW / 2), dy: 0 },
+        { dx: 0, dy: -58 },
+        { dx: 0, dy: 58 },
+        { dx: dir * (70 + boxW / 2), dy: -85 },
+        { dx: dir * (70 + boxW / 2), dy: 85 },
+        { dx: -dir * (70 + boxW / 2), dy: -75 },
+        { dx: -dir * (70 + boxW / 2), dy: 75 },
+        { dx: dir * (110 + boxW / 2), dy: -125 },
+        { dx: dir * (110 + boxW / 2), dy: 125 },
+        { dx: -dir * (110 + boxW / 2), dy: -125 },
+        { dx: -dir * (110 + boxW / 2), dy: 125 },
+        { dx: dir * (150 + boxW / 2), dy: 0 },
+        { dx: 0, dy: -135 },
+        { dx: 0, dy: 135 },
+      ];
+
+      let bestBox = {
+        x1: sp.x + candidateOffsets[0].dx - boxW / 2,
+        y1: sp.y + candidateOffsets[0].dy - boxH / 2,
+        x2: sp.x + candidateOffsets[0].dx + boxW / 2,
+        y2: sp.y + candidateOffsets[0].dy + boxH / 2,
+      };
+      let bestScore = Infinity;
+
+      for (let i = 0; i < candidateOffsets.length; i++) {
+        const cand = candidateOffsets[i];
+        const cx = Math.min(Math.max(sp.x + cand.dx, expLeft + boxW / 2), expRight - boxW / 2);
+        const cy = Math.min(Math.max(sp.y + cand.dy, expTop + boxH / 2), expBottom - boxH / 2);
+        const x1 = cx - boxW / 2;
+        const y1 = cy - boxH / 2;
+        const x2 = cx + boxW / 2;
+        const y2 = cy + boxH / 2;
+
+        let penalty = i * 12;
+        for (const b of placedExportBoxes) {
+          const ox = Math.max(0, Math.min(x2 + 8, b.x2 + 8) - Math.max(x1 - 8, b.x1 - 8));
+          const oy = Math.max(0, Math.min(y2 + 8, b.y2 + 8) - Math.max(y1 - 8, b.y1 - 8));
+          if (ox > 0 && oy > 0) penalty += ox * oy * 50 + 50000;
+        }
+        for (const mp of exportScreenPts) {
+          const closestX = Math.max(x1, Math.min(mp.x, x2));
+          const closestY = Math.max(y1, Math.min(mp.y, y2));
+          const distSq = (mp.x - closestX) ** 2 + (mp.y - closestY) ** 2;
+          if (distSq < 900) penalty += 30000;
+        }
+
+        if (penalty < bestScore) {
+          bestScore = penalty;
+          bestBox = { x1, y1, x2, y2 };
+          if (penalty < 30) break;
+        }
       }
-    }
+
+      placedExportBoxes.push(bestBox);
+
+      // Draw callout leader line from ring edge to label box
+      const anchorX = Math.max(bestBox.x1, Math.min(sp.x, bestBox.x2));
+      const anchorY = Math.max(bestBox.y1, Math.min(sp.y, bestBox.y2));
+      const distToBox = Math.hypot(anchorX - sp.x, anchorY - sp.y);
+      if (distToBox > 26) {
+        const angle = Math.atan2(anchorY - sp.y, anchorX - sp.x);
+        ctx.beginPath();
+        ctx.moveTo(sp.x + Math.cos(angle) * 24, sp.y + Math.sin(angle) * 24);
+        ctx.lineTo(anchorX, anchorY);
+        ctx.strokeStyle = isLight ? "#b45309" : "#fbbf24";
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+      }
+
+      // Label pill box
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.94)" : "rgba(15, 23, 42, 0.94)";
+      ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(bestBox.x1, bestBox.y1, boxW, boxH, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      // Gene name text
+      ctx.fillStyle = isLight ? "#0f172a" : "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sp.geneName, (bestBox.x1 + bestBox.x2) / 2, (bestBox.y1 + bestBox.y2) / 2 + 2);
+    });
+    ctx.textBaseline = "alphabetic";
 
     // Outer Axis Frame
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
@@ -648,6 +895,15 @@ export default function VolcanoPlot({
     return offscreen;
   };
 
+  const exportFileSuffix = useMemo(() => {
+    if (selectedGenes && selectedGenes.size > 0) {
+      const arr = Array.from(selectedGenes);
+      if (arr.length <= 3) return arr.join("_");
+      return `${arr.slice(0, 2).join("_")}_and_${arr.length - 2}_more`;
+    }
+    return selectedGene || "Target";
+  }, [selectedGenes, selectedGene]);
+
   return (
     <div
       ref={containerRef}
@@ -655,8 +911,15 @@ export default function VolcanoPlot({
     >
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-2">
         <div>
-          <h3 className="text-slate-200 font-semibold text-lg">DEG Volcano Plot</h3>
-          <p className="text-[10px] text-slate-400">Scroll to zoom • Drag to pan • Click dot to select</p>
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-slate-200 font-semibold text-lg">DEG Volcano Plot</h3>
+            {selectedGenes && selectedGenes.size > 0 && (
+              <span className="bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold">
+                {selectedGenes.size.toLocaleString()} {selectedGenes.size === 1 ? "gene" : "genes"} marked from table
+              </span>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-400">Scroll to zoom • Drag to pan • Click dot or check rows in table below to mark genes</p>
         </div>
 
         {/* Configurations Toolbar */}
@@ -719,7 +982,7 @@ export default function VolcanoPlot({
                 const squareCanvas = generateSquareVolcanoCanvas(theme, 2400);
                 exportCanvasToPNG({
                   canvas: squareCanvas,
-                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.png`,
+                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${exportFileSuffix}.png`,
                   theme,
                 });
               }}
@@ -727,7 +990,7 @@ export default function VolcanoPlot({
                 const squareCanvas = generateSquareVolcanoCanvas(theme, 1200);
                 exportCanvasToSVG({
                   canvas: squareCanvas,
-                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${selectedGene || "Target"}.svg`,
+                  filename: `Volcano_${isTcgaGtex ? "TCGA_GTEX" : "GSE225767"}_${exportFileSuffix}.svg`,
                   theme,
                 });
               }}

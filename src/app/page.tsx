@@ -91,6 +91,7 @@ export default function Dashboard() {
 
   // Interaction/Filtering States
   const [selectedGene, setSelectedGene] = useState<string | null>("NFE2L2");
+  const [selectedVolcanoGenes, setSelectedVolcanoGenes] = useState<Set<string>>(new Set());
   
   // SBRT specific state
   const [heatmapGenes, setHeatmapGenes] = useState<string[]>([]);
@@ -102,6 +103,15 @@ export default function Dashboard() {
   const [tcgaGtexHeatmapGenes, setTcgaGtexHeatmapGenes] = useState<string[]>([]);
   const [tcgaGtexCorrelationGene1, setTcgaGtexCorrelationGene1] = useState<string | null>("NFE2L2");
   const [tcgaGtexCorrelationGene2, setTcgaGtexCorrelationGene2] = useState<string | null>("PHGDH");
+
+  // Unified Single / Multi-Gene Correlation state (1 gene per axis = single-gene mode; >1 gene = signature mode)
+  const [signatureMethod, setSignatureMethod] = useState<"zscore" | "mean">("zscore");
+  const [geneSetALabel, setGeneSetALabel] = useState<string>("");
+  const [geneSetBLabel, setGeneSetBLabel] = useState<string>("");
+  const [geneSetA, setGeneSetA] = useState<string[]>(["NFE2L2"]);
+  const [geneSetB, setGeneSetB] = useState<string[]>(["PHGDH"]);
+  const [pasteInputA, setPasteInputA] = useState<string>("");
+  const [pasteInputB, setPasteInputB] = useState<string>("");
 
   // Search state in the header for quick selection
   const [headerSearch, setHeaderSearch] = useState<string>("");
@@ -310,6 +320,15 @@ export default function Dashboard() {
   // Cross-filtering: Global select gene handler
   const handleSelectGene = (geneName: string) => {
     setSelectedGene(geneName);
+
+    // If user is in 1-gene vs 1-gene correlation state, rotate the clicked gene into Axis X
+    if (geneSetA.length <= 1 && geneSetB.length <= 1) {
+      const prevA = geneSetA[0] || "NFE2L2";
+      if (prevA !== geneName) {
+        setGeneSetB([prevA]);
+        setGeneSetA([geneName]);
+      }
+    }
     
     if (activeStudy === "TCGA_GTEX") {
       if (!tcgaGtexHeatmapGenes.includes(geneName)) {
@@ -420,6 +439,45 @@ export default function Dashboard() {
     }
     return map;
   }, [tcgaGtexData]);
+
+  // Resolve expression vectors for Gene Set A and Gene Set B
+  const geneSetAExpressions = useMemo(() => {
+    const out: Array<{ gene: string; values: number[] }> = [];
+    for (const sym of geneSetA) {
+      if (activeStudy === "TCGA_GTEX") {
+        if (!tcgaGtexExpressions) continue;
+        const idx = tcgaGtexGeneIndexLookup.get(sym);
+        if (idx === undefined) continue;
+        const offset = idx * 349 * 4;
+        out.push({ gene: sym, values: Array.from(new Float32Array(tcgaGtexExpressions, offset, 349)) });
+      } else {
+        const vals = expressionData?.expressions[sym];
+        if (vals && vals.length > 0) {
+          out.push({ gene: sym, values: vals });
+        }
+      }
+    }
+    return out;
+  }, [geneSetA, activeStudy, tcgaGtexExpressions, tcgaGtexGeneIndexLookup, expressionData]);
+
+  const geneSetBExpressions = useMemo(() => {
+    const out: Array<{ gene: string; values: number[] }> = [];
+    for (const sym of geneSetB) {
+      if (activeStudy === "TCGA_GTEX") {
+        if (!tcgaGtexExpressions) continue;
+        const idx = tcgaGtexGeneIndexLookup.get(sym);
+        if (idx === undefined) continue;
+        const offset = idx * 349 * 4;
+        out.push({ gene: sym, values: Array.from(new Float32Array(tcgaGtexExpressions, offset, 349)) });
+      } else {
+        const vals = expressionData?.expressions[sym];
+        if (vals && vals.length > 0) {
+          out.push({ gene: sym, values: vals });
+        }
+      }
+    }
+    return out;
+  }, [geneSetB, activeStudy, tcgaGtexExpressions, tcgaGtexGeneIndexLookup, expressionData]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -1001,6 +1059,7 @@ export default function Dashboard() {
                 <VolcanoPlot
                   data={activeBulkData}
                   selectedGene={selectedGene}
+                  selectedGenes={selectedVolcanoGenes}
                   onSelectGene={handleSelectGene}
                   isTcgaGtex={activeStudy === "TCGA_GTEX"}
                 />
@@ -1009,6 +1068,8 @@ export default function Dashboard() {
                 <GeneTable
                   data={activeBulkData}
                   selectedGene={selectedGene}
+                  selectedGenes={selectedVolcanoGenes}
+                  onSelectedGenesChange={setSelectedVolcanoGenes}
                   onSelectGene={handleSelectGene}
                   isTcgaGtex={activeStudy === "TCGA_GTEX"}
                   onRunPathwayAnalysis={(genes, rankedGenes, metadata) => {
@@ -1024,39 +1085,356 @@ export default function Dashboard() {
 
           {activeTab === "correlation" && (
             <div className="flex flex-col gap-6">
-              {/* Co-expression search selector bar */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900/40 p-4 border border-slate-800 rounded-xl">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">
-                    Co-Expression Gene 1
-                  </label>
-                  <SearchableGeneSelect
-                    options={activeBulkData.map((d) => d.gene_name)}
-                    value={activeStudy === "TCGA_GTEX" ? tcgaGtexCorrelationGene1 : correlationGene1}
-                    onChange={(val) => {
-                      if (val) {
-                        if (activeStudy === "TCGA_GTEX") setTcgaGtexCorrelationGene1(val);
-                        else setCorrelationGene1(val);
-                      }
-                    }}
-                    placeholder="Search Gene 1..."
-                  />
+              {/* Unified Co-Expression Selector Panel (1 gene = Single-Gene mode; 2+ genes = Signature mode) */}
+              <div className="bg-slate-900/40 p-4 border border-slate-800 rounded-xl flex flex-col gap-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-slate-800/80">
+                  <div className="flex items-center gap-2.5 flex-wrap font-mono text-xs">
+                    <span className="text-slate-200 font-bold uppercase tracking-wider">
+                      Co-Expression Axis Selection
+                    </span>
+                    <span className="bg-teal-500/15 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">
+                      {geneSetA.length > 1 || geneSetB.length > 1
+                        ? `Gene-Set Signature Mode (${geneSetAExpressions.length} × ${geneSetBExpressions.length} genes)`
+                        : "Single-Gene Mode (Add 2+ genes to either axis for signature correlation)"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
+                    {(geneSetA.length > 1 || geneSetB.length > 1) ? (
+                      <>
+                        <span className="text-slate-400">Scoring:</span>
+                        <select
+                          value={signatureMethod}
+                          onChange={(e) => setSignatureMethod(e.target.value as "zscore" | "mean")}
+                          className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-teal-300 font-semibold focus:outline-none focus:border-teal-500 cursor-pointer text-[11px]"
+                        >
+                          <option value="zscore">Mean Z-Score (Standardized)</option>
+                          <option value="mean">Mean log₂ Expression</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGeneSetA([geneSetA[0] || "NFE2L2"]);
+                            setGeneSetB([geneSetB[0] || "PHGDH"]);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-[11px] cursor-pointer"
+                        >
+                          Reset to 1×1 Gene
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGeneSetALabel("NRF2 / Antioxidant Set");
+                          setGeneSetBLabel("Serine Synthesis Set");
+                          setGeneSetA(["NFE2L2", "NQO1", "HMOX1", "GCLC"]);
+                          setGeneSetB(["PHGDH", "PSAT1", "PSPH", "SHMT2"]);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-[11px] font-semibold cursor-pointer"
+                      >
+                        + Load Example Gene Sets (NRF2 vs. Serine)
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">
-                    Co-Expression Gene 2
-                  </label>
-                  <SearchableGeneSelect
-                    options={activeBulkData.map((d) => d.gene_name)}
-                    value={activeStudy === "TCGA_GTEX" ? tcgaGtexCorrelationGene2 : correlationGene2}
-                    onChange={(val) => {
-                      if (val) {
-                        if (activeStudy === "TCGA_GTEX") setTcgaGtexCorrelationGene2(val);
-                        else setCorrelationGene2(val);
-                      }
-                    }}
-                    placeholder="Search Gene 2..."
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* X-Axis Gene(s) / Set A */}
+                  <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 flex flex-col gap-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+                        <span className="text-xs font-bold text-teal-400 font-mono uppercase tracking-wider shrink-0">
+                          X-Axis ({geneSetAExpressions.length}):
+                        </span>
+                        <input
+                          type="text"
+                          value={geneSetALabel}
+                          onChange={(e) => setGeneSetALabel(e.target.value)}
+                          placeholder={geneSetA.length === 1 ? `${geneSetA[0]} (or type custom set/index name...)` : "Custom X-Axis Name (e.g. Serine Transport Index)"}
+                          className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder:text-slate-500 font-mono focus:outline-none focus:border-teal-400"
+                        />
+                        {geneSetALabel && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetALabel("")}
+                            className="text-[10px] font-mono text-slate-400 hover:text-rose-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 cursor-pointer"
+                            title="Reset custom X-axis name"
+                          >
+                            Reset Name
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                        {selectedVolcanoGenes.size > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetA(Array.from(selectedVolcanoGenes).slice(0, 50))}
+                            className="px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30 hover:bg-teal-500/25 cursor-pointer"
+                            title="Import genes checked in the Gene Expression Data Table"
+                          >
+                            Use Table Selection ({selectedVolcanoGenes.size})
+                          </button>
+                        )}
+                        {geneSetA.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetA([geneSetA[0]])}
+                            className="px-2 py-0.5 rounded bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800 cursor-pointer"
+                          >
+                            Keep 1st Only
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons for X-Axis */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
+                      <span className="text-slate-500">Presets:</span>
+                      {[
+                        { label: "NRF2 Targets", genes: ["NFE2L2", "NQO1", "GCLC", "GCLM", "HMOX1", "TXNRD1", "SRXN1", "AKR1C1"] },
+                        { label: "Serine Biosynthesis", genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2"] },
+                        { label: "Serine Transport Index", genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC3A2", "SLC38A1", "SLC38A2"] },
+                        { label: "Basal-like PDAC", genes: ["KRT5", "KRT14", "KRT17", "TP63", "S100A2", "SLC2A1"] },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            const validSet = new Set(activeBulkData.map((d) => d.gene_name));
+                            const matched = preset.genes.filter((g) => validSet.has(g));
+                            if (matched.length > 0) {
+                              setGeneSetALabel(preset.label);
+                              setGeneSetA(matched);
+                            }
+                          }}
+                          className="px-2 py-0.5 rounded bg-slate-900 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 transition cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <SearchableGeneSelect
+                        options={activeBulkData.map((d) => d.gene_name)}
+                        value={geneSetA.length === 1 ? geneSetA[0] : null}
+                        onChange={(val) => {
+                          if (!val) return;
+                          if (geneSetA.includes(val)) return;
+                          setGeneSetA((prev) => [...prev, val]);
+                        }}
+                        placeholder="+ Search & add gene to X-Axis..."
+                      />
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={pasteInputA}
+                          onChange={(e) => setPasteInputA(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && pasteInputA.trim()) {
+                              const validSet = new Set(activeBulkData.map((d) => d.gene_name.toUpperCase()));
+                              const tokens = pasteInputA.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter((s) => s && validSet.has(s));
+                              if (tokens.length > 0) {
+                                setGeneSetA((prev) => Array.from(new Set([...prev, ...tokens])));
+                                setPasteInputA("");
+                              }
+                            }
+                          }}
+                          placeholder="Paste gene list (e.g. NFE2L2, NQO1)..."
+                          className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[11px] text-slate-200 font-mono focus:outline-none focus:border-teal-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!pasteInputA.trim()) return;
+                            const validSet = new Set(activeBulkData.map((d) => d.gene_name.toUpperCase()));
+                            const tokens = pasteInputA.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter((s) => s && validSet.has(s));
+                            if (tokens.length > 0) {
+                              setGeneSetA((prev) => Array.from(new Set([...prev, ...tokens])));
+                              setPasteInputA("");
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 rounded-lg text-xs font-mono font-semibold cursor-pointer"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto pt-0.5">
+                      {geneSetA.map((g) => (
+                        <span
+                          key={g}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-teal-500/10 border border-teal-500/30 text-teal-300 text-[11px] font-mono"
+                        >
+                          {g}
+                          {geneSetA.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setGeneSetA((prev) => prev.filter((item) => item !== g))}
+                              className="text-teal-400/70 hover:text-rose-400 ml-0.5 cursor-pointer font-bold"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {geneSetA.length === 1 && (
+                        <span className="text-[10px] text-slate-500 font-mono ml-1">
+                          (Add more genes above for a signature score, or type a custom X-Axis name at the top)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Y-Axis Gene(s) / Set B */}
+                  <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 flex flex-col gap-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+                        <span className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider shrink-0">
+                          Y-Axis ({geneSetBExpressions.length}):
+                        </span>
+                        <input
+                          type="text"
+                          value={geneSetBLabel}
+                          onChange={(e) => setGeneSetBLabel(e.target.value)}
+                          placeholder={geneSetB.length === 1 ? `${geneSetB[0]} (or type custom set/index name...)` : "Custom Y-Axis Name (e.g. Serine Synthesis Set)"}
+                          className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-100 placeholder:text-slate-500 font-mono focus:outline-none focus:border-amber-400"
+                        />
+                        {geneSetBLabel && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetBLabel("")}
+                            className="text-[10px] font-mono text-slate-400 hover:text-rose-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 cursor-pointer"
+                            title="Reset custom Y-axis name"
+                          >
+                            Reset Name
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                        {selectedVolcanoGenes.size > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetB(Array.from(selectedVolcanoGenes).slice(0, 50))}
+                            className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 cursor-pointer"
+                            title="Import genes checked in the Gene Expression Data Table"
+                          >
+                            Use Table Selection ({selectedVolcanoGenes.size})
+                          </button>
+                        )}
+                        {geneSetB.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setGeneSetB([geneSetB[0]])}
+                            className="px-2 py-0.5 rounded bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800 cursor-pointer"
+                          >
+                            Keep 1st Only
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons for Y-Axis */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
+                      <span className="text-slate-500">Presets:</span>
+                      {[
+                        { label: "Serine Biosynthesis", genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2"] },
+                        { label: "Serine Transport Index", genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC3A2", "SLC38A1", "SLC38A2"] },
+                        { label: "NRF2 Targets", genes: ["NFE2L2", "NQO1", "GCLC", "GCLM", "HMOX1", "TXNRD1", "SRXN1", "AKR1C1"] },
+                        { label: "EMT Signature", genes: ["VIM", "FN1", "ZEB1", "SNAI1", "SNAI2", "MMP2", "CDH2"] },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            const validSet = new Set(activeBulkData.map((d) => d.gene_name));
+                            const matched = preset.genes.filter((g) => validSet.has(g));
+                            if (matched.length > 0) {
+                              setGeneSetBLabel(preset.label);
+                              setGeneSetB(matched);
+                            }
+                          }}
+                          className="px-2 py-0.5 rounded bg-slate-900 hover:bg-amber-500/15 text-slate-300 hover:text-amber-300 border border-slate-800 hover:border-amber-500/30 transition cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <SearchableGeneSelect
+                        options={activeBulkData.map((d) => d.gene_name)}
+                        value={geneSetB.length === 1 ? geneSetB[0] : null}
+                        onChange={(val) => {
+                          if (!val) return;
+                          if (geneSetB.includes(val)) return;
+                          setGeneSetB((prev) => [...prev, val]);
+                        }}
+                        placeholder="+ Search & add gene to Y-Axis..."
+                      />
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={pasteInputB}
+                          onChange={(e) => setPasteInputB(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && pasteInputB.trim()) {
+                              const validSet = new Set(activeBulkData.map((d) => d.gene_name.toUpperCase()));
+                              const tokens = pasteInputB.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter((s) => s && validSet.has(s));
+                              if (tokens.length > 0) {
+                                setGeneSetB((prev) => Array.from(new Set([...prev, ...tokens])));
+                                setPasteInputB("");
+                              }
+                            }
+                          }}
+                          placeholder="Paste gene list (e.g. PHGDH, PSAT1)..."
+                          className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-[11px] text-slate-200 font-mono focus:outline-none focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!pasteInputB.trim()) return;
+                            const validSet = new Set(activeBulkData.map((d) => d.gene_name.toUpperCase()));
+                            const tokens = pasteInputB.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter((s) => s && validSet.has(s));
+                            if (tokens.length > 0) {
+                              setGeneSetB((prev) => Array.from(new Set([...prev, ...tokens])));
+                              setPasteInputB("");
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-mono font-semibold cursor-pointer"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto pt-0.5">
+                      {geneSetB.map((g) => (
+                        <span
+                          key={g}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono"
+                        >
+                          {g}
+                          {geneSetB.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setGeneSetB((prev) => prev.filter((item) => item !== g))}
+                              className="text-amber-400/70 hover:text-rose-400 ml-0.5 cursor-pointer font-bold"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {geneSetB.length === 1 && (
+                        <span className="text-[10px] text-slate-500 font-mono ml-1">
+                          (Add more genes above for a signature score, or type a custom Y-Axis name at the top)
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1136,12 +1514,18 @@ export default function Dashboard() {
                   {/* Co-expression scatter plot */}
                   <div className="flex-1">
                     <CorrelationPlot
-                      gene1Name={activeStudy === "TCGA_GTEX" ? (tcgaGtexCorrelationGene1 || "") : (correlationGene1 || "")}
-                      gene2Name={activeStudy === "TCGA_GTEX" ? (tcgaGtexCorrelationGene2 || "") : (correlationGene2 || "")}
-                      gene1Expression={activeStudy === "TCGA_GTEX" ? tcgaGtexCorrelationGene1Expression : expressionData?.expressions[correlationGene1 || ""]}
-                      gene2Expression={activeStudy === "TCGA_GTEX" ? tcgaGtexCorrelationGene2Expression : expressionData?.expressions[correlationGene2 || ""]}
+                      gene1Name={geneSetA[0] || "NFE2L2"}
+                      gene2Name={geneSetB[0] || "PHGDH"}
+                      gene1Expression={geneSetAExpressions[0]?.values}
+                      gene2Expression={geneSetBExpressions[0]?.values}
                       samples={activeStudy === "TCGA_GTEX" ? tcgaGtexSampleNames : (expressionData?.samples || [])}
                       isTcgaGtex={activeStudy === "TCGA_GTEX"}
+                      correlationMode={geneSetA.length > 1 || geneSetB.length > 1 ? "geneset" : "single"}
+                      signatureMethod={signatureMethod}
+                      geneSetALabel={geneSetALabel.trim() || (geneSetA.length === 1 ? geneSetA[0] : "Gene Set A")}
+                      geneSetBLabel={geneSetBLabel.trim() || (geneSetB.length === 1 ? geneSetB[0] : "Gene Set B")}
+                      geneSetAExpressions={geneSetAExpressions}
+                      geneSetBExpressions={geneSetBExpressions}
                     />
                   </div>
                   

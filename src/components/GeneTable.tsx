@@ -56,6 +56,8 @@ interface GeneTableProps {
   data: GeneData[];
   selectedGene: string | null;
   onSelectGene: (geneName: string) => void;
+  selectedGenes?: Set<string>;
+  onSelectedGenesChange?: React.Dispatch<React.SetStateAction<Set<string>>>;
   isTcgaGtex?: boolean;
   onRunPathwayAnalysis?: (
     geneSymbols: string[],
@@ -84,6 +86,8 @@ export default function GeneTable({
   data, 
   selectedGene, 
   onSelectGene,
+  selectedGenes: externalSelectedGenes,
+  onSelectedGenesChange,
   isTcgaGtex = false,
   onRunPathwayAnalysis
 }: GeneTableProps) {
@@ -93,7 +97,10 @@ export default function GeneTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filterRobust, setFilterRobust] = useState<"all" | "robust" | "non_robust">("all");
-  const [selectedGenes, setSelectedGenes] = useState<Set<string>>(new Set());
+  const [internalSelectedGenes, setInternalSelectedGenes] = useState<Set<string>>(new Set());
+
+  const selectedGenes = externalSelectedGenes ?? internalSelectedGenes;
+  const setSelectedGenes = onSelectedGenesChange ?? setInternalSelectedGenes;
 
   let aiCtx: any = null;
   try {
@@ -286,7 +293,7 @@ export default function GeneTable({
             </span>
           </div>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Interactive transcriptomic matrix · Click any row to view expression distribution
+            Interactive transcriptomic matrix · Check rows to mark genes on Volcano Plot · Click any row to view expression distribution
           </p>
         </div>
 
@@ -689,10 +696,10 @@ export default function GeneTable({
                           )}
                         </td>
                         <td className="p-3 text-right font-mono text-slate-400">
-                          {row.pct_tumor_gt1 !== undefined ? `${(row.pct_tumor_gt1 * 100).toFixed(1)}%` : "N/A"}
+                          {row.pct_tumor_gt1 !== undefined ? `${row.pct_tumor_gt1.toFixed(1)}%` : "N/A"}
                         </td>
                         <td className="p-3 text-right pr-4 font-mono text-slate-400">
-                          {row.pct_gtex_gt1 !== undefined ? `${(row.pct_gtex_gt1 * 100).toFixed(1)}%` : "N/A"}
+                          {row.pct_gtex_gt1 !== undefined ? `${row.pct_gtex_gt1.toFixed(1)}%` : "N/A"}
                         </td>
                       </>
                     ) : (
