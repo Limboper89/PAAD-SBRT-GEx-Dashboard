@@ -762,8 +762,8 @@ export default function Dashboard() {
           title="PDAC BioPortal - Home"
         >
           <img 
-            src={`${basePath}/pdac_bioportal_logo_transparent.png`} 
-            alt="PDAC BioPortal - A multi-Cohort Transcriptomics & RT Translational Knowledgebase" 
+            src={`${basePath}/pdac_bioportal_logo_transparent.png?v=2`} 
+            alt="PDAC BioPortal - A Multicohort Transcriptomics & Translational Knowledgebase" 
             className="h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain transition-all duration-200 group-hover:scale-[1.02] drop-shadow-[0_2px_12px_rgba(56,189,248,0.15)]"
           />
         </div>
