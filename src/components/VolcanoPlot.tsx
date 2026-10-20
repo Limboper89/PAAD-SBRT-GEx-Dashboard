@@ -144,6 +144,14 @@ export default function VolcanoPlot({
     setZoom((z) => Math.max(z / 1.3, 0.5));
   };
 
+  const [isLightTheme, setIsLightTheme] = useState<boolean>(false);
+  useEffect(() => {
+    setIsLightTheme(document.documentElement.classList.contains("light"));
+    const onTheme = () => setIsLightTheme(document.documentElement.classList.contains("light"));
+    window.addEventListener("bioportal:theme", onTheme);
+    return () => window.removeEventListener("bioportal:theme", onTheme);
+  }, []);
+
   // Draw plot onto Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,13 +174,13 @@ export default function VolcanoPlot({
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const screenPt = getScreenCoords(x, 0);
       if (screenPt.x >= padding.left && screenPt.x <= dimensions.width - padding.right) {
-        ctx.fillStyle = "#94a3b8"; // Slate 400
+        ctx.fillStyle = isLightTheme ? "#334155" : "#94a3b8";
         ctx.font = "10px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(x.toString(), screenPt.x, dimensions.height - padding.bottom + 18);
 
         // Tick mark
-        ctx.strokeStyle = "#475569";
+        ctx.strokeStyle = isLightTheme ? "#64748b" : "#475569";
         ctx.beginPath();
         ctx.moveTo(screenPt.x, dimensions.height - padding.bottom);
         ctx.lineTo(screenPt.x, dimensions.height - padding.bottom + 4);
@@ -185,13 +193,13 @@ export default function VolcanoPlot({
     for (let y = 0; y <= bounds.maxY; y += yStep) {
       const screenPt = getScreenCoords(0, y);
       if (screenPt.y >= padding.top && screenPt.y <= dimensions.height - padding.bottom) {
-        ctx.fillStyle = "#94a3b8";
+        ctx.fillStyle = isLightTheme ? "#334155" : "#94a3b8";
         ctx.font = "10px sans-serif";
         ctx.textAlign = "right";
         ctx.fillText(y.toString(), padding.left - 8, screenPt.y + 3);
 
         // Tick mark
-        ctx.strokeStyle = "#475569";
+        ctx.strokeStyle = isLightTheme ? "#64748b" : "#475569";
         ctx.beginPath();
         ctx.moveTo(padding.left - 4, screenPt.y);
         ctx.lineTo(padding.left, screenPt.y);
@@ -211,7 +219,7 @@ export default function VolcanoPlot({
     ctx.clip();
 
     // Draw Grid lines
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.03)";
+    ctx.strokeStyle = isLightTheme ? "rgba(100, 116, 139, 0.12)" : "rgba(148, 163, 184, 0.03)";
     ctx.lineWidth = 1;
 
     for (let x = startX; x <= bounds.maxX; x += xStep) {
@@ -232,7 +240,7 @@ export default function VolcanoPlot({
 
     // Zero fold change line
     const zeroPt = getScreenCoords(0, 0);
-    ctx.strokeStyle = "rgba(148, 163, 184, 0.2)";
+    ctx.strokeStyle = isLightTheme ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.2)";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(zeroPt.x, padding.top);
@@ -482,7 +490,7 @@ export default function VolcanoPlot({
     ctx.restore(); // Restore clipping region
 
     // 3. Draw Axis Lines
-    ctx.strokeStyle = "#475569";
+    ctx.strokeStyle = isLightTheme ? "#475569" : "#475569";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padding.left, dimensions.height - padding.bottom);
@@ -492,7 +500,7 @@ export default function VolcanoPlot({
     ctx.stroke();
 
     // Axis titles
-    ctx.fillStyle = "#cbd5e1";
+    ctx.fillStyle = isLightTheme ? "#1e293b" : "#cbd5e1";
     ctx.font = "bold 11px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(
@@ -507,7 +515,7 @@ export default function VolcanoPlot({
     ctx.fillText(isTcgaGtex ? "-log10(FDR / q-value)" : "-log10(p-value)", 0, 0);
     ctx.restore();
 
-  }, [dimensions, bounds, points, selectedGene, selectedGenes, hoveredGene, zoom, offsetX, offsetY, isTcgaGtex, highlightRobust, fcThreshold]);
+  }, [dimensions, bounds, points, selectedGene, selectedGenes, hoveredGene, zoom, offsetX, offsetY, isTcgaGtex, highlightRobust, fcThreshold, isLightTheme]);
 
   // Handle Dragging / Pan
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {

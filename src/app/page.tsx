@@ -13,7 +13,9 @@ import {
   Info,
   GitFork,
   HeartPulse,
-  Target
+  Target,
+  Sun,
+  Moon
 } from "lucide-react";
 import VolcanoPlot from "@/components/VolcanoPlot";
 import Heatmap from "@/components/Heatmap";
@@ -71,6 +73,26 @@ export default function Dashboard() {
   // Hard‑coded base path for static export
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "survival" | "about" | "pathway">("de");
+  const [portalTheme, setPortalTheme] = useState<"dark" | "light">("dark");
+
+  // Initialize and sync Light / Dark theme class on <html>
+  useEffect(() => {
+    const saved = localStorage.getItem("pdac_bioportal_theme");
+    if (saved === "light" || saved === "dark") {
+      setPortalTheme(saved);
+      document.documentElement.classList.remove("dark", "light");
+      document.documentElement.classList.add(saved);
+    }
+  }, []);
+
+  const togglePortalTheme = () => {
+    const nextTheme = portalTheme === "dark" ? "light" : "dark";
+    setPortalTheme(nextTheme);
+    localStorage.setItem("pdac_bioportal_theme", nextTheme);
+    document.documentElement.classList.remove("dark", "light");
+    document.documentElement.classList.add(nextTheme);
+    window.dispatchEvent(new CustomEvent("bioportal:theme", { detail: { theme: nextTheme } }));
+  };
   const [pathwayInputGenes, setPathwayInputGenes] = useState<string[] | undefined>(undefined);
   const [pathwayInputRankedGenes, setPathwayInputRankedGenes] = useState<RankedGene[] | undefined>(undefined);
   const [pathwayInputMetadata, setPathwayInputMetadata] = useState<DegTransferMetadata | undefined>(undefined);
@@ -815,6 +837,26 @@ export default function Dashboard() {
               ))}
             </select>
           </div>
+
+          {/* Light / Dark Mode Toggle Button */}
+          <button
+            type="button"
+            onClick={togglePortalTheme}
+            title={portalTheme === "dark" ? "Switch to Light Mode (Clinical Paper View)" : "Switch to Dark Mode (High-Contrast Dark View)"}
+            className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 text-xs font-mono font-medium text-slate-200 transition-all cursor-pointer shadow-sm"
+          >
+            {portalTheme === "dark" ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-400" />
+                <span>Dark</span>
+              </>
+            )}
+          </button>
         </div>
       </header>
 

@@ -23,10 +23,65 @@
   --radius: 0.75rem;
 }
 
+/* Light Mode Theme Overrides */
+html.light {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #e2e8f0;
+  --accent-foreground: #0f172a;
+  --border: #cbd5e1;
+  --input: #cbd5e1;
+  --ring: #0d9488;
+
+  /* Remap Tailwind v4 slate scale for clean clinical paper surfaces */
+  --color-slate-950: #f1f5f9; /* Page background & recessed inputs */
+  --color-slate-900: #ffffff; /* Cards, panels, modals, header */
+  --color-slate-800: #e2e8f0; /* Borders, pills, secondary surfaces */
+  --color-slate-700: #cbd5e1; /* Stronger borders & dividers */
+  --color-slate-600: #64748b; /* Muted icons / secondary text */
+  --color-slate-500: #475569; /* Subtitles & muted labels */
+  --color-slate-400: #334155; /* Body text & table cells */
+  --color-slate-300: #1e293b; /* Emphasized secondary text */
+  --color-slate-200: #0f172a; /* Primary headings & stat values */
+  --color-slate-100: #020617; /* High-contrast titles */
+  --color-slate-50: #020617;
+
+  /* Deepen pastel accent text tones for AA/AAA contrast on white cards */
+  --color-teal-400: #0d9488;
+  --color-teal-300: #0f766e;
+  --color-amber-400: #d97706;
+  --color-amber-300: #b45309;
+  --color-indigo-400: #4f46e5;
+  --color-indigo-300: #4338ca;
+  --color-cyan-400: #0284c7;
+  --color-cyan-300: #0369a1;
+  --color-emerald-400: #059669;
+  --color-emerald-300: #047857;
+  --color-red-400: #dc2626;
+  --color-red-300: #b91c1c;
+  --color-rose-400: #e11d48;
+  --color-rose-300: #be123c;
+  --color-blue-400: #2563eb;
+  --color-blue-300: #1d4ed8;
+  --color-purple-400: #7c3aed;
+  --color-purple-300: #6d28d9;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom Scrollbar for a premium look */
@@ -48,12 +103,104 @@ body {
   background: #475569;
 }
 
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* Grid overlay and utility patterns */
 .bg-grid-pattern {
   background-size: 40px 40px;
   background-image: 
     linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+}
+
+html.light .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px);
+}
+
+/* Ensure standalone text-white headings/labels become dark ink in Light Mode,
+   while preserving white text inside solid colored buttons/badges */
+html.light .text-white {
+  color: #0f172a;
+}
+
+html.light .hover\:text-white:hover {
+  color: #0f172a;
+}
+
+html.light .bg-teal-600.text-white,
+html.light .bg-teal-500.text-white,
+html.light .bg-indigo-600.text-white,
+html.light .bg-indigo-500.text-white,
+html.light .bg-blue-600.text-white,
+html.light .bg-blue-500.text-white,
+html.light .bg-emerald-600.text-white,
+html.light .bg-emerald-500.text-white,
+html.light .bg-red-600.text-white,
+html.light .bg-red-500.text-white,
+html.light .bg-rose-600.text-white,
+html.light .bg-rose-500.text-white,
+html.light .bg-amber-600.text-white,
+html.light .bg-amber-500.text-white,
+html.light .bg-purple-600.text-white,
+html.light .bg-purple-500.text-white,
+html.light .from-teal-600.text-white,
+html.light .from-indigo-600.text-white,
+html.light .bg-teal-600 .text-white,
+html.light .bg-indigo-600 .text-white,
+html.light .bg-rose-600 .text-white {
+  color: #ffffff !important;
+}
+
+/* Recharts & SVG Axis/Grid/Tooltip contrast in Light Mode */
+html.light svg text[fill="#f1f5f9"],
+html.light svg text[fill="#f8fafc"],
+html.light svg text[fill="#e2e8f0"],
+html.light svg text[fill="#cbd5e1"],
+html.light svg tspan[fill="#f1f5f9"],
+html.light svg tspan[fill="#f8fafc"],
+html.light svg tspan[fill="#e2e8f0"],
+html.light svg tspan[fill="#cbd5e1"] {
+  fill: #0f172a !important;
+}
+
+html.light svg text[fill="#94a3b8"],
+html.light svg text[fill="#64748b"],
+html.light svg tspan[fill="#94a3b8"],
+html.light svg tspan[fill="#64748b"] {
+  fill: #334155 !important;
+}
+
+html.light svg line[stroke="#334155"],
+html.light svg line[stroke="#1e293b"],
+html.light svg path[stroke="#334155"],
+html.light svg path[stroke="#1e293b"],
+html.light svg .recharts-cartesian-grid line {
+  stroke: #cbd5e1 !important;
+}
+
+html.light svg line[stroke="#475569"],
+html.light svg path[stroke="#475569"] {
+  stroke: #94a3b8 !important;
+}
+
+html.light .recharts-default-tooltip {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12) !important;
 }
 
 /* Glow effects */
@@ -78,3 +225,4 @@ body {
   mask-composite: exclude;
   pointer-events: none;
 }
+

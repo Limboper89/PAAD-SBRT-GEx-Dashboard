@@ -185,6 +185,14 @@ export default function Heatmap({
   const labelWidth = 90;
   const headerHeight = 35;
 
+  const [isLightTheme, setIsLightTheme] = useState<boolean>(false);
+  useEffect(() => {
+    setIsLightTheme(document.documentElement.classList.contains("light"));
+    const onTheme = () => setIsLightTheme(document.documentElement.classList.contains("light"));
+    window.addEventListener("bioportal:theme", onTheme);
+    return () => window.removeEventListener("bioportal:theme", onTheme);
+  }, []);
+
   // Draw Heatmap Matrix on Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -245,7 +253,7 @@ export default function Heatmap({
       }
 
       // Draw vertical dividers between cohorts
-      ctx.strokeStyle = "#0f172a";
+      ctx.strokeStyle = isLightTheme ? "#ffffff" : "#0f172a";
       ctx.lineWidth = 2.0;
       ctx.beginPath();
       if (normalW > 0) {
@@ -265,7 +273,7 @@ export default function Heatmap({
       // Pre-SBRT Banner
       ctx.fillStyle = "rgba(100, 116, 139, 0.15)";
       ctx.fillRect(labelWidth, 5, heatmapData.preCount * cellWidth - 2, 20);
-      ctx.fillStyle = "#94a3b8";
+      ctx.fillStyle = isLightTheme ? "#475569" : "#94a3b8";
       ctx.font = "bold 10px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`Pre-SBRT (N=${heatmapData.preCount})`, labelWidth + (heatmapData.preCount * cellWidth) / 2, 18);
@@ -273,11 +281,11 @@ export default function Heatmap({
       // Post-SBRT Banner
       ctx.fillStyle = "rgba(20, 184, 166, 0.1)";
       ctx.fillRect(dividerX + 1, 5, matrixWidth - heatmapData.preCount * cellWidth - 2, 20);
-      ctx.fillStyle = "#14b8a6";
+      ctx.fillStyle = isLightTheme ? "#0d9488" : "#14b8a6";
       ctx.fillText(`Post-SBRT (N=${heatmapData.samples.length - heatmapData.preCount})`, dividerX + (matrixWidth - heatmapData.preCount * cellWidth) / 2, 18);
 
       // Divider line
-      ctx.strokeStyle = "#0f172a";
+      ctx.strokeStyle = isLightTheme ? "#ffffff" : "#0f172a";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(dividerX, headerHeight);
@@ -291,7 +299,7 @@ export default function Heatmap({
 
       // Draw Row Label (Gene Symbol)
       const isActive = row.gene === activeGene;
-      ctx.fillStyle = isActive ? "#f59e0b" : "#cbd5e1";
+      ctx.fillStyle = isActive ? (isLightTheme ? "#d97706" : "#f59e0b") : (isLightTheme ? "#1e293b" : "#cbd5e1");
       ctx.font = isActive ? "bold 11px sans-serif" : "11px sans-serif";
       ctx.textAlign = "left";
       ctx.fillText(row.gene, 10, y + 15);
@@ -333,7 +341,7 @@ export default function Heatmap({
       });
     });
 
-  }, [dimensions, heatmapData, activeGene, isTcgaGtex]);
+  }, [dimensions, heatmapData, activeGene, isTcgaGtex, isLightTheme]);
 
   // Handle Cell Hover Detection
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
