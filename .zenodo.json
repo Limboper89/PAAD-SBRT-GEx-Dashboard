@@ -1,0 +1,42 @@
+{
+  "title": "PDAC BioPortal: An Integrated Multi-Scale Framework for Context-Aware Analysis of Pancreatic Cancer Transcriptomics",
+  "upload_type": "software",
+  "description": "<p><strong>PDAC BioPortal</strong> (featuring <strong>PDACopilot</strong>) is an open-access multi-scale pancreatic ductal adenocarcinoma (PDAC) transcriptomics and translational knowledgebase.</p><p><strong>Live Portal:</strong> <a href=\"https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/\">https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/</a><br><strong>Source Code Repository:</strong> <a href=\"https://github.com/Limboper89/PAAD-SBRT-GEx-Dashboard\">https://github.com/Limboper89/PAAD-SBRT-GEx-Dashboard</a></p><p>The platform harmonizes four complementary human PDAC transcriptomic cohorts:</p><ul><li><strong>TCGA-PAAD vs GTEx Normal Pancreas</strong> (n=349: 178 primary tumors, 167 GTEx normal pancreas, 4 solid tissue normals; UCSC Xena Toil recompute)</li><li><strong>GSE225767</strong>: Neoadjuvant stereotactic body radiotherapy (SBRT) bulk RNA-seq cohort (n=55: 26 pre-treatment FNA biopsies, 29 post-treatment surgical resections)</li><li><strong>GSE202051</strong>: Single-nucleus RNA-seq reference atlas (224,988 nuclei across 43 patients)</li><li><strong>GSE274103</strong>: 10x Genomics Visium spatial transcriptomics (23,436 spots across 5 clinical sections with H&amp;E histology overlay)</li></ul>",
+  "creators": [
+    {
+      "name": "Kumar, Prince",
+      "affiliation": "University of California, Los Angeles (UCLA)"
+    }
+  ],
+  "keywords": [
+    "PDAC BioPortal",
+    "PDACopilot",
+    "Pancreatic Ductal Adenocarcinoma",
+    "PDAC",
+    "Transcriptomics",
+    "SBRT",
+    "Radiotherapy",
+    "Single-Nucleus RNA-seq",
+    "Spatial Transcriptomics",
+    "GSE225767",
+    "GSE202051",
+    "GSE274103",
+    "TCGA-PAAD",
+    "GTEx",
+    "NFE2L2",
+    "NRF2"
+  ],
+  "license": "MIT",
+  "related_identifiers": [
+    {
+      "identifier": "https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "https://github.com/Limboper89/PAAD-SBRT-GEx-Dashboard",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ]
+}

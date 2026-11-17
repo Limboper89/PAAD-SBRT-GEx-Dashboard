@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use PDAC BioPortal or PDACopilot in your research, please cite it using the metadata below."
+title: "PDAC BioPortal: An Integrated Multi-Scale Framework for Context-Aware Analysis of Pancreatic Cancer Transcriptomics"
+type: software
+authors:
+  - family-names: "Kumar"
+    given-names: "Prince"
+    affiliation: "University of California, Los Angeles (UCLA)"
+doi: 10.5281/zenodo.22149338
+url: "https://limboper89.github.io/PAAD-SBRT-GEx-Dashboard/"
+repository-code: "https://github.com/Limboper89/PAAD-SBRT-GEx-Dashboard"
+keywords:
+  - "PDAC BioPortal"
+  - "PDACopilot"
+  - "Pancreatic Ductal Adenocarcinoma"
+  - "PDAC"
+  - "Transcriptomics"
+  - "SBRT"
+  - "Radiotherapy"
+  - "Single-Nucleus RNA-seq"
+  - "Spatial Transcriptomics"
+  - "GSE225767"
+  - "GSE202051"
+  - "GSE274103"
+  - "TCGA-PAAD"
+  - "GTEx"
+  - "NFE2L2"
+  - "NRF2"
+license: MIT

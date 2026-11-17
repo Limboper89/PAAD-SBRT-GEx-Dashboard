@@ -209,9 +209,14 @@ export default function Dashboard() {
     async function loadBulkData() {
       try {
         setIsLoading(true);
-        const res = await fetch(`${basePath}/data/GSE225767_DEG_results_with_names.csv`);
+        const [res, exprRes] = await Promise.all([
+          fetch(`${basePath}/data/GSE225767_DEG_results_with_names.csv`),
+          fetch(`${basePath}/data/GSE225767_expression_data.json`),
+        ]);
         if (!res.ok) throw new Error("Failed to fetch SBRT DEG results CSV.");
-        const text = await res.text();
+        if (!exprRes.ok) throw new Error("Failed to fetch SBRT expression JSON dataset.");
+
+        const [text, exprData] = await Promise.all([res.text(), exprRes.json()]);
         
         const lines = text.split("\n");
         const parsed: GeneData[] = [];
@@ -232,10 +237,6 @@ export default function Dashboard() {
         }
         
         setBulkData(parsed);
-
-        const exprRes = await fetch(`${basePath}/data/GSE225767_expression_data.json`);
-        if (!exprRes.ok) throw new Error("Failed to fetch SBRT expression JSON dataset.");
-        const exprData = await exprRes.json();
         setExpressionData(exprData);
         
         const topSigGenes = parsed
