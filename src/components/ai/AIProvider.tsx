@@ -20,7 +20,7 @@ export function assembleProductionResponse(
   selectedGene?: string
 ): string {
   const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
-  const hasQuantitativeData = !!(dResults.tcga_gtex?.metrics || dResults.gse225767?.metrics);
+  const hasQuantitativeData = !!(dResults.tcga_gtex?.metrics || dResults.gse225767?.metrics || dResults.gse202051?.found || dResults.gse274103);
 
   const deterministicBlock = formatVerifiedQuantitativeBlock(plan, executionResult);
 
@@ -97,14 +97,18 @@ export function assembleProductionResponse(
         const sbrtMetrics = dResults.gse225767?.metrics;
         const primaryGene = plan.entities.genes[0] || "Target Gene";
         
-        let interpretationText = "";
+        const interpretationParts: string[] = [];
         if (tcgaMetrics) {
           const up = tcgaMetrics.log2FC > 0;
-          interpretationText = `BioPortal analysis demonstrates that **${primaryGene}** is **${up ? 'significantly upregulated' : 'downregulated'}** in TCGA-PAAD primary pancreatic tumor samples relative to GTEx normal pancreas tissue (log2FC = \`${tcgaMetrics.log2FCFormatted}\`, FDR = \`${tcgaMetrics.adjPValueFormatted}\`).`;
-        } else if (sbrtMetrics) {
+          const sigText = tcgaMetrics.adjPValue < 0.05 ? "significantly " : "non-significantly ";
+          interpretationParts.push(`BioPortal analysis demonstrates that **${primaryGene}** is **${sigText}${up ? 'upregulated' : 'downregulated'}** in TCGA-PAAD primary pancreatic tumor samples relative to GTEx normal pancreas tissue (log2FC = \`${tcgaMetrics.log2FCFormatted}\`, FDR = \`${tcgaMetrics.adjPValueFormatted}\`).`);
+        }
+        if (sbrtMetrics) {
           const up = sbrtMetrics.log2FC > 0;
-          interpretationText = `BioPortal analysis indicates that **${primaryGene}** expression is **${up ? 'increased' : 'decreased'}** following SBRT radiotherapy in GSE225767 (log2FC = \`${sbrtMetrics.log2FCFormatted}\`, FDR = \`${sbrtMetrics.adjPValueFormatted}\`).`;
-        } else if (dResults.gse202051?.pseudobulkResults && dResults.gse202051.pseudobulkResults.length > 0) {
+          const isSig = (sbrtMetrics.adjPValue !== undefined ? sbrtMetrics.adjPValue < 0.05 : sbrtMetrics.pValue < 0.05);
+          interpretationParts.push(`BioPortal analysis indicates that **${primaryGene}** expression is **${up ? 'increased' : 'decreased'}** following SBRT radiotherapy in GSE225767 (log2FC = \`${sbrtMetrics.log2FCFormatted}\`, FDR = \`${sbrtMetrics.adjPValueFormatted}\`, ${isSig ? 'statistically significant' : 'not statistically significant'}).`);
+        }
+        if (dResults.gse202051?.pseudobulkResults && dResults.gse202051.pseudobulkResults.length > 0) {
           const sn = dResults.gse202051;
           const targetLineage = sn.targetCellType 
             ? sn.pseudobulkResults.find((r: any) => r.cellType.toLowerCase().includes(sn.targetCellType.toLowerCase())) 
@@ -112,10 +116,20 @@ export function assembleProductionResponse(
           const sigLineage = sn.pseudobulkResults.find((r: any) => r.isSignificant);
           const top = targetLineage || sigLineage || sn.pseudobulkResults[0];
           const directionDesc = top.direction === 'UP' ? 'statistically significant upregulation' : top.direction === 'DOWN' ? 'statistically significant downregulation' : 'no statistically significant alteration';
-          interpretationText = `In the GSE202051 single-nucleus pseudobulk atlas (${sn.comparisonLabel || 'Naïve vs Treated'}), **${primaryGene}** in the **${top.cellType}** cell compartment exhibits ${directionDesc} (log2FC = \`${top.log2FC > 0 ? '+' : ''}${top.log2FC.toFixed(2)}\`, FDR = \`${top.qValue.toExponential(2)}\`).`;
-        } else {
-          interpretationText = `BioPortal verified quantitative evidence is presented in the table above.`;
+          interpretationParts.push(`In the GSE202051 single-nucleus pseudobulk atlas (${sn.comparisonLabel || 'Naïve vs Treated'}), **${primaryGene}** in the **${top.cellType}** cell compartment exhibits ${directionDesc} (log2FC = \`${top.log2FC > 0 ? '+' : ''}${top.log2FC.toFixed(2)}\`, FDR = \`${top.qValue.toExponential(2)}\`).`);
         }
+        if (dResults.gse274103) {
+          const sp = dResults.gse274103;
+          if (sp.found) {
+            interpretationParts.push(`In GSE274103 spatial transcriptomics, **${primaryGene}** is localized in ${sp.description || `section ${sp.sampleId || 'PDAC-p1'}`} (max spot expression = \`${typeof sp.maxSpotExpr === 'number' ? sp.maxSpotExpr.toFixed(2) : sp.maxSpotExpr}\` log1p).`);
+          } else {
+            interpretationParts.push(`In GSE274103 spatial transcriptomics, **${primaryGene}** is not available in the targeted FFPE Visium probe set.`);
+          }
+        }
+
+        const interpretationText = interpretationParts.length > 0
+          ? interpretationParts.join("\n\n")
+          : `BioPortal verified quantitative evidence is presented in the table above.`;
 
         assembled = `${deterministicBlock}\n\n### Biological Interpretation\n\n${interpretationText}\n\n*Note: Quantitative metrics above are served directly from the verified BioPortal analytical engine.*`;
       }

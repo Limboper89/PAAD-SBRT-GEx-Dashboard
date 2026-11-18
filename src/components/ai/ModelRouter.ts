@@ -236,6 +236,19 @@ export function formatVerifiedQuantitativeBlock(
           const sig = (m.adjPValue !== undefined ? m.adjPValue < 0.05 : m.pValue < 0.05) ? "Significant" : "Not Significant";
           rows.push(`| **${g}** | SBRT GSE225767 | \`${m.log2FCFormatted}\` | \`${m.pValueFormatted}\` | \`${m.adjPValueFormatted || 'N/A'}\` | ${dir} | ${sig} |`);
         }
+        if (gData.sn && gData.sn.found && gData.sn.pseudobulkResults?.length > 0) {
+          const topSn = gData.sn.pseudobulkResults.find((r: any) => r.isSignificant) || gData.sn.pseudobulkResults[0];
+          const snSig = topSn.isSignificant ? "Significant" : "Not Significant";
+          rows.push(`| **${g}** | Single-Nucleus GSE202051 (${topSn.cellType}) | \`${topSn.log2FC > 0 ? '+' : ''}${topSn.log2FC.toFixed(2)}\` | \`${topSn.pValueWelch.toExponential(2)}\` | \`${topSn.qValue.toExponential(2)}\` | ${topSn.direction} | ${snSig} |`);
+        }
+        if (gData.spatial) {
+          if (gData.spatial.found) {
+            const maxExpr = typeof gData.spatial.maxSpotExpr === 'number' ? gData.spatial.maxSpotExpr.toFixed(2) : gData.spatial.maxSpotExpr;
+            rows.push(`| **${g}** | Spatial Visium GSE274103 | \`max log1p: ${maxExpr}\` | \`N/A\` | \`N/A\` | ${gData.spatial.sampleId || 'PDAC-p1'} | Present in Visium |`);
+          } else {
+            rows.push(`| **${g}** | Spatial Visium GSE274103 | *N/A* | *N/A* | *N/A* | *Absent from Visium probe panel* | *Absent* |`);
+          }
+        }
       } else {
         rows.push(`| **${g}** | Current Datasets | *Not Available* | *N/A* | *N/A* | *No verified measurement available in current portal dataset* | *N/A* |`);
       }
@@ -322,6 +335,71 @@ export function formatVerifiedQuantitativeBlock(
         );
       }
     }
+
+    if (dResults.gse202051 && (plan.intent === "cross_module_synthesis" || plan.targetDatasets.includes("gse202051"))) {
+      const sn: any = dResults.gse202051;
+      const gene = sn.gene || plan.entities.genes[0] || "Target Gene";
+      if (sn.found && sn.pseudobulkResults && sn.pseudobulkResults.length > 0) {
+        const compLabel = sn.comparisonLabel || "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)";
+        const nNaive = sn.pseudobulkResults[0]?.naivePatientCount || sn.naiveCount || 18;
+        const nTreated = sn.pseudobulkResults[0]?.treatedPatientCount || sn.treatedCount || 25;
+        const rows = sn.pseudobulkResults.map((r: any) => {
+          const isTarget = sn.targetCellType && (r.cellType.toLowerCase().includes(sn.targetCellType.toLowerCase()) || sn.targetCellType.toLowerCase().includes(r.cellType.toLowerCase()));
+          const cellTypeStr = isTarget ? `**${r.cellType}** 🎯` : `**${r.cellType}**`;
+          return `| ${cellTypeStr} | \`${r.naiveMean.toFixed(3)} ± ${r.naiveSE.toFixed(3)}\` | \`${r.treatedMean.toFixed(3)} ± ${r.treatedSE.toFixed(3)}\` | \`${r.log2FC > 0 ? '+' : ''}${r.log2FC.toFixed(2)}\` | \`${r.pValueWelch.toExponential(2)}\` | \`${r.qValue.toExponential(2)}\` | ${r.direction} |`;
+        }).join("\n");
+
+        blocks.push(
+          `### Verified BioPortal Evidence (Single-Nucleus GSE202051)\n` +
+          `* **Dataset:** PDAC Single-Nucleus Reference Atlas (GSE202051, 224,988 nuclei across 43 patients)\n` +
+          `* **Clinical Cohort:** ${compLabel}\n` +
+          `* **Statistical Unit:** Patient Pseudobulk Means (${nNaive} Naïve vs ${nTreated} Treated patients) with Welch's t-test & BH FDR\n\n` +
+          `| Cell Lineage | Naïve Mean ± SE (n=${nNaive}) | Treated Mean ± SE (n=${nTreated}) | log2FC | Welch t (p) | FDR (q) | Trend |\n` +
+          `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+          rows
+        );
+      } else if (sn.found) {
+        blocks.push(
+          `### Verified BioPortal Evidence (Single-Nucleus GSE202051)\n` +
+          `* **Dataset:** PDAC Single-Nucleus Reference Atlas (GSE202051, 224,988 nuclei across 43 patients)\n` +
+          `* **Gene Evaluated:** **${gene}**\n` +
+          `* **Highest Expressing Lineage:** **${sn.topLineage || 'Epithelial / Ductal Cells'}**`
+        );
+      } else {
+        blocks.push(
+          `### Verified BioPortal Evidence (Single-Nucleus GSE202051)\n` +
+          `* **Dataset:** PDAC Single-Nucleus Reference Atlas (GSE202051)\n` +
+          `* **Feature Status:** **${gene}** was not found in the GSE202051 single-nucleus index.`
+        );
+      }
+    }
+
+    if (dResults.gse274103 && (plan.intent === "cross_module_synthesis" || plan.targetDatasets.includes("gse274103"))) {
+      const sp: any = dResults.gse274103;
+      const gene = sp.gene || plan.entities.genes[0] || "Target Gene";
+      if (sp.found === false) {
+        blocks.push(
+          `### Verified BioPortal Evidence (Spatial Visium GSE274103)\n` +
+          `* **Dataset:** Patient Tumor Visium Spatial Transcriptomics (GSE274103)\n` +
+          `* **Feature Status:** **${gene}** is NOT available in the GSE274103 Visium FFPE targeted probe panel (absent from feature set, NOT zero expression).`
+        );
+      } else {
+        const maxExprStr = sp.maxSpotExpr !== undefined ? (typeof sp.maxSpotExpr === 'number' ? sp.maxSpotExpr.toFixed(2) : sp.maxSpotExpr) : 'N/A';
+        let spBlock =
+          `### Verified BioPortal Evidence (Spatial Visium GSE274103)\n` +
+          `* **Dataset:** Patient Tumor Visium Spatial Transcriptomics (GSE274103)\n` +
+          `* **Tissue Localization:** ${sp.description || 'Ductal tumor epithelium and tumor-stroma boundaries'}\n` +
+          `* **Primary Section Max Spot Expression (${sp.sampleId || 'PDAC-p1'}):** \`${maxExprStr}\` log1p`;
+
+        if (sp.patientMetrics && sp.patientMetrics.length > 0) {
+          const pmRows = sp.patientMetrics.map((pm: any) =>
+            `| **${pm.patientId}** | \`${pm.gsm || 'N/A'}\` | \`${typeof pm.maxSpotExpr === 'number' ? pm.maxSpotExpr.toFixed(2) : pm.maxSpotExpr}\` | ${pm.maxRawCount ?? 'N/A'} |`
+          ).join("\n");
+          spBlock += `\n\n| Patient ID | GSM Accession | Max Spot Expression (log1p) | Max Raw UMI Count |\n| :--- | :--- | :--- | :--- |\n${pmRows}`;
+        }
+        blocks.push(spBlock);
+      }
+    }
   }
 
   // Association Notice Block
@@ -367,7 +445,18 @@ export function formatVerifiedQuantitativeBlock(
     }
   }
 
-  return blocks.join("\n\n") + "\n\n[Action: OPEN_DEG]";
+  const actions: string[] = [];
+  if (dResults.tcga_gtex || dResults.gse225767 || (!dResults.gse202051 && !dResults.gse274103)) {
+    actions.push("[Action: OPEN_DEG]");
+  }
+  if (dResults.gse202051 && (plan.intent === "cross_module_synthesis" || plan.targetDatasets.includes("gse202051"))) {
+    actions.push("[Action: OPEN_SINGLE_NUCLEUS]");
+  }
+  if (dResults.gse274103 && (plan.intent === "cross_module_synthesis" || plan.targetDatasets.includes("gse274103"))) {
+    actions.push("[Action: OPEN_SPATIAL]");
+  }
+
+  return blocks.join("\n\n") + `\n\n${actions.join(" ")}`;
 }
 
 /**
@@ -422,7 +511,7 @@ export function formatBioPortalDirectResponse(
   const hasTcgaGene = (tcgaGeneResult?.type === "gene" || tcgaGeneResult?.metrics) && tcgaGeneResult?.found !== false && tcgaGeneResult?.metrics;
   const hasSbrtGene = (sbrtGeneResult?.type === "gene" || sbrtGeneResult?.metrics) && sbrtGeneResult?.found !== false && sbrtGeneResult?.metrics;
 
-  if (hasTcgaGene || hasSbrtGene) {
+  if (hasTcgaGene || hasSbrtGene || plan.intent === "cross_module_synthesis" || d.multiGeneResults) {
     // Delegate entirely to formatVerifiedQuantitativeBlock — the SINGLE source of truth
     return formatVerifiedQuantitativeBlock(plan, result);
   }

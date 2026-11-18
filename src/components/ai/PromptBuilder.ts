@@ -37,9 +37,11 @@ export function buildQuestionIntent(
   else if (plan.intent === "top_expressed_abundance") requiredOutputType = "abundance_ranking_list";
   else if (plan.intent === "cell_type_lineage_expression") requiredOutputType = "cell_type_distribution";
   else if (plan.intent === "spatial_localization") requiredOutputType = "spatial_tissue_localization";
+  else if (plan.intent === "cross_module_synthesis") requiredOutputType = "cross_module_integrative_summary";
 
   let requestedComparison = "none";
-  if (plan.comparison?.subgroupFilter) requestedComparison = `naive_vs_${plan.comparison.subgroupFilter}`;
+  if (plan.intent === "cross_module_synthesis") requestedComparison = "cross_module_multimodal";
+  else if (plan.comparison?.subgroupFilter) requestedComparison = `naive_vs_${plan.comparison.subgroupFilter}`;
   else if (plan.comparison?.type) requestedComparison = plan.comparison.type;
   else if (qLower.includes("tumor versus normal") || qLower.includes("tumor vs normal")) requestedComparison = "tumor_vs_normal";
   else if (qLower.includes("sbrt") || qLower.includes("radiation")) requestedComparison = "pre_vs_post_sbrt";
@@ -70,7 +72,9 @@ export function buildRequiredAnswerContract(intentObj: QuestionIntent): string {
   const focusStr = intentObj.requestedEntities.length > 0 ? `\nMANDATORY BIOLOGICAL FOCUS: ${entityStr}` : "";
 
   let studyDesignRule = "Respect study design of the queried dataset. Do NOT mix cohort parameters across datasets.";
-  if (intentObj.requiredDatasetIds.includes("tcga_gtex") && !intentObj.requiredDatasetIds.includes("gse225767") && !intentObj.requiredDatasetIds.includes("gse202051")) {
+  if (intentObj.requiredDatasetIds.length > 1 || intentObj.requestedTask === "cross_module_synthesis") {
+    studyDesignRule = "Respect EACH dataset's distinct study design without conflating cohorts: TCGA-PAAD (n=178) vs GTEx normal (n=167) is primary tumor vs normal; GSE225767 is unpaired pre-SBRT (n=26) vs post-SBRT (n=29); GSE202051 is single-nucleus patient pseudobulk (18 Naïve vs 25 RT/CRT-treated); GSE274103 is Visium spatial transcriptomics across PDAC tissue sections. Synthesize all queried modalities conservatively and state missing/absent features explicitly.";
+  } else if (intentObj.requiredDatasetIds.includes("tcga_gtex") && !intentObj.requiredDatasetIds.includes("gse225767") && !intentObj.requiredDatasetIds.includes("gse202051")) {
     studyDesignRule = "Respect study design: TCGA-PAAD primary tumor (n=178) vs GTEx normal pancreas (n=167) independent cohort comparison. Do NOT cite pre/post SBRT cohort parameters.";
   } else if (intentObj.requiredDatasetIds.includes("gse225767")) {
     studyDesignRule = "Respect study design: GSE225767 is UNPAIRED pre-SBRT (n=26) vs post-SBRT (n=29) cohort resections (NOT longitudinal paired tracking).";
@@ -344,7 +348,11 @@ export function buildContextualPrompt(
     ? currentPageContext.heatmapGenes.join(', ')
     : "None";
 
-  const quantitativeNotice = (executionResult.datasetResults.tcga_gtex?.metrics || executionResult.datasetResults.gse225767?.metrics)
+  const quantitativeNotice = (
+    executionResult.datasetResults.tcga_gtex?.metrics ||
+    executionResult.datasetResults.gse225767?.metrics ||
+    (executionResult.plan.intent === "cross_module_synthesis" && (executionResult.datasetResults.gse202051?.found || executionResult.datasetResults.gse274103))
+  )
     ? "\n[MANDATORY NO-TABLE RULE]\n" +
       "A verified BioPortal quantitative evidence table is AUTOMATICALLY rendered above your text response.\n" +
       "DO NOT generate Markdown tables or log2FC/FDR numbers in your text.\n" +

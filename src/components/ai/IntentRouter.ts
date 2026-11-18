@@ -326,6 +326,76 @@ export class IntentRouter {
       };
     }
 
+    // Rule 1.35 (Cross-Module): Multi-dataset / cross-module synthesis (EVALUATED BEFORE SINGLE-DATASET SBRT/PATHWAY OVERRIDES)
+    const matchedModalities: string[] = [];
+    if (qLower.includes("tcga") || qLower.includes("gtex") || qLower.includes("tumor vs normal") || qLower.includes("tumor versus normal")) {
+      matchedModalities.push("tcga_gtex");
+    }
+    if (qLower.includes("sbrt") || qLower.includes("gse225767")) {
+      matchedModalities.push("gse225767");
+    }
+    if (
+      qLower.includes("single-nucleus") ||
+      qLower.includes("single nucleus") ||
+      qLower.includes("snrna") ||
+      qLower.includes("gse202051") ||
+      qLower.includes("pseudobulk")
+    ) {
+      matchedModalities.push("gse202051");
+    }
+    if (qLower.includes("spatial") || qLower.includes("visium") || qLower.includes("gse274103")) {
+      matchedModalities.push("gse274103");
+    }
+
+    const hasCrossModulePhrase =
+      qLower.includes("all modules") ||
+      qLower.includes("across datasets") ||
+      qLower.includes("cross-module") ||
+      qLower.includes("cross module") ||
+      qLower.includes("all datasets") ||
+      qLower.includes("across all") ||
+      qLower.includes("across the portal") ||
+      qLower.includes("across the available") ||
+      qLower.includes("integrate") ||
+      qLower.includes("aggregating") ||
+      (qLower.includes("across") && (qLower.includes("datasets") || qLower.includes("available"))) ||
+      (qLower.includes("bulk") && qLower.includes("spatial") && (qLower.includes("single-nucleus") || qLower.includes("single nucleus")));
+
+    const isDatasetDiscoveryOnly =
+      extractedGenes.length === 0 &&
+      (qLower.includes("what datasets") ||
+        qLower.includes("available datasets") ||
+        qLower.includes("datasets are available"));
+
+    if (!isDatasetDiscoveryOnly && (hasCrossModulePhrase || matchedModalities.length >= 2)) {
+      const targetDs =
+        hasCrossModulePhrase || matchedModalities.length >= 3
+          ? ["tcga_gtex", "gse225767", "gse202051", "gse274103"]
+          : matchedModalities;
+      const snFilters = this.extractSingleNucleusFilters(question, currentPageContext);
+
+      return {
+        intent: "cross_module_synthesis",
+        entities: {
+          genes: extractedGenes,
+          cellTypes: snFilters.targetCellType ? [snFilters.targetCellType] : undefined,
+          subgroupFilter: snFilters.subgroupFilter,
+          targetCellType: snFilters.targetCellType,
+          cellTypeLevel: snFilters.cellTypeLevel
+        },
+        comparison: snFilters.subgroupFilter
+          ? {
+              type: "naive_vs_treated_single_nucleus",
+              subgroupFilter: snFilters.subgroupFilter,
+              targetCellType: snFilters.targetCellType
+            }
+          : undefined,
+        targetDatasets: targetDs,
+        isPageSpecificQuestion: false,
+        reasoning: `Cross-module synthesis query detected. Routing across datasets [${targetDs.join(", ")}].`
+      };
+    }
+
     // Rule 1.4: SBRT Radiotherapy DEG & Treatment Query (EVALUATED BEFORE DATASET OVERVIEW OVERRIDE)
     if (
       qLower.includes("sbrt") ||
@@ -475,28 +545,6 @@ export class IntentRouter {
           reasoning: "General pathway membership/enrichment query detected. Routing to pathway engine."
         };
       }
-    }
-
-    // Rule 3: Multi-dataset / cross-module synthesis
-    if (
-      qLower.includes("all modules") ||
-      qLower.includes("across datasets") ||
-      qLower.includes("cross-module") ||
-      qLower.includes("all datasets") ||
-      qLower.includes("across all") ||
-      qLower.includes("across the portal") ||
-      qLower.includes("across the available") ||
-      qLower.includes("integrate") ||
-      (qLower.includes("across") && (qLower.includes("datasets") || qLower.includes("available"))) ||
-      (qLower.includes("bulk") && qLower.includes("spatial") && (qLower.includes("single-nucleus") || qLower.includes("single nucleus")))
-    ) {
-      return {
-        intent: "cross_module_synthesis",
-        entities: { genes: extractedGenes },
-        targetDatasets: ["tcga_gtex", "gse225767", "gse202051", "gse274103"],
-        isPageSpecificQuestion: false,
-        reasoning: "Cross-module synthesis query detected. Routing across all datasets."
-      };
     }
 
     // Rule 4: Single-nucleus cell type & CRT / Neoadjuvant treatment remodeling query

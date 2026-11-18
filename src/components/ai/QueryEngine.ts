@@ -747,10 +747,42 @@ export class QueryEngine {
 
         try {
           const chunkFilename = `chunk_${chunkId.toString().padStart(3, "0")}.bin`;
-          const chunkRes = await fetch(`${this.basePath}/data/gse202051/expression_chunks/${chunkFilename}`);
-          if (chunkRes.ok) {
-            const chunkBuf = await chunkRes.arrayBuffer();
-            const buf = chunkBuf.slice(offset, offset + length);
+          const chunkUrl = `${this.basePath}/data/gse202051/expression_chunks/${chunkFilename}`;
+          const cleanChunkUrl = chunkUrl.replace(/^\/PAAD-SBRT-GEx-Dashboard/, "");
+          let buf: ArrayBuffer | null = null;
+
+          if (typeof window === "undefined") {
+            try {
+              const req = eval("require");
+              const fs = req("fs");
+              const path = req("path");
+              const targetFile = path.join(process.cwd(), "public", "data", "gse202051", "expression_chunks", chunkFilename);
+              if (fs.existsSync(targetFile)) {
+                const fileBuf = fs.readFileSync(targetFile);
+                buf = fileBuf.buffer.slice(fileBuf.byteOffset + offset, fileBuf.byteOffset + offset + length);
+              }
+            } catch (fsErr) {
+              console.warn("Could not read binary chunk via fs:", fsErr);
+            }
+          }
+
+          if (!buf) {
+            let chunkRes: Response | null = null;
+            try {
+              const res = await fetch(chunkUrl);
+              if (res.ok) chunkRes = res;
+            } catch (e) {}
+            if (!chunkRes) {
+              const fallbackRes = await fetch(cleanChunkUrl);
+              if (fallbackRes.ok) chunkRes = fallbackRes;
+            }
+            if (chunkRes) {
+              const chunkBuf = await chunkRes.arrayBuffer();
+              buf = chunkBuf.slice(offset, offset + length);
+            }
+          }
+
+          if (buf) {
             const dv = new DataView(buf);
             const n_nz = dv.getUint32(0, true);
             const idxArr = new Uint16Array(buf, 4, n_nz);

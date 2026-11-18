@@ -161,6 +161,28 @@ export class EvidenceValidator {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
     const datasetKeys = ["tcga_gtex", "gse225767"];
 
+    const allLog2FCs: number[] = [];
+    for (const key of datasetKeys) {
+      const res: any = dResults[key];
+      if (res && res.type === "gene" && res.found && res.metrics && typeof res.metrics.log2FC === "number") {
+        allLog2FCs.push(res.metrics.log2FC);
+      }
+    }
+    if (dResults.gse202051?.found && Array.isArray(dResults.gse202051.pseudobulkResults)) {
+      for (const r of dResults.gse202051.pseudobulkResults) {
+        if (typeof r.log2FC === "number") {
+          allLog2FCs.push(r.log2FC);
+        }
+      }
+    }
+
+    const hasPositive = allLog2FCs.some(v => v > 0);
+    const hasNegative = allLog2FCs.some(v => v < 0);
+    if (hasPositive && hasNegative) {
+      // Multi-dataset or multi-lineage results legitimately span both upregulation and downregulation
+      return;
+    }
+
     for (const key of datasetKeys) {
       const res: any = dResults[key];
       if (res && res.type === "gene" && res.found && res.metrics) {
@@ -222,6 +244,28 @@ export class EvidenceValidator {
   ): void {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
     const datasetKeys = ["tcga_gtex", "gse225767"];
+
+    const allSigs: boolean[] = [];
+    for (const key of datasetKeys) {
+      const res: any = dResults[key];
+      if (res && res.type === "gene" && res.found && res.metrics) {
+        const pValue = res.metrics.pValue;
+        const adjPValue = res.metrics.adjPValue;
+        allSigs.push((adjPValue !== undefined && adjPValue < 0.05) || (pValue !== undefined && pValue < 0.05));
+      }
+    }
+    if (dResults.gse202051?.found && Array.isArray(dResults.gse202051.pseudobulkResults)) {
+      for (const r of dResults.gse202051.pseudobulkResults) {
+        if (typeof r.qValue === "number") {
+          allSigs.push(r.qValue < 0.05);
+        }
+      }
+    }
+
+    if (allSigs.some(s => s === true) && allSigs.some(s => s === false)) {
+      // Multi-dataset or multi-lineage results legitimately include both significant and non-significant findings
+      return;
+    }
 
     for (const key of datasetKeys) {
       const res: any = dResults[key];
@@ -383,52 +427,78 @@ export class EvidenceValidator {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
     const datasetKeys = ["tcga_gtex", "gse225767"];
 
+    const authoritativeLog2FCs: number[] = [];
+    const authoritativeFDRs: number[] = [];
+    const activeGenes = new Set<string>();
+    const activeDatasetNames: string[] = [];
+
     for (const key of datasetKeys) {
       const res: any = dResults[key];
       if (res && res.type === "gene" && res.found && res.metrics) {
-        const geneStr = res.gene.toLowerCase();
-        const actualLog2FC = res.metrics.log2FC;
-        const actualFDR = res.metrics.adjPValue !== undefined ? res.metrics.adjPValue : res.metrics.pValue;
+        activeGenes.add(res.gene.toLowerCase());
+        activeDatasetNames.push(res.datasetName || key);
+        if (typeof res.metrics.log2FC === "number") authoritativeLog2FCs.push(res.metrics.log2FC);
+        const fdrVal = res.metrics.adjPValue !== undefined ? res.metrics.adjPValue : res.metrics.pValue;
+        if (typeof fdrVal === "number") authoritativeFDRs.push(fdrVal);
+        if (typeof res.metrics.pValue === "number") authoritativeFDRs.push(res.metrics.pValue);
+      }
+    }
 
-        if (respLower.includes(geneStr)) {
-          // 1. Scan for log2FC numbers in prose or tables
-          const allLog2FcMatches = Array.from(respLower.matchAll(/(?:log2fc|fold change)[^\d\-+]{0,30}(-?\d+\.\d+)|(-?\d+\.\d+)[^\d\-+]{0,30}(?:log2fc|fold change)|\|\s*\*?\*?[a-z0-9]+\*?\*?\s*\|\s*(-?\d+\.\d+)\s*\|/gi));
-          
-          for (const match of allLog2FcMatches) {
-            const valStr = match[1] || match[2] || match[3];
-            if (valStr) {
-              const val = parseFloat(valStr);
-              // Ignore standard reference values / thresholds (like 0.05)
-              if (Math.abs(val) !== 0.05 && Math.abs(val) !== 0.01 && Math.abs(val) !== 0.001) {
-                if (Math.abs(val - actualLog2FC) > 0.05) {
-                  errors.push({
-                    type: "NUMERICAL_CONTRADICTION",
-                    message: `Reported log2FC = ${val} for ${res.gene} in ${res.datasetName}, but QueryEngine authoritative value is ${actualLog2FC}.`,
-                    severity: "CRITICAL",
-                    expected: String(actualLog2FC),
-                    actual: String(val)
-                  });
-                }
-              }
+    if (dResults.gse202051?.found && Array.isArray(dResults.gse202051.pseudobulkResults)) {
+      if (dResults.gse202051.gene) activeGenes.add(String(dResults.gse202051.gene).toLowerCase());
+      activeDatasetNames.push("GSE202051");
+      for (const r of dResults.gse202051.pseudobulkResults) {
+        if (typeof r.log2FC === "number") authoritativeLog2FCs.push(r.log2FC);
+        if (typeof r.qValue === "number") authoritativeFDRs.push(r.qValue);
+        if (typeof r.pValueWelch === "number") authoritativeFDRs.push(r.pValueWelch);
+      }
+    }
+
+    const geneMentioned = Array.from(activeGenes).some(g => respLower.includes(g));
+    if (!geneMentioned || activeGenes.size === 0) return;
+
+    // 1. Scan for log2FC numbers in prose or tables
+    if (authoritativeLog2FCs.length > 0) {
+      const allLog2FcMatches = Array.from(respLower.matchAll(/(?:log2fc|fold change)[^\d\-+]{0,30}(-?\d+\.\d+)|(-?\d+\.\d+)[^\d\-+]{0,30}(?:log2fc|fold change)|\|\s*\*?\*?[a-z0-9]+\*?\*?\s*\|\s*(-?\d+\.\d+)\s*\|/gi));
+
+      for (const match of allLog2FcMatches) {
+        const valStr = match[1] || match[2] || match[3];
+        if (valStr) {
+          const val = parseFloat(valStr);
+          // Ignore standard reference values / thresholds (like 0.05)
+          if (Math.abs(val) !== 0.05 && Math.abs(val) !== 0.01 && Math.abs(val) !== 0.001) {
+            const matchesAnyAuthoritative = authoritativeLog2FCs.some(auth => Math.abs(val - auth) <= 0.05);
+            if (!matchesAnyAuthoritative) {
+              errors.push({
+                type: "NUMERICAL_CONTRADICTION",
+                message: `Reported log2FC = ${val} across [${activeDatasetNames.join(", ")}], which contradicts QueryEngine authoritative values (${authoritativeLog2FCs.map(v => v.toFixed(4)).join(", ")}).`,
+                severity: "CRITICAL",
+                expected: authoritativeLog2FCs.map(v => v.toFixed(4)).join(", "),
+                actual: String(val)
+              });
             }
           }
+        }
+      }
+    }
 
-          // 2. Scan for FDR / P-value numbers in prose or tables
-          const allFdrMatches = Array.from(respLower.matchAll(/(?:fdr|p-value|pval|qval)[^\d]{0,30}(\d+\.\d+)|\|\s*(-?\d+\.\d+)\s*\|\s*(\d+\.\d+)\s*\|/gi));
-          for (const match of allFdrMatches) {
-            const valStr = match[1] || match[3];
-            if (valStr) {
-              const val = parseFloat(valStr);
-              if (val > 0.05 && actualFDR < 0.05) {
-                errors.push({
-                  type: "NUMERICAL_CONTRADICTION",
-                  message: `Reported FDR/P-value = ${val} for ${res.gene} in ${res.datasetName}, but QueryEngine authoritative FDR is ${actualFDR} (Significant).`,
-                  severity: "CRITICAL",
-                  expected: String(actualFDR),
-                  actual: String(val)
-                });
-              }
-            }
+    // 2. Scan for FDR / P-value numbers in prose or tables
+    if (authoritativeFDRs.length > 0) {
+      const allQueriedSignificant = authoritativeFDRs.every(fdr => fdr < 0.05);
+      const allFdrMatches = Array.from(respLower.matchAll(/(?:fdr|p-value|pval|qval)[^\d]{0,30}(\d+\.\d+)|\|\s*(-?\d+\.\d+)\s*\|\s*(\d+\.\d+)\s*\|/gi));
+      for (const match of allFdrMatches) {
+        const valStr = match[1] || match[3];
+        if (valStr) {
+          const val = parseFloat(valStr);
+          const matchesAnyFDR = authoritativeFDRs.some(auth => Math.abs(val - auth) <= 0.05);
+          if (val > 0.05 && allQueriedSignificant && !matchesAnyFDR) {
+            errors.push({
+              type: "NUMERICAL_CONTRADICTION",
+              message: `Reported FDR/P-value = ${val} across [${activeDatasetNames.join(", ")}], but all QueryEngine authoritative FDR/P-values are < 0.05 (Significant).`,
+              severity: "CRITICAL",
+              expected: authoritativeFDRs.map(v => String(v)).join(", "),
+              actual: String(val)
+            });
           }
         }
       }
