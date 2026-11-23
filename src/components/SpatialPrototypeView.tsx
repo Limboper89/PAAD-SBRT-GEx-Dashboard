@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Search, Layers, Info, Sliders, HelpCircle, User, Bot, ZoomIn, ZoomOut, RotateCcw, Maximize2, Download, Sparkles } from "lucide-react";
 import ExportButton from "./ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV, PUB_FONT_SANS, PUB_FONT_NUM, drawFittedText } from "@/utils/exportUtils";
 import { useAIContext } from "@/components/ai/AIProvider";
 import SpatialCrossPatientPlot, { PatientSpatialMetric } from "./SpatialCrossPatientPlot";
 
@@ -785,33 +785,31 @@ export default function SpatialPrototypeView() {
 
     const exprActualMax = exprVec ? Math.max(...Array.from(exprVec)) : 0;
 
-    // 2. Title & Subtitle Header
+    // 2. Title & Subtitle Header (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     const layerTitle = layer === "he_only" 
       ? "H&E Tissue Histology Slide" 
       : layer === "spots_only" 
         ? "Spatial Gene Expression Spot Map" 
         : "Spatial Transcriptomics Atlas (10x Visium)";
-    ctx.fillText(layerTitle, 80, 85);
+    drawFittedText(ctx, layerTitle, 80, 92, size - 160, 72, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
     const zoomText = isZoomed ? ` · Region of Interest (${Math.round(zoom * 100)}% Zoom ROI)` : " · Full Slide Overview (1x)";
     const sub = `Sample: ${selectedPatient} · ${metadata.spots.length.toLocaleString()} Spots · Gene: ${activeGene || "None"}${zoomText}`;
-    ctx.fillText(sub, 80, 136);
+    drawFittedText(ctx, sub, 80, 152, size - 160, 40, "bold", PUB_FONT_NUM);
 
     // 3. Layout Dimensions
-    const padLeft = 90;
-    const padTop = 180;
-    const plotW = 1520;
-    const plotH = 2140;
+    const padLeft = 80;
+    const padTop = 195;
+    const plotW = 1480;
+    const plotH = 2125;
 
-    const legendLeft = 1650;
-    const legendTop = 180;
-    const legendW = 670;
-    const legendH = 2140;
+    const legendLeft = 1600;
+    const legendTop = 195;
+    const legendW = 720;
+    const legendH = 2125;
 
     const imgW = metadata.image_size[0] || 578;
     const imgH = metadata.image_size[1] || 600;
@@ -905,24 +903,23 @@ export default function SpatialPrototypeView() {
       });
     }
 
-    // 6. Draw Dedicated Legend Panel on the Right
+    // 6. Draw Dedicated Legend Panel on the Right (publication-scaled)
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.fillRect(legendLeft, legendTop, legendW, legendH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(legendLeft, legendTop, legendW, legendH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Spatial Expression Key", legendLeft + 36, legendTop + 65);
+    drawFittedText(ctx, "Spatial Expression Key", legendLeft + 36, legendTop + 72, legendW - 72, 52, "bold", PUB_FONT_SANS);
 
     if (viewMode === "expression" && activeGene && exprVec && layer !== "he_only") {
       // Color Bar (Large Plasma Gradient)
-      const barX = legendLeft + 40;
-      const barY = legendTop + 130;
-      const barW = legendW - 80;
-      const barH = 52;
+      const barX = legendLeft + 36;
+      const barY = legendTop + 125;
+      const barW = legendW - 72;
+      const barH = 60;
 
       const grad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
       grad.addColorStop(0, "rgb(13, 8, 135)");     // Dark Blue (Min)
@@ -934,21 +931,22 @@ export default function SpatialPrototypeView() {
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(barX, barY, barW, barH);
 
       // Ticks & Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 32px monospace";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.textAlign = "left";
+      ctx.fillText("0.00", barX, barY + barH + 46);
       ctx.textAlign = "center";
+      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 46);
+      ctx.textAlign = "right";
+      ctx.fillText(`${exprCap.toFixed(2)}`, barX + barW, barY + barH + 46);
 
-      ctx.fillText("0.00 (Min)", barX + 50, barY + barH + 42);
-      ctx.fillText((exprCap / 2).toFixed(2), barX + barW / 2, barY + barH + 42);
-      ctx.fillText(`${exprCap.toFixed(2)} (Max)`, barX + barW - 60, barY + barH + 42);
-
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 24px monospace";
-      ctx.fillText("log1p(Normalized UMI / 10K)", barX + barW / 2, barY + barH + 82);
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.textAlign = "center";
+      drawFittedText(ctx, "log1p(Normalized UMI / 10K)", barX + barW / 2, barY + barH + 98, barW, 34, "bold", PUB_FONT_NUM);
 
       // Positive Spot Metrics Box
       let positiveCount = 0;
@@ -962,76 +960,70 @@ export default function SpatialPrototypeView() {
       const meanPos = positiveCount > 0 ? (sumPositive / positiveCount).toFixed(2) : "0.00";
       const pctPos = ((positiveCount / metadata.spots.length) * 100).toFixed(1);
 
-      const statsY = barY + barH + 120;
-      const statsH = 390;
+      const statsY = barY + barH + 140;
+      const statsH = 540;
       ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
       ctx.fillRect(barX, statsY, barW, statsH);
       ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(barX, statsY, barW, statsH);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText("Spot Expression Metrics", barX + 28, statsY + 52);
+      drawFittedText(ctx, "Spot Expression Metrics", barX + 28, statsY + 62, barW - 56, 44, "bold", PUB_FONT_SANS);
 
-      ctx.font = "bold 26px sans-serif";
+      ctx.font = `bold 34px ${PUB_FONT_SANS}`;
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Positive Spots:", barX + 28, statsY + 108);
+      ctx.fillText("Positive Spots:", barX + 28, statsY + 135);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${positiveCount.toLocaleString()} / ${metadata.spots.length.toLocaleString()} (${pctPos}%)`, barX + 28, statsY + 146);
+      drawFittedText(ctx, `${positiveCount.toLocaleString()} / ${metadata.spots.length.toLocaleString()} (${pctPos}%)`, barX + 28, statsY + 186, barW - 56, 40, "bold", PUB_FONT_NUM);
 
-      ctx.font = "bold 26px sans-serif";
+      ctx.font = `bold 34px ${PUB_FONT_SANS}`;
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Mean Log-Expr (Pos):", barX + 28, statsY + 208);
+      ctx.fillText("Mean Log-Expr (Pos):", barX + 28, statsY + 275);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${meanPos} log1p(Float16)`, barX + 28, statsY + 246);
+      drawFittedText(ctx, `${meanPos} log1p`, barX + 28, statsY + 326, barW - 56, 40, "bold", PUB_FONT_NUM);
 
-      ctx.font = "bold 26px sans-serif";
+      ctx.font = `bold 34px ${PUB_FONT_SANS}`;
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.fillText("Maximum Observed:", barX + 28, statsY + 308);
+      ctx.fillText("Maximum Observed:", barX + 28, statsY + 415);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 28px monospace";
-      ctx.fillText(`${exprActualMax.toFixed(2)} log1p(Float16)`, barX + 28, statsY + 346);
+      drawFittedText(ctx, `${exprActualMax.toFixed(2)} log1p`, barX + 28, statsY + 466, barW - 56, 40, "bold", PUB_FONT_NUM);
     }
 
     // Sample Metadata Info Card (Bottom of legend panel)
-    const cardY = legendTop + (viewMode === "expression" && activeGene && layer !== "he_only" ? 690 : 130);
-    const cardH = 420;
-    const barX = legendLeft + 40;
-    const barW = legendW - 80;
+    const cardY = legendTop + (viewMode === "expression" && activeGene && layer !== "he_only" ? 915 : 135);
+    const cardH = 740;
+    const barX = legendLeft + 36;
+    const barW = legendW - 72;
 
     ctx.fillStyle = isLight ? "#f1f5f9" : "#020617";
     ctx.fillRect(barX, cardY, barW, cardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeRect(barX, cardY, barW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Sample Metadata", barX + 28, cardY + 52);
+    drawFittedText(ctx, "Sample Metadata", barX + 28, cardY + 62, barW - 56, 44, "bold", PUB_FONT_SANS);
 
     const metaRows = [
       ["Sample ID:", selectedPatient],
       ["Pathology:", "Pancreatic Ductal Adenocarcinoma"],
-      ["Platform:", "10x Genomics Visium Spatial (FFPE)"],
-      ["Layer Rendered:", layer === "he_only" ? "H&E Histology Only" : layer === "spots_only" ? "Spatial Spots Only" : "Full Histology + Spots Overlay"],
+      ["Platform:", "10x Genomics Visium (FFPE)"],
+      ["Layer Rendered:", layer === "he_only" ? "H&E Histology Only" : layer === "spots_only" ? "Spatial Spots Only" : "Histology + Spots Overlay"],
       ["View Scope:", isZoomed ? `Zoomed ROI (${Math.round(zoom * 100)}%)` : "Full Slide Overview (1x)"],
       ["Total Spots:", `${metadata.spots.length.toLocaleString()} in-tissue spots`]
     ];
 
     metaRows.forEach(([k, v], i) => {
-      const rowY = cardY + 98 + i * 52;
-      ctx.font = "bold 20px sans-serif";
+      const rowY = cardY + 132 + i * 100;
+      ctx.font = `bold 30px ${PUB_FONT_SANS}`;
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
       ctx.fillText(k, barX + 28, rowY);
 
-      ctx.font = "bold 20px monospace";
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.fillText(v, barX + 28, rowY + 24);
+      drawFittedText(ctx, v, barX + 28, rowY + 42, barW - 56, 34, "bold", PUB_FONT_NUM, 24);
     });
 
     return offscreen;

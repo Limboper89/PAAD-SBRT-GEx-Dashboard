@@ -5,7 +5,7 @@ import { PathwayEnrichmentResult } from "@/types/pathway";
 import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
 import { Layers, Sparkles } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV, PUB_FONT_SANS, PUB_FONT_NUM, drawFittedText } from "@/utils/exportUtils";
 
 interface PathwayGeneMatrixProps {
   results: PathwayEnrichmentResult[];
@@ -80,26 +80,26 @@ export default function PathwayGeneMatrix({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title
+    // Title (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(contrast.shortTitle, 80, 82);
+    drawFittedText(ctx, contrast.shortTitle, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 28px monospace";
-    ctx.fillText(
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • ${isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"} • Top ${topPathways.length} Pathways × Top ${topGenes.length} Genes`,
+    drawFittedText(
+      ctx,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · ${isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"} · Top ${topPathways.length} Pathways × ${topGenes.length} Genes`,
       80,
-      130
+      150,
+      size - 160,
+      38,
+      "bold",
+      PUB_FONT_NUM
     );
 
-
-
-    const padLeft = 880;
+    const padLeft = 1000;
     const padRight = 80;
-    const padTop = 340;
+    const padTop = 420;
     const padBottom = 100;
 
     const matrixW = size - padLeft - padRight;
@@ -112,10 +112,10 @@ export default function PathwayGeneMatrix({
     topGenes.forEach((gene, cIdx) => {
       const x = padLeft + cIdx * cellW + cellW / 2;
       ctx.save();
-      ctx.translate(x, padTop - 24);
+      ctx.translate(x, padTop - 26);
       ctx.rotate(-Math.PI / 3);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 32px monospace";
+      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
       ctx.textAlign = "left";
       ctx.fillText(gene, 0, 0);
       ctx.restore();
@@ -128,13 +128,12 @@ export default function PathwayGeneMatrix({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(38, Math.max(22, Math.round(rowH * 0.52)));
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+      const fontSize = Math.min(48, Math.max(34, Math.round(rowH * 0.42)));
       ctx.textAlign = "right";
 
-      const maxLen = 42;
+      const maxLen = 38;
       const displayName = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      ctx.fillText(displayName, padLeft - 26, y + rowH * 0.68);
+      drawFittedText(ctx, displayName, padLeft - 28, y + rowH * 0.62, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
 
       // Cells
       topGenes.forEach((gene, cIdx) => {

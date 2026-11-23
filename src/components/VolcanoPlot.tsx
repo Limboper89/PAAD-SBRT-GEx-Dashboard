@@ -3,7 +3,13 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
+import {
+  exportCanvasToPNG,
+  exportCanvasToSVG,
+  PUB_FONT_SANS,
+  PUB_FONT_NUM,
+  drawFittedText,
+} from "@/utils/exportUtils";
 
 interface GeneData {
   gene_name: string;
@@ -602,20 +608,36 @@ export default function VolcanoPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, virtualSize, virtualSize);
 
-    // 2. Title & Subtitle Header
+    // 2. Title & Subtitle Header (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 54px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(isTcgaGtex ? "Differential Expression: TCGA vs. GTEx (N=349)" : "Differential Expression: GSE225767 Pre vs. Post SBRT", 100, 85);
+    drawFittedText(
+      ctx,
+      isTcgaGtex ? "Differential Expression: TCGA vs. GTEx (n=345)" : "Differential Expression: GSE225767 Pre vs. Post SBRT",
+      100,
+      92,
+      virtualSize - 200,
+      72,
+      "bold",
+      PUB_FONT_SANS
+    );
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
     const markedSummary = markedGeneNames.size > 0
       ? ` · Marked Genes: ${markedGeneNames.size}`
       : "";
-    ctx.fillText(`Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}${markedSummary}`, 100, 136);
+    drawFittedText(
+      ctx,
+      `Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}${markedSummary}`,
+      100,
+      154,
+      virtualSize - 200,
+      44,
+      "bold",
+      PUB_FONT_NUM
+    );
 
-    const pad = { left: 240, right: 100, top: 220, bottom: 240 };
+    const pad = { left: 280, right: 100, top: 230, bottom: 260 };
     const plotW = virtualSize - pad.left - pad.right;
     const plotH = virtualSize - pad.top - pad.bottom;
 
@@ -670,9 +692,9 @@ export default function VolcanoPlot({
     ctx.setLineDash([]);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = "bold 30px monospace";
+    ctx.font = `bold 44px ${PUB_FONT_NUM}`;
     ctx.textAlign = "left";
-    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 20, threshPt.y - 14);
+    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 20, threshPt.y - 18);
 
     // Fold change threshold lines
     if (fcThreshold > 0) {
@@ -758,7 +780,7 @@ export default function VolcanoPlot({
     });
 
     // 2. Place and render non-overlapping gene labels with leader lines
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
     const placedExportBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     const expLeft = pad.left + 14;
     const expRight = pad.left + plotW - 14;
@@ -767,8 +789,8 @@ export default function VolcanoPlot({
 
     exportScreenPts.slice(0, maxExportLabels).forEach((sp) => {
       const textW = ctx.measureText(sp.geneName).width;
-      const boxW = textW + 28;
-      const boxH = 50;
+      const boxW = textW + 32;
+      const boxH = 62;
       const dir = sp.dataX >= 0 ? 1 : -1;
 
       const candidateOffsets = [
@@ -867,35 +889,35 @@ export default function VolcanoPlot({
     ctx.strokeRect(pad.left, pad.top, plotW, plotH);
 
     // Axis Ticks & Numbers
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 36px monospace";
+    ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
+    ctx.font = `bold 50px ${PUB_FONT_NUM}`;
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const pt = getExportScreenCoords(x, 0);
       if (pt.x >= pad.left - 5 && pt.x <= pad.left + plotW + 5) {
         ctx.textAlign = "center";
-        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 46);
+        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 62);
       }
     }
     for (let y = 0; y <= bounds.maxY; y += yStep) {
       const pt = getExportScreenCoords(0, y);
       if (pt.y >= pad.top - 5 && pt.y <= pad.top + plotH + 5) {
         ctx.textAlign = "right";
-        ctx.fillText(y.toString(), pad.left - 24, pt.y + 12);
+        ctx.fillText(y.toString(), pad.left - 26, pt.y + 16);
       }
     }
 
     // Axis Titles
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText(
       isTcgaGtex ? "Wilcoxon log₂(Fold Change)" : "DESeq2 log₂(Fold Change)",
       pad.left + plotW / 2,
-      pad.top + plotH + 115
+      pad.top + plotH + 152
     );
 
     ctx.save();
-    ctx.translate(pad.left - 120, pad.top + plotH / 2);
+    ctx.translate(pad.left - 155, pad.top + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(isTcgaGtex ? "−log₁₀(Wilcoxon FDR)" : "−log₁₀(p-value)", 0, 0);
     ctx.restore();

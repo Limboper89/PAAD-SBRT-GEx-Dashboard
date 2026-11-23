@@ -14,7 +14,14 @@ import {
 } from "recharts";
 import { Info, AlertTriangle } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportToCSV, exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
+import {
+  exportToCSV,
+  exportCanvasToPNG,
+  exportCanvasToSVG,
+  PUB_FONT_SANS,
+  PUB_FONT_NUM,
+  drawFittedText,
+} from "@/utils/exportUtils";
 
 interface GeneExpressionEntry {
   gene: string;
@@ -95,18 +102,65 @@ function calculatePearson(x: number[], y: number[]): number {
   return denX && denY ? num / Math.sqrt(denX * denY) : 0;
 }
 
-// Normal / Student-t approximation for two-tailed correlation p-value
+// Exact Lanczos log-gamma for Student-t two-tailed p-value down to ~1e-300
+function logGamma(z: number): number {
+  const g = 7;
+  const p = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  z -= 1;
+  let x = p[0];
+  for (let i = 1; i < g + 2; i++) x += p[i] / (z + i);
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+// Regularized incomplete beta I_x(a, b) via Lentz continued fraction
+function betainc(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const logBt = logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x);
+  const bt = Math.exp(logBt);
+  const cf = (xVal: number, aVal: number, bVal: number) => {
+    const fpmin = 1e-300;
+    let c = 1, d = 1 - ((aVal + bVal) * xVal) / (aVal + 1);
+    if (Math.abs(d) < fpmin) d = fpmin;
+    d = 1 / d;
+    let h = d;
+    for (let m = 1; m <= 200; m++) {
+      const m2 = 2 * m;
+      let aa = (m * (bVal - m) * xVal) / ((aVal + m2 - 1) * (aVal + m2));
+      d = 1 + aa * d; if (Math.abs(d) < fpmin) d = fpmin;
+      c = 1 + aa / c; if (Math.abs(c) < fpmin) c = fpmin;
+      d = 1 / d; h *= d * c;
+      aa = (-(aVal + m) * (aVal + bVal + m) * xVal) / ((aVal + m2) * (aVal + m2 + 1));
+      d = 1 + aa * d; if (Math.abs(d) < fpmin) d = fpmin;
+      c = 1 + aa / c; if (Math.abs(c) < fpmin) c = fpmin;
+      d = 1 / d;
+      const del = d * c;
+      h *= del;
+      if (Math.abs(del - 1) < 1e-12) break;
+    }
+    return h;
+  };
+  if (x < (a + 1) / (a + b + 2)) {
+    return (bt * cf(x, a, b)) / a;
+  }
+  return 1 - (bt * cf(1 - x, b, a)) / b;
+}
+
+// Exact Student-t two-tailed correlation p-value (no 1e-99 underflow clamp)
 function calculateCorrelationPValue(r: number, n: number): number {
   if (n <= 2) return 1;
-  const absR = Math.min(Math.abs(r), 0.9999999);
+  const absR = Math.min(Math.abs(r), 0.9999999999);
   const df = n - 2;
-  const t = absR * Math.sqrt(df / (1 - absR * absR));
-  const z = Math.sqrt(df * Math.log(1 + (t * t) / df)) * (1 - 1 / (4 * df));
-  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, pConst = 0.3275911;
-  const x = z / Math.SQRT2;
-  const tVal = 1.0 / (1.0 + pConst * x);
-  const y = 1.0 - (((((a5 * tVal + a4) * tVal) + a3) * tVal + a2) * tVal + a1) * tVal * Math.exp(-x * x);
-  return Math.max(1 - y, 1e-99);
+  const t2 = (absR * absR * df) / (1 - absR * absR);
+  const x = df / (df + t2);
+  const p = betainc(x, df / 2, 0.5);
+  return Math.max(Math.min(p, 1), 1e-300);
 }
 
 function formatPValue(p: number): string {
@@ -445,21 +499,28 @@ export default function CorrelationPlot({
     ctx.fillRect(0, 0, virtualSize, virtualSize);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 50px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`Pairwise Gene-Set Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`, 100, 85);
+    drawFittedText(ctx, `Pairwise Gene-Set Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`, 100, 96, virtualSize - 200, 68, "bold", PUB_FONT_SANS);
 
     const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
-    ctx.fillText(`${cohortLabel} · Metric: ${matrixMetric === "pearson" ? "Pearson r" : "Spearman ρ"} · Set Score r = ${r} (p = ${formatPValue(pVal)})`, 100, 136);
+    drawFittedText(
+      ctx,
+      `${cohortLabel} · Metric: ${matrixMetric === "pearson" ? "Pearson r" : "Spearman ρ"} · Set Score r = ${r} (p = ${formatPValue(pVal)})`,
+      100,
+      154,
+      virtualSize - 200,
+      40,
+      "bold",
+      PUB_FONT_NUM
+    );
 
     const nRows = pairwiseMatrix.genesA.length;
     const nCols = pairwiseMatrix.genesB.length;
-    const padLeft = 320;
-    const padTop = 320;
-    const padRight = 140;
-    const padBottom = 220;
+    const padLeft = 360;
+    const padTop = 380;
+    const padRight = 120;
+    const padBottom = 180;
     const gridW = virtualSize - padLeft - padRight;
     const gridH = virtualSize - padTop - padBottom;
     const cellW = gridW / Math.max(1, nCols);
@@ -484,11 +545,11 @@ export default function CorrelationPlot({
 
     // Draw column headers (Gene Set B)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    const labelFontPx = Math.min(34, Math.max(18, Math.floor(Math.min(cellW, cellH) * 0.35)));
-    ctx.font = `bold ${labelFontPx}px monospace`;
+    const labelFontPx = Math.min(48, Math.max(28, Math.floor(Math.min(cellW, cellH) * 0.42)));
+    ctx.font = `bold ${labelFontPx}px ${PUB_FONT_NUM}`;
     pairwiseMatrix.genesB.forEach((gB, colIdx) => {
       const cx = padLeft + colIdx * cellW + cellW / 2;
-      const cy = padTop - 20;
+      const cy = padTop - 24;
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(-Math.PI / 4);
@@ -501,22 +562,22 @@ export default function CorrelationPlot({
     pairwiseMatrix.rows.forEach((row, rowIdx) => {
       const ry = padTop + rowIdx * cellH;
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold ${labelFontPx}px monospace`;
+      ctx.font = `bold ${labelFontPx}px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillText(row.geneA, padLeft - 20, ry + cellH / 2);
+      ctx.fillText(row.geneA, padLeft - 24, ry + cellH / 2);
 
       row.cells.forEach((cell, colIdx) => {
         const cx = padLeft + colIdx * cellW;
         ctx.fillStyle = getCorrColor(cell.r);
         ctx.fillRect(cx, ry, cellW, cellH);
         ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.strokeRect(cx, ry, cellW, cellH);
 
         if (nRows <= 20 && nCols <= 20) {
-          const valFont = Math.min(28, Math.max(14, Math.floor(Math.min(cellW, cellH) * 0.26)));
-          ctx.font = `bold ${valFont}px monospace`;
+          const valFont = Math.min(40, Math.max(22, Math.floor(Math.min(cellW, cellH) * 0.34)));
+          ctx.font = `bold ${valFont}px ${PUB_FONT_NUM}`;
           ctx.fillStyle = Math.abs(cell.r) > 0.5 ? "#ffffff" : "#0f172a";
           ctx.textAlign = "center";
           ctx.fillText(cell.r.toFixed(2), cx + cellW / 2, ry + cellH / 2);
@@ -547,33 +608,30 @@ export default function CorrelationPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, virtualSize, virtualSize);
 
-    // 2. Title & Subtitle Header
+    // 2. Title & Subtitle Header (publication-scaled >= 7 pt at 85 mm width)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 50px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     const headerTitle = isGeneSetMode
       ? `Gene-Set Signature Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`
       : `Gene-Gene Co-Expression: ${gene1Name} vs. ${gene2Name}`;
-    ctx.fillText(headerTitle, 100, 82);
+    drawFittedText(ctx, headerTitle, 100, 92, virtualSize - 200, 70, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 28px monospace";
     const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
-    ctx.fillText(`${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho} · p = ${formatPValue(pVal)}`, 100, 130);
+    drawFittedText(ctx, `${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho} · p = ${formatPValue(pVal)}`, 100, 152, virtualSize - 200, 44, "bold", PUB_FONT_NUM);
 
     if (isGeneSetMode) {
       ctx.fillStyle = isLight ? "#475569" : "#64748b";
-      ctx.font = "bold 22px monospace";
       const setAStr = geneSetAExpressions.map((g) => g.gene).join(", ");
       const setBStr = geneSetBExpressions.map((g) => g.gene).join(", ");
-      ctx.fillText(`Set A (${geneSetAExpressions.length}): ${setAStr.slice(0, 75)}${setAStr.length > 75 ? "..." : ""} | Set B (${geneSetBExpressions.length}): ${setBStr.slice(0, 75)}${setBStr.length > 75 ? "..." : ""}`, 100, 172);
+      drawFittedText(ctx, `Set A (${geneSetAExpressions.length}): ${setAStr.slice(0, 65)}${setAStr.length > 65 ? "..." : ""} | Set B (${geneSetBExpressions.length}): ${setBStr.slice(0, 65)}${setBStr.length > 65 ? "..." : ""}`, 100, 202, virtualSize - 200, 34, "bold", PUB_FONT_NUM);
     }
 
     // 3. Layout Dimensions
-    const padLeft = 240;
+    const padLeft = 280;
     const padRight = 100;
-    const padTop = 240;
-    const padBottom = 240;
+    const padTop = 260;
+    const padBottom = 270;
     const plotW = virtualSize - padLeft - padRight;
     const plotH = virtualSize - padTop - padBottom;
 
@@ -587,7 +645,7 @@ export default function CorrelationPlot({
 
     // 4. Grid Lines
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
 
     const numTicks = 6;
     for (let i = 0; i <= numTicks; i++) {
@@ -598,10 +656,10 @@ export default function CorrelationPlot({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 36px monospace";
+      ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 24, py + 12);
+      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 17);
 
       const xVal = minX + (i / numTicks) * (maxX - minX);
       const px = mapX(xVal);
@@ -611,24 +669,23 @@ export default function CorrelationPlot({
       ctx.stroke();
 
       ctx.textAlign = "center";
-      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 46);
+      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 62);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Axis Titles
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(`${xLabelTitle} [${unitSuffix}]`, padLeft + plotW / 2, padTop + plotH + 115);
+    drawFittedText(ctx, `${xLabelTitle} [${unitSuffix}]`, padLeft + plotW / 2, padTop + plotH + 150, plotW, 58, "bold", PUB_FONT_SANS);
 
     ctx.save();
-    ctx.translate(padLeft - 120, padTop + plotH / 2);
+    ctx.translate(padLeft - 155, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText(`${yLabelTitle} [${unitSuffix}]`, 0, 0);
+    drawFittedText(ctx, `${yLabelTitle} [${unitSuffix}]`, 0, 0, plotH, 58, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Linear Regression Trendline
@@ -638,7 +695,7 @@ export default function CorrelationPlot({
     const trendY2 = m * trendX2 + b;
 
     ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(mapX(trendX1), mapY(trendY1));
     ctx.lineTo(mapX(trendX2), mapY(trendY2));
@@ -651,7 +708,7 @@ export default function CorrelationPlot({
       const py = mapY(p.y);
 
       ctx.beginPath();
-      ctx.arc(px, py, 14, 0, Math.PI * 2);
+      ctx.arc(px, py, 16, 0, Math.PI * 2);
       ctx.fillStyle = ptColor;
       ctx.globalAlpha = 0.85;
       ctx.fill();
@@ -664,31 +721,31 @@ export default function CorrelationPlot({
     // 8. Statistics Summary Card (Top-Left inside plot)
     const cardX = padLeft + 40;
     const cardY = padTop + 40;
-    const cardW = 700;
-    const cardH = 290;
+    const cardW = 920;
+    const cardH = 360;
 
     ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.96)" : "rgba(11, 19, 41, 0.96)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 46px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText(isGeneSetMode ? "Signature Correlation" : "Correlation Statistics", cardX + 32, cardY + 52);
+    ctx.fillText(isGeneSetMode ? "Signature Correlation" : "Correlation Statistics", cardX + 34, cardY + 64);
 
-    ctx.font = "bold 28px monospace";
+    ctx.font = `bold 40px ${PUB_FONT_NUM}`;
     ctx.fillStyle = isLight ? "#0d9488" : "#2dd4bf";
-    ctx.fillText(`Pearson r  = ${r} (p = ${formatPValue(pVal)})`, cardX + 32, cardY + 106);
-    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 32, cardY + 152);
+    ctx.fillText(`Pearson r  = ${r} (p = ${formatPValue(pVal)})`, cardX + 34, cardY + 132);
+    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 34, cardY + 190);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 26px monospace";
-    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 32, cardY + 202);
+    ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 34, cardY + 252);
     if (isGeneSetMode) {
-      ctx.font = "bold 22px monospace";
-      ctx.fillText(`Method: ${signatureMethod === "zscore" ? "Mean Z-Score" : "Mean log2 Expr"} (${geneSetAExpressions.length} vs ${geneSetBExpressions.length} genes)`, cardX + 32, cardY + 248);
+      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      ctx.fillText(`Method: ${signatureMethod === "zscore" ? "Mean Z-Score" : "Mean log2 Expr"} (${geneSetAExpressions.length} vs ${geneSetBExpressions.length} genes)`, cardX + 34, cardY + 310);
     }
 
     return offscreen;

@@ -5,7 +5,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 
 import { PathwayEnrichmentResult } from "@/types/pathway";
 import { getContrastDisplayInfo, calculateNiceTicks, formatTickValue } from "@/utils/pathwayEngine";
 import ExportButton from "@/components/ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV, PUB_FONT_SANS, PUB_FONT_NUM, drawFittedText } from "@/utils/exportUtils";
 
 interface PathwayBarPlotProps {
   results: PathwayEnrichmentResult[];
@@ -118,25 +118,28 @@ export default function PathwayBarPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Main Title: Contrast & Analysis Method (e.g. Tumor vs Normal (GSEA))
+    // Main Title: Contrast & Analysis Method (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 82);
+    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
 
     // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • Top ${displayResults.length} Pathways`,
+    drawFittedText(
+      ctx,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · Top ${displayResults.length} Pathways`,
       80,
-      132
+      152,
+      size - 160,
+      40,
+      "bold",
+      PUB_FONT_NUM
     );
 
-    const padLeft = 880;
-    const padRight = 240;
-    const padTop = 200;
-    const padBottom = 340;
+    const padLeft = 980;
+    const padRight = 320;
+    const padTop = 210;
+    const padBottom = 365;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
@@ -164,13 +167,12 @@ export default function PathwayBarPlot({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(38, Math.max(22, Math.round(rowH * 0.52)));
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+      const fontSize = Math.min(46, Math.max(32, Math.round(rowH * 0.54)));
       ctx.textAlign = "right";
 
-      const maxLen = 42;
+      const maxLen = 38;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      ctx.fillText(displayName, padLeft - 26, y + barH * 0.72);
+      drawFittedText(ctx, displayName, padLeft - 28, y + barH * 0.72, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
 
       const isUp = d.direction === "Upregulated" || d.metric >= 0;
 
@@ -179,20 +181,20 @@ export default function PathwayBarPlot({
       ctx.fillRect(barX, y, barW, barH);
 
       ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(barX, y, barW, barH);
 
       // Value label at end of bar
       ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.font = "bold 28px monospace";
+      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
       ctx.textAlign = d.metric >= 0 ? "left" : "right";
-      const labelX = d.metric >= 0 ? getX(d.metric) + 16 : getX(d.metric) - 16;
-      ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.7);
+      const labelX = d.metric >= 0 ? getX(d.metric) + 18 : getX(d.metric) - 18;
+      ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.72);
     });
 
     // Zero line
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(zeroX, padTop);
     ctx.lineTo(zeroX, axisY);
@@ -205,7 +207,7 @@ export default function PathwayBarPlot({
     ctx.stroke();
 
     // Clean Integer / Half Ticks
-    ctx.font = "bold 32px monospace";
+    ctx.font = `bold 48px ${PUB_FONT_NUM}`;
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
 
@@ -213,80 +215,81 @@ export default function PathwayBarPlot({
       const xPos = getX(val);
       ctx.beginPath();
       ctx.moveTo(xPos, axisY);
-      ctx.lineTo(xPos, axisY + 14);
+      ctx.lineTo(xPos, axisY + 16);
       ctx.stroke();
-      ctx.fillText(formatTickValue(val), xPos, axisY + 52);
+      ctx.fillText(formatTickValue(val), xPos, axisY + 62);
     });
 
-    // X Axis Title (sole occupant of this line — no collisions)
+    // X Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText(
       isGsea
-        ? "Normalized Enrichment Score (NES)"
+        ? "Rank-Sum Enrichment Z-Score (Z_GSEA)"
         : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      axisY + 105
+      axisY + 132
     );
 
-    // Dedicated Legend Container Box
-    const legBoxY = axisY + 155;
-    const legBoxH = 80;
-    const midY = legBoxY + 44;
+    // Dedicated Full-Width Legend Container Box
+    const legBoxX = 80;
+    const legBoxW = size - 160;
+    const legBoxY = axisY + 185;
+    const legBoxH = 98;
+    const midY = legBoxY + 50;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
-    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(padLeft, legBoxY, plotW, legBoxH, 12);
+    ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
     ctx.fill();
     ctx.stroke();
 
     if (isGsea) {
-      // 1. Negative NES (Blue swatch on left, pointing left)
+      // 1. Negative Z_GSEA (Blue swatch on left)
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-      ctx.fillRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.fillRect(legBoxX + 42, midY - 16, 32, 32);
       ctx.strokeStyle = "#1e40af";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(legBoxX + 42, midY - 16, 32, 32);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(contrast.negLegend, padLeft + 80, midY + 7);
+      drawFittedText(ctx, contrast.negLegend, legBoxX + 88, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
 
-      // 2. Positive NES (Red swatch in middle, pointing right)
+      // 2. Positive Z_GSEA (Red swatch in middle)
+      const midColX = legBoxX + 780;
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
-      ctx.fillRect(padLeft + 540, midY - 12, 24, 24);
+      ctx.fillRect(midColX, midY - 16, 32, 32);
       ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(padLeft + 540, midY - 12, 24, 24);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(midColX, midY - 16, 32, 32);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.fillText(contrast.posLegend, padLeft + 575, midY + 7);
+      drawFittedText(ctx, contrast.posLegend, midColX + 46, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
 
       // 3. Metric Note
-      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = "22px monospace";
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
       ctx.textAlign = "right";
-      ctx.fillText("Bar Length = |NES| • q = BH FDR", padLeft + plotW - 40, midY + 6);
+      drawFittedText(ctx, "Bar Length = |Z_GSEA| · q = BH FDR", legBoxX + legBoxW - 42, midY + 11, 680, 34, "bold", PUB_FONT_NUM, 26);
     } else {
       ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
-      ctx.fillRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.fillRect(legBoxX + 42, midY - 16, 32, 32);
       ctx.strokeStyle = "#0d9488";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(padLeft + 45, midY - 12, 24, 24);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(legBoxX + 42, midY - 16, 32, 32);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = `bold 36px ${PUB_FONT_SANS}`;
       ctx.textAlign = "left";
-      ctx.fillText("Fold Enrichment (BH FDR < 0.05)", padLeft + 80, midY + 7);
+      ctx.fillText("Fold Enrichment (BH FDR < 0.05)", legBoxX + 88, midY + 12);
 
-      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = "22px monospace";
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
+      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText("q = BH Adjusted P-value", padLeft + plotW - 40, midY + 6);
+      ctx.fillText("q = BH Adjusted P-value", legBoxX + legBoxW - 42, midY + 11);
     }
 
     return offscreen;

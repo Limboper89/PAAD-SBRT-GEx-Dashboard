@@ -3,7 +3,14 @@
 import React, { useState } from "react";
 import { BarChart3, Download, Layers, TrendingUp, Sparkles, User, Info, FileSpreadsheet } from "lucide-react";
 import ExportButton from "./ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import {
+  exportCanvasToPNG,
+  exportCanvasToSVG,
+  exportToCSV,
+  PUB_FONT_SANS,
+  PUB_FONT_NUM,
+  drawFittedText,
+} from "@/utils/exportUtils";
 
 export interface PatientSpatialMetric {
   patientId: string;
@@ -87,33 +94,36 @@ export default function SpatialCrossPatientPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Title & Header Block
+    // 2. Title & Header Block (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`Cross-Patient Spatial Expression: ${geneSymbol} (${ensemblId})`, 80, 80);
+    drawFittedText(ctx, `Cross-Patient Spatial Expression: ${geneSymbol} (${ensemblId})`, 80, 86, w - 160, 62, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText(
-      `10x Genomics Visium Spatial (GSE274103) · 5 Treatment-Naïve PDAC Patients · Analyzed In-Tissue Spots: ${metrics.reduce((a, b) => a + b.totalSpots, 0).toLocaleString()}`,
+    drawFittedText(
+      ctx,
+      `10x Genomics Visium Spatial (GSE274103) · 5 Treatment-Naïve PDAC Patients · Analyzed Spots: ${metrics.reduce((a, b) => a + b.totalSpots, 0).toLocaleString()}`,
       80,
-      126
+      142,
+      w - 160,
+      36,
+      "bold",
+      PUB_FONT_NUM
     );
 
     // Divider Line
     ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(80, 155);
-    ctx.lineTo(w - 80, 155);
+    ctx.moveTo(80, 174);
+    ctx.lineTo(w - 80, 174);
     ctx.stroke();
 
     // 3. Plot Dimensions & Generous Spacing
-    const padLeft = 160;
-    const padRight = 160;
-    const padTop = 230;
-    const padBottom = 260;
+    const padLeft = 215;
+    const padRight = 215;
+    const padTop = 240;
+    const padBottom = 300;
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
     const plotBottom = padTop + plotH;
@@ -129,40 +139,38 @@ export default function SpatialCrossPatientPlot({
       ctx.moveTo(padLeft, y);
       ctx.lineTo(padLeft + plotW, y);
       ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-      ctx.lineWidth = i === 5 ? 3 : 1.5;
+      ctx.lineWidth = i === 5 ? 3.5 : 1.5;
       ctx.stroke();
 
       // Left Y-Axis labels (% Positive Spots)
       const val = 100 - i * 20;
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 24px monospace";
+      ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(`${val}%`, padLeft - 20, y + 8);
+      ctx.fillText(`${val}%`, padLeft - 24, y + 13);
 
       // Right Y-Axis labels (Mean Intensity)
       const exprVal = ((rightAxisMax * (5 - i)) / 5).toFixed(2);
       ctx.textAlign = "left";
       ctx.fillStyle = "#f43f5e";
-      ctx.fillText(exprVal, padLeft + plotW + 20, y + 8);
+      ctx.fillText(exprVal, padLeft + plotW + 24, y + 13);
     }
 
     // 5. Y-Axis Titles
     ctx.save();
-    ctx.translate(55, padTop + plotH / 2);
+    ctx.translate(64, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Spatial Tissue Coverage (% Positive Spots)", 0, 0);
+    drawFittedText(ctx, "Spatial Tissue Coverage (% Positive Spots)", 0, 0, plotH + 60, 42, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     ctx.save();
-    ctx.translate(w - 45, padTop + plotH / 2);
+    ctx.translate(w - 58, padTop + plotH / 2);
     ctx.rotate(Math.PI / 2);
     ctx.fillStyle = "#f43f5e";
-    ctx.font = "bold 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Mean Positive Spot Intensity [log1p(Float16)]", 0, 0);
+    drawFittedText(ctx, "Mean Positive Spot Intensity (log1p)", 0, 0, plotH + 60, 42, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Bars & Points
@@ -184,32 +192,32 @@ export default function SpatialCrossPatientPlot({
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = isLight ? "#0f766e" : "#2dd4bf";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(barX, barY, barW, barH);
 
       // Label above bar with pill background
       const pctText = `${m.pctPositive.toFixed(1)}%`;
-      ctx.font = "bold 24px monospace";
+      ctx.font = `bold 36px ${PUB_FONT_NUM}`;
       const textMetrics = ctx.measureText(pctText);
-      const pillW = textMetrics.width + 16;
-      const pillH = 32;
-      const pillY = barY - pillH - 6;
+      const pillW = textMetrics.width + 24;
+      const pillH = 48;
+      const pillY = barY - pillH - 8;
 
       ctx.fillStyle = isLight ? "rgba(241, 245, 249, 0.95)" : "rgba(15, 23, 42, 0.95)";
       ctx.fillRect(cx - pillW / 2, pillY, pillW, pillH);
       ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.strokeRect(cx - pillW / 2, pillY, pillW, pillH);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "center";
-      ctx.fillText(pctText, cx, pillY + 23);
+      ctx.fillText(pctText, cx, pillY + 35);
 
       // Mean Intensity Point (Right Axis with Headroom)
       const pointY = plotBottom - (m.meanPositiveExpr / rightAxisMax) * plotH;
 
       ctx.beginPath();
-      ctx.arc(cx, pointY, 15, 0, 2 * Math.PI);
+      ctx.arc(cx, pointY, 17, 0, 2 * Math.PI);
       ctx.fillStyle = "#f43f5e"; // Rose 500
       ctx.fill();
       ctx.strokeStyle = "#ffffff";
@@ -218,71 +226,71 @@ export default function SpatialCrossPatientPlot({
 
       // Intensity Label Badge above Point
       const exprText = m.meanPositiveExpr.toFixed(2);
-      ctx.font = "bold 22px monospace";
-      const exprTextW = ctx.measureText(exprText).width + 16;
-      const exprPillH = 30;
-      const exprPillY = pointY - exprPillH - 12;
+      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      const exprTextW = ctx.measureText(exprText).width + 24;
+      const exprPillH = 44;
+      const exprPillY = pointY - exprPillH - 16;
 
       ctx.fillStyle = "#f43f5e";
       ctx.fillRect(cx - exprTextW / 2, exprPillY, exprTextW, exprPillH);
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(cx - exprTextW / 2, exprPillY, exprTextW, exprPillH);
 
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "center";
-      ctx.fillText(exprText, cx, exprPillY + 22);
+      ctx.fillText(exprText, cx, exprPillY + 33);
 
       // 7. X-Axis Labels (Hierarchy & Breathing Room)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 30px sans-serif";
+      ctx.font = `bold 44px ${PUB_FONT_SANS}`;
       ctx.textAlign = "center";
-      ctx.fillText(m.patientId, cx, plotBottom + 45);
+      ctx.fillText(m.patientId, cx, plotBottom + 56);
 
-      ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.font = "bold 22px monospace";
-      ctx.fillText(m.gsm, cx, plotBottom + 82);
+      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+      ctx.font = `bold 32px ${PUB_FONT_NUM}`;
+      ctx.fillText(m.gsm, cx, plotBottom + 98);
 
       ctx.fillStyle = isLight ? "#0f766e" : "#2dd4bf";
-      ctx.font = "bold 20px monospace";
-      ctx.fillText(`${m.positiveSpots.toLocaleString()} / ${m.totalSpots.toLocaleString()} spots`, cx, plotBottom + 118);
+      ctx.font = `bold 30px ${PUB_FONT_NUM}`;
+      ctx.fillText(`${m.positiveSpots.toLocaleString()} / ${m.totalSpots.toLocaleString()} spots`, cx, plotBottom + 136);
     });
 
     // 8. Dedicated Clean Legend Box at the Bottom
-    const legBoxW = 980;
-    const legBoxH = 64;
+    const legBoxW = 1600;
+    const legBoxH = 88;
     const legBoxX = (w - legBoxW) / 2;
-    const legBoxY = h - 90;
+    const legBoxY = h - 115;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.fillRect(legBoxX, legBoxY, legBoxW, legBoxH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.strokeRect(legBoxX, legBoxY, legBoxW, legBoxH);
 
     // Item 1: Coverage
     ctx.fillStyle = "#0d9488";
-    ctx.fillRect(legBoxX + 40, legBoxY + 20, 28, 24);
+    ctx.fillRect(legBoxX + 42, legBoxY + 28, 32, 30);
     ctx.strokeStyle = isLight ? "#0f766e" : "#2dd4bf";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(legBoxX + 40, legBoxY + 20, 28, 24);
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(legBoxX + 42, legBoxY + 28, 32, 30);
 
     ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
-    ctx.font = "bold 22px sans-serif";
+    ctx.font = `bold 34px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Tissue Spatial Coverage (% In-Tissue Spots)", legBoxX + 80, legBoxY + 39);
+    ctx.fillText("Tissue Spatial Coverage (% In-Tissue Spots)", legBoxX + 88, legBoxY + 55);
 
     // Item 2: Mean Intensity
     ctx.beginPath();
-    ctx.arc(legBoxX + 570, legBoxY + 32, 11, 0, 2 * Math.PI);
+    ctx.arc(legBoxX + 885, legBoxY + 44, 14, 0, 2 * Math.PI);
     ctx.fillStyle = "#f43f5e";
     ctx.fill();
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.stroke();
 
     ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
-    ctx.fillText("Mean Positive Spot Intensity [log1p]", legBoxX + 595, legBoxY + 39);
+    ctx.fillText("Mean Positive Spot Intensity [log1p]", legBoxX + 914, legBoxY + 55);
 
     return offscreen;
   };

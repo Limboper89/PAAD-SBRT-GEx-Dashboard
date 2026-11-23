@@ -19,7 +19,14 @@ import {
 import SearchableGeneSelect from "./SearchableGeneSelect";
 import { X, Info, AlertTriangle, HelpCircle } from "lucide-react";
 import ExportButton from "./ExportButton";
-import { exportToCSV, exportCanvasToPNG, exportCanvasToSVG } from "@/utils/exportUtils";
+import {
+  exportToCSV,
+  exportCanvasToPNG,
+  exportCanvasToSVG,
+  PUB_FONT_SANS,
+  PUB_FONT_NUM,
+  drawFittedText,
+} from "@/utils/exportUtils";
 import { computeWelchTTest } from "@/utils/survivalEngine";
 
 interface DegGene {
@@ -349,25 +356,28 @@ export default function ExpressionComparison({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header
+    // 2. Header (publication-scaled, unpaired label)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 60px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT vs. Post-SBRT Gene Expression Comparison (GSE225767)", 120, 100);
+    drawFittedText(ctx, "Pre-SBRT vs. Post-SBRT Gene Expression Comparison (GSE225767)", 100, 96, size - 200, 72, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 32px monospace";
-    ctx.fillText(
-      `Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Pre-SBRT (n=26) vs. Post-SBRT (n=29)`,
-      120,
-      155
+    drawFittedText(
+      ctx,
+      `Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Unpaired Pre-SBRT (n=26) vs. Post-SBRT (n=29)`,
+      100,
+      158,
+      size - 200,
+      42,
+      "bold",
+      PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
-    const padLeft = 260;
+    const padLeft = 280;
     const padRight = 100;
-    const padTop = 320; // Headroom for significance brackets
-    const padBottom = 340; // Room for X-labels, log2FC, and clean bottom legend
+    const padTop = 320;
+    const padBottom = 360;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -408,21 +418,21 @@ export default function ExpressionComparison({
       ctx.lineWidth = 2;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = "bold 36px monospace";
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 12);
+      ctx.fillText(yVal.toFixed(1), padLeft - 28, py + 16);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 140, padTop + plotH / 2);
+    ctx.translate(padLeft - 155, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText("Normalized log2-Expression (Mean ± SE)", 0, 0);
     ctx.restore();
@@ -474,15 +484,15 @@ export default function ExpressionComparison({
       // Pre Value above bar with clear backing
       ctx.save();
       const preStr = d["Pre-SBRT"].toFixed(2);
-      ctx.font = "bold 28px monospace";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
-      const preLabelY = preErrTop - 16;
+      const preLabelY = preErrTop - 20;
       const ptw = ctx.measureText(preStr).width;
       ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(2, 6, 23, 0.95)";
-      ctx.fillRect(preX + barW / 2 - ptw / 2 - 8, preLabelY - 26, ptw + 16, 32);
-      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.15)" : "rgba(255, 255, 255, 0.2)";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(preX + barW / 2 - ptw / 2 - 8, preLabelY - 26, ptw + 16, 32);
+      ctx.fillRect(preX + barW / 2 - ptw / 2 - 10, preLabelY - 34, ptw + 20, 44);
+      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.18)" : "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(preX + barW / 2 - ptw / 2 - 10, preLabelY - 34, ptw + 20, 44);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.fillText(preStr, preX + barW / 2, preLabelY);
       ctx.restore();
@@ -516,15 +526,15 @@ export default function ExpressionComparison({
       // Post Value above bar with clear backing
       ctx.save();
       const postStr = d["Post-SBRT"].toFixed(2);
-      ctx.font = "bold 28px monospace";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
-      const postLabelY = postErrTop - 16;
+      const postLabelY = postErrTop - 20;
       const postTw = ctx.measureText(postStr).width;
       ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(2, 6, 23, 0.95)";
-      ctx.fillRect(postX + barW / 2 - postTw / 2 - 8, postLabelY - 26, postTw + 16, 32);
-      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.15)" : "rgba(255, 255, 255, 0.2)";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(postX + barW / 2 - postTw / 2 - 8, postLabelY - 26, postTw + 16, 32);
+      ctx.fillRect(postX + barW / 2 - postTw / 2 - 10, postLabelY - 34, postTw + 20, 44);
+      ctx.strokeStyle = isLight ? "rgba(15, 23, 42, 0.18)" : "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(postX + barW / 2 - postTw / 2 - 10, postLabelY - 34, postTw + 20, 44);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.fillText(postStr, postX + barW / 2, postLabelY);
       ctx.restore();
@@ -532,13 +542,13 @@ export default function ExpressionComparison({
       // Significance Bracket Over Gene Pair
       const bx0 = preX + barW / 2;
       const bx1 = postX + barW / 2;
-      const bracketTopY = Math.min(preErrTop, postErrTop) - 64;
-      const tickH = 14;
+      const bracketTopY = Math.min(preErrTop, postErrTop) - 82;
+      const tickH = 16;
       const isSig = d.p_value < 0.05;
       const pStr = formatPStr(d.p_value);
 
       ctx.strokeStyle = isSig ? "#059669" : (isLight ? "#0f172a" : "#cbd5e1");
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(bx0, bracketTopY + tickH);
       ctx.lineTo(bx0, bracketTopY);
@@ -547,27 +557,27 @@ export default function ExpressionComparison({
       ctx.stroke();
 
       ctx.fillStyle = isSig ? "#059669" : (isLight ? "#0f172a" : "#f8fafc");
-      ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = `bold 40px ${PUB_FONT_SANS}`;
       ctx.textAlign = "center";
-      ctx.fillText(pStr, (bx0 + bx1) / 2, bracketTopY - 14);
+      ctx.fillText(pStr, (bx0 + bx1) / 2, bracketTopY - 16);
 
       // Gene Symbol Label on X-Axis
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = `bold 54px ${PUB_FONT_SANS}`;
       ctx.textAlign = "center";
-      ctx.fillText(d.gene_name, groupCenter, padTop + plotH + 54);
+      ctx.fillText(d.gene_name, groupCenter, padTop + plotH + 62);
 
       // Delta / log2FC annotation
       const fcColor = d.log2FC >= 0 ? (isLight ? "#15803d" : "#4ade80") : (isLight ? "#b91c1c" : "#f87171");
       ctx.fillStyle = fcColor;
-      ctx.font = "bold 32px monospace";
-      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 102);
+      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+      ctx.fillText(`Δ: ${d.log2FC >= 0 ? "+" : ""}${d.log2FC.toFixed(2)}`, groupCenter, padTop + plotH + 116);
     });
 
     // 7. Clean Bottom Legend (Zero Plot Occlusion)
-    const legTop = padTop + plotH + 160;
+    const legTop = padTop + plotH + 162;
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(padLeft, legTop);
     ctx.lineTo(padLeft + plotW, legTop);
@@ -575,35 +585,43 @@ export default function ExpressionComparison({
 
     // Pre-SBRT Swatch
     const legX = padLeft + 20;
-    const legY = legTop + 50;
+    const legY = legTop + 58;
 
     ctx.fillStyle = "#10b981";
-    ctx.fillRect(legX, legY - 26, 32, 32);
+    ctx.fillRect(legX, legY - 30, 36, 36);
     ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(legX, legY - 26, 32, 32);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(legX, legY - 30, 36, 36);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 42px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Pre-SBRT Baseline (n = 26)", legX + 44, legY);
+    ctx.fillText("Pre-SBRT Baseline (n = 26)", legX + 52, legY);
 
     // Post-SBRT Swatch
-    const legX2 = legX + 540;
+    const legX2 = legX + 680;
     ctx.fillStyle = "#f97316";
-    ctx.fillRect(legX2, legY - 26, 32, 32);
+    ctx.fillRect(legX2, legY - 30, 36, 36);
     ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(legX2, legY - 26, 32, 32);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(legX2, legY - 30, 36, 36);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.fillText("Post-SBRT Treated (n = 29)", legX2 + 44, legY);
+    ctx.fillText("Post-SBRT Treated (n = 29)", legX2 + 52, legY);
 
     // Bottom citation watermark
-    ctx.fillStyle = isLight ? "#94a3b8" : "#64748b";
-    ctx.font = "bold 24px monospace";
+    ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
     ctx.textAlign = "left";
-    ctx.fillText("GSE225767 Bulk RNA-seq · Pancreatic Ductal Adenocarcinoma · Neoadjuvant SBRT Cohort (N = 55)", padLeft + 20, legTop + 120);
+    drawFittedText(
+      ctx,
+      "GSE225767 Bulk RNA-seq · Pancreatic Ductal Adenocarcinoma · Unpaired Neoadjuvant SBRT Cohort (N = 55)",
+      padLeft + 20,
+      legTop + 128,
+      plotW - 40,
+      32,
+      "bold",
+      PUB_FONT_NUM
+    );
 
     return offscreen;
   };
@@ -818,21 +836,28 @@ export default function ExpressionComparison({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header
+    // 2. Header (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`Tumor vs. Normal Expression: ${selectedGeneSymbol || "Target Gene"}`, 100, 85);
+    drawFittedText(ctx, `Tumor vs. Normal Expression: ${selectedGeneSymbol || "Target Gene"}`, 100, 96, size - 1020, 72, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 30px monospace";
-    ctx.fillText(`TCGA-PAAD Tumors (n=178) vs GTEx Normal Pancreas (n=167) · Reference Atlas (N = 349)`, 100, 136);
+    drawFittedText(
+      ctx,
+      `TCGA-PAAD Tumors (n=178) vs GTEx Normal (n=167) · Primary Atlas (n=345)`,
+      100,
+      154,
+      size - 1020,
+      40,
+      "bold",
+      PUB_FONT_NUM
+    );
 
     // 3. Layout Dimensions (Clean Top Headroom)
-    const padLeft = 240;
+    const padLeft = 280;
     const padRight = 100;
-    const padTop = 300; // Gives 300px headroom so boxplot never touches top border
-    const padBottom = 240;
+    const padTop = 310;
+    const padBottom = 250;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -848,7 +873,7 @@ export default function ExpressionComparison({
 
     // 4. Grid Lines & Ticks
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
 
     const numTicks = 6;
     const tickStep = (maxY - minY) / numTicks;
@@ -861,22 +886,22 @@ export default function ExpressionComparison({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 38px monospace";
+      ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 12);
+      ctx.fillText(yVal.toFixed(1), padLeft - 28, py + 16);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 120, padTop + plotH / 2);
+    ctx.translate(padLeft - 155, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText("Expression log2(TPM + 0.001)", 0, 0);
     ctx.restore();
@@ -962,22 +987,22 @@ export default function ExpressionComparison({
 
       // Median label badge
       const medText = `Med: ${b.median.toFixed(2)}`;
-      ctx.font = "bold 30px monospace";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
       const textW = ctx.measureText(medText).width;
-      ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.94)" : "rgba(2, 6, 23, 0.94)";
-      ctx.fillRect(cx + boxW / 2 + 12, medY - 22, textW + 18, 42);
+      ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.96)" : "rgba(2, 6, 23, 0.96)";
+      ctx.fillRect(cx + boxW / 2 + 12, medY - 26, textW + 22, 52);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx + boxW / 2 + 12, medY - 22, textW + 18, 42);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(cx + boxW / 2 + 12, medY - 26, textW + 22, 52);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
-      ctx.fillText(medText, cx + boxW / 2 + 20, medY + 8);
+      ctx.fillText(medText, cx + boxW / 2 + 22, medY + 12);
 
       // Diamond Mean Marker (if showMean is active)
       if (showMean && b.mean !== undefined) {
         const meanY = mapY(b.mean);
-        const dR = 16;
+        const dR = 18;
         ctx.beginPath();
         ctx.moveTo(cx, meanY - dR);
         ctx.lineTo(cx + dR, meanY);
@@ -994,51 +1019,51 @@ export default function ExpressionComparison({
 
     // Column X-Axis Labels (Bold Large)
     ctx.fillStyle = "#2563eb";
-    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 60);
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 34px monospace";
-    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 106);
+    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 72);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 126);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = "bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 60);
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 34px monospace";
-    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 106);
+    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
+    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 72);
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+    ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 126);
 
     if (showSolid) {
       ctx.fillStyle = "#d97706";
-      ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Solid Normal", col3X, padTop + plotH + 60);
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 30px monospace";
-      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 106);
+      ctx.font = `bold 46px ${PUB_FONT_SANS}`;
+      ctx.fillText("Solid Normal", col3X, padTop + plotH + 72);
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 126);
     }
 
     // Top Summary Statistics Card (Placed Outside Plot Area at Header)
-    const cardX = padLeft + plotW - 740;
-    const cardY = 25;
-    const cardW = 740;
-    const cardH = 150;
+    const cardW = 860;
+    const cardH = 195;
+    const cardX = padLeft + plotW - cardW;
+    const cardY = 26;
 
     ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
-    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = isLight ? "#94a3b8" : "#334155";
+    ctx.lineWidth = 3;
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 30px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 40px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 44);
+    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 54);
 
-    ctx.font = "bold 26px monospace";
+    ctx.font = `bold 36px ${PUB_FONT_NUM}`;
     const delta = (stats.tumorMean - stats.gtexMean).toFixed(2);
     ctx.fillStyle = Number(delta) >= 0 ? (isLight ? "#be123c" : "#f43f5e") : "#2563eb";
-    ctx.fillText(`Tumor: ${stats.tumorMean.toFixed(2)} | Normal: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 88);
-    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 126);
+    ctx.fillText(`Tumor: ${stats.tumorMean.toFixed(2)} | Normal: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 112);
+    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 164);
 
     return offscreen;
   };

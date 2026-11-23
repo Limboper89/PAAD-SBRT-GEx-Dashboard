@@ -70,6 +70,49 @@ export function exportToCSV({
 export type ExportTheme = "light" | "dark";
 
 /**
+ * Publication typography constants calibrated for GPB (Oxford Academic) and
+ * Advanced Science (Wiley-VCH): clean sans-serif (Arial/Helvetica) ensures
+ * >= 6.5-8.5 pt legibility when a 2400 px panel is scaled to 85-90 mm width.
+ */
+export const PUB_FONT_SANS = "Arial, Helvetica, -apple-system, BlinkMacSystemFont, sans-serif";
+export const PUB_FONT_NUM = "Arial, Helvetica, -apple-system, BlinkMacSystemFont, sans-serif";
+
+/**
+ * Format p-values for publication figures without ever printing "p=0.00".
+ */
+export function formatPublicationPValue(p: number): string {
+  if (!Number.isFinite(p)) return "N/A";
+  if (p < 0.01) return p.toExponential(2);
+  if (p < 0.05) return p.toFixed(3);
+  return p.toFixed(2);
+}
+
+/**
+ * Draw text fitted inside maxWidth by shrinking font size only if needed,
+ * preventing right-edge clipping on long titles and subtitles.
+ */
+export function drawFittedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  fontPx: number,
+  weight: "bold" | "normal" = "bold",
+  family: string = PUB_FONT_SANS,
+  minPx: number = 28
+) {
+  let currentPx = fontPx;
+  ctx.font = `${weight} ${currentPx}px ${family}`;
+  const measured = ctx.measureText(text).width;
+  if (measured > maxWidth && maxWidth > 0) {
+    currentPx = Math.max(minPx, Math.floor((fontPx * maxWidth) / measured));
+    ctx.font = `${weight} ${currentPx}px ${family}`;
+  }
+  ctx.fillText(text, x, y, maxWidth);
+}
+
+/**
  * Export HTML Canvas element to High-Res 300 DPI PNG without banner clutter.
  * Clean, full-canvas publication figure on pure white (Light) or dark (Dark) background.
  */

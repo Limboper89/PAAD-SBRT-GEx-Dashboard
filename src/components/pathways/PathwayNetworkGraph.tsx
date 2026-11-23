@@ -5,7 +5,7 @@ import { PathwayEnrichmentResult } from "@/types/pathway";
 import { getContrastDisplayInfo } from "@/utils/pathwayEngine";
 import { Share2, Info } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV, PUB_FONT_SANS, PUB_FONT_NUM, drawFittedText } from "@/utils/exportUtils";
 
 interface PathwayNetworkGraphProps {
   results: PathwayEnrichmentResult[];
@@ -103,26 +103,26 @@ export default function PathwayNetworkGraph({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title
+    // Title (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(contrast.shortTitle, 80, 82);
+    drawFittedText(ctx, contrast.shortTitle, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 28px monospace";
-    ctx.fillText(
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • ${isGsea ? "Crosstalk Network" : "Overlap Network"} • Top ${topPathways.length} Pathways`,
+    drawFittedText(
+      ctx,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · ${isGsea ? "Crosstalk Network" : "Overlap Network"} · Top ${topPathways.length} Pathways`,
       80,
-      130
+      150,
+      size - 160,
+      38,
+      "bold",
+      PUB_FONT_NUM
     );
 
-
-
     const cX = size / 2;
-    const cY = size / 2 + 30;
-    const r = size * 0.34;
+    const cY = size / 2 + 20;
+    const r = size * 0.27;
 
     const posList = topPathways.map((p, idx) => {
       const angle = (idx / numNodes) * 2 * Math.PI - Math.PI / 2;
@@ -142,7 +142,7 @@ export default function PathwayNetworkGraph({
       const p2 = highResNodeMap.get(edge.targetId);
       if (!p1 || !p2) return;
 
-      const w = Math.min(18, Math.max(3, edge.sharedGenes.length * 2));
+      const w = Math.min(20, Math.max(4, edge.sharedGenes.length * 2.2));
       ctx.strokeStyle = isLight ? "rgba(99, 102, 241, 0.45)" : "rgba(129, 140, 248, 0.45)";
       ctx.lineWidth = w;
       ctx.beginPath();
@@ -158,76 +158,93 @@ export default function PathwayNetworkGraph({
 
       // Outer circle
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 32, 0, 2 * Math.PI);
+      ctx.arc(pos.x, pos.y, 36, 0, 2 * Math.PI);
       ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.9)" : "rgba(37, 99, 235, 0.9)";
       ctx.fill();
 
       ctx.strokeStyle = isUp ? "#991b1b" : "#1e40af";
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 4.5;
       ctx.stroke();
 
-      // Label text
+      // Label text (bounded to stay inside canvas edges)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
       const cosA = Math.cos(pos.angle);
       const sinA = Math.sin(pos.angle);
 
       let labelX = pos.x;
       let labelY = pos.y;
+      let availW = 540;
 
       if (Math.abs(cosA) > 0.3) {
         ctx.textAlign = cosA > 0 ? "left" : "right";
-        labelX += cosA > 0 ? 44 : -44;
-        labelY += 8;
+        labelX += cosA > 0 ? 50 : -50;
+        labelY += 12;
+        availW = cosA > 0 ? Math.max(240, size - labelX - 40) : Math.max(240, labelX - 40);
       } else {
         ctx.textAlign = "center";
-        labelY += sinA > 0 ? 56 : -44;
+        labelY += sinA > 0 ? 74 : -54;
+        availW = 860;
       }
 
-      const maxLen = 32;
+      const maxLen = 30;
       const displayLabel = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      ctx.fillText(displayLabel, labelX, labelY);
+      drawFittedText(ctx, displayLabel, labelX, labelY, availW, 40, "bold", PUB_FONT_SANS, 28);
     });
 
-    // 3. Legend at bottom
-    const legY = size - 70;
-    ctx.font = "bold 22px sans-serif";
+    // 3. Full-Width Legend Box at Bottom
+    const legBoxX = 80;
+    const legBoxW = size - 160;
+    const legBoxY = size - 135;
+    const legBoxH = 92;
+    const legY = legBoxY + 46;
+
+    ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
+    ctx.fill();
+    ctx.stroke();
+
     ctx.textAlign = "left";
 
     if (isGsea) {
       // Red dot
       ctx.beginPath();
-      ctx.arc(cX - 560, legY, 16, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, legY, 18, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.fillText(`Positive NES: ${contrast.posShort}`, cX - 530, legY + 8);
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      drawFittedText(ctx, `Positive Z_GSEA: ${contrast.posShort}`, legBoxX + 86, legY + 12, 660, 34, "bold", PUB_FONT_SANS, 26);
 
       // Blue dot
+      const midX = legBoxX + 780;
       ctx.beginPath();
-      ctx.arc(cX - 60, legY, 16, 0, 2 * Math.PI);
+      ctx.arc(midX, legY, 18, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.fillText(`Negative NES: ${contrast.negShort}`, cX - 30, legY + 8);
-    }
+      ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
+      drawFittedText(ctx, `Negative Z_GSEA: ${contrast.negShort}`, midX + 34, legY + 12, 660, 34, "bold", PUB_FONT_SANS, 26);
 
-    // Edge thickness text
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "20px monospace";
-    ctx.fillText(
-      isGsea ? "• Edge Width ∝ Shared Leading-Edge Genes" : "• Edge Width ∝ Shared Overlapping DEGs",
-      isGsea ? cX + 460 : cX - 200,
-      legY + 7
-    );
+      // Edge thickness text
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
+      ctx.textAlign = "right";
+      drawFittedText(ctx, "Edge Width ∝ Shared Leading-Edge Genes", legBoxX + legBoxW - 42, legY + 12, 700, 32, "bold", PUB_FONT_NUM, 24);
+    } else {
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
+      ctx.textAlign = "center";
+      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      ctx.fillText("Edge Width ∝ Shared Overlapping DEGs", size / 2, legY + 12);
+    }
 
     return offscreen;
   };

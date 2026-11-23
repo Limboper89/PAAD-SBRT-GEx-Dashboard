@@ -5,7 +5,7 @@ import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Toolti
 import { PathwayEnrichmentResult } from "@/types/pathway";
 import { getContrastDisplayInfo, calculateNiceTicks, formatTickValue } from "@/utils/pathwayEngine";
 import ExportButton from "@/components/ExportButton";
-import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV } from "@/utils/exportUtils";
+import { exportCanvasToPNG, exportCanvasToSVG, exportToCSV, PUB_FONT_SANS, PUB_FONT_NUM, drawFittedText } from "@/utils/exportUtils";
 
 interface PathwayBubblePlotProps {
   results: PathwayEnrichmentResult[];
@@ -171,25 +171,28 @@ export default function PathwayBubblePlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Main Title: Contrast & Analysis Method (e.g. Tumor vs Normal (GSEA))
+    // Main Title: Contrast & Analysis Method (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 82);
+    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
 
     // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) • Top ${displayResults.length} Pathways`,
+    drawFittedText(
+      ctx,
+      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · Top ${displayResults.length} Pathways`,
       80,
-      132
+      152,
+      size - 160,
+      40,
+      "bold",
+      PUB_FONT_NUM
     );
 
-    const padLeft = 880;
-    const padRight = 120;
-    const padTop = 200;
-    const padBottom = 340;
+    const padLeft = 1000;
+    const padRight = 100;
+    const padTop = 210;
+    const padBottom = 365;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
@@ -210,7 +213,7 @@ export default function PathwayBubblePlot({
     const rowH = plotH / displayResults.length;
 
     ctx.strokeStyle = isLight ? "#f1f5f9" : "rgba(148, 163, 184, 0.08)";
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
 
     for (let i = 0; i < displayResults.length; i++) {
       const y = padTop + i * rowH + rowH / 2;
@@ -225,7 +228,7 @@ export default function PathwayBubblePlot({
       ctx.save();
       ctx.setLineDash([10, 8]);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(zeroX, padTop);
       ctx.lineTo(zeroX, axisY);
@@ -238,18 +241,17 @@ export default function PathwayBubblePlot({
       const x = getXCoord(d.xValue);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(38, Math.max(22, Math.round(rowH * 0.52)));
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
+      const fontSize = Math.min(46, Math.max(32, Math.round(rowH * 0.56)));
       ctx.textAlign = "right";
 
-      const maxLen = 42;
+      const maxLen = 38;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      ctx.fillText(displayName, padLeft - 26, y + fontSize * 0.35);
+      drawFittedText(ctx, displayName, padLeft - 28, y + fontSize * 0.35, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
 
       const maxCount = Math.max(...chartData.map((cd) => cd.size), 20);
       const minCount = Math.min(...chartData.map((cd) => cd.size), 1);
       const normalizedSize = (d.size - minCount) / Math.max(1, maxCount - minCount);
-      const radius = 16 + normalizedSize * 30;
+      const radius = 18 + normalizedSize * 30;
 
       const isUp = d.direction === "Upregulated" || d.xValue >= 0;
 
@@ -259,13 +261,13 @@ export default function PathwayBubblePlot({
       ctx.fill();
 
       ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.stroke();
     });
 
     // Axis Border Lines (Left Y and Bottom X)
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(padLeft, axisY);
     ctx.lineTo(padLeft + plotW, axisY);
@@ -275,107 +277,110 @@ export default function PathwayBubblePlot({
 
     // Clean Integer / Half Ticks
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 32px monospace";
+    ctx.font = `bold 48px ${PUB_FONT_NUM}`;
     ctx.textAlign = "center";
 
     tickInfo.ticks.forEach((val) => {
       const xPos = getXCoord(val);
       ctx.beginPath();
       ctx.moveTo(xPos, axisY);
-      ctx.lineTo(xPos, axisY + 14);
+      ctx.lineTo(xPos, axisY + 16);
       ctx.stroke();
-      ctx.fillText(formatTickValue(val), xPos, axisY + 52);
+      ctx.fillText(formatTickValue(val), xPos, axisY + 62);
     });
 
-    // X-Axis Metric Title in Center (sole occupant of this line — no collisions)
+    // X-Axis Metric Title in Center
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText(
-      isGsea ? "Normalized Enrichment Score (NES)" : `Fold Enrichment (${contrast.shortTitle})`,
+      isGsea ? "Rank-Sum Enrichment Z-Score (Z_GSEA)" : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      axisY + 105
+      axisY + 132
     );
 
-    // Dedicated Legend Container Box (spanning plot width)
-    const legBoxY = axisY + 155;
-    const legBoxH = 80;
-    const midY = legBoxY + 44;
+    // Dedicated Full-Width Legend Container Box (prevents text collisions)
+    const legBoxX = 80;
+    const legBoxW = size - 160;
+    const legBoxY = axisY + 185;
+    const legBoxH = 98;
+    const midY = legBoxY + 50;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
-    ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.roundRect(padLeft, legBoxY, plotW, legBoxH, 12);
+    ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
     ctx.fill();
     ctx.stroke();
 
     if (isGsea) {
-      // 1. Negative NES (Blue circle on left, pointing left)
+      // 1. Negative Z_GSEA (Blue circle on left)
       ctx.beginPath();
-      ctx.arc(padLeft + 45, midY, 14, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, midY, 18, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(contrast.negLegend, padLeft + 72, midY + 8);
+      drawFittedText(ctx, contrast.negLegend, legBoxX + 86, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
 
-      // 2. Positive NES (Red circle in middle, pointing right)
+      // 2. Positive Z_GSEA (Red circle in middle)
+      const midColX = legBoxX + 780;
       ctx.beginPath();
-      ctx.arc(padLeft + 540, midY, 14, 0, 2 * Math.PI);
+      ctx.arc(midColX, midY, 18, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.fillText(contrast.posLegend, padLeft + 567, midY + 8);
+      drawFittedText(ctx, contrast.posLegend, midColX + 34, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
 
       // 3. Bubble Size (Gray sample bubbles on right)
+      const rightColX = legBoxX + 1520;
       ctx.beginPath();
-      ctx.arc(padLeft + 1030, midY, 8, 0, 2 * Math.PI);
-      ctx.arc(padLeft + 1055, midY, 15, 0, 2 * Math.PI);
+      ctx.arc(rightColX, midY, 11, 0, 2 * Math.PI);
+      ctx.arc(rightColX + 34, midY, 19, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
       ctx.fill();
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = "23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Bubble Size ∝ Leading-Edge Genes", padLeft + 1080, midY + 8);
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
+      drawFittedText(ctx, "Size ∝ Leading-Edge Genes", rightColX + 68, midY + 12, legBoxW - 1610, 34, "bold", PUB_FONT_SANS, 26);
     } else {
       ctx.beginPath();
-      ctx.arc(padLeft + 45, midY, 14, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, midY, 18, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#0d9488";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = `bold 36px ${PUB_FONT_SANS}`;
       ctx.textAlign = "left";
-      ctx.fillText("Significant Overlap (BH FDR < 0.05)", padLeft + 72, midY + 8);
+      ctx.fillText("Significant Overlap (BH FDR < 0.05)", legBoxX + 86, midY + 12);
 
+      const rightColX = legBoxX + 1220;
       ctx.beginPath();
-      ctx.arc(padLeft + 700, midY, 8, 0, 2 * Math.PI);
-      ctx.arc(padLeft + 725, midY, 15, 0, 2 * Math.PI);
+      ctx.arc(rightColX, midY, 11, 0, 2 * Math.PI);
+      ctx.arc(rightColX + 34, midY, 19, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
       ctx.fill();
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = "23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Bubble Size ∝ Overlapping Genes", padLeft + 750, midY + 8);
+      ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
+      ctx.font = `bold 34px ${PUB_FONT_SANS}`;
+      ctx.fillText("Bubble Size ∝ Overlapping Genes", rightColX + 68, midY + 12);
     }
 
     return offscreen;

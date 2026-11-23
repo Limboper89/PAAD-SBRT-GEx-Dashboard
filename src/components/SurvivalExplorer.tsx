@@ -39,6 +39,9 @@ import {
   exportToCSV,
   exportCanvasToPNG,
   exportCanvasToSVG,
+  PUB_FONT_SANS,
+  PUB_FONT_NUM,
+  drawFittedText,
 } from "@/utils/exportUtils";
 
 interface SurvivalExplorerProps {
@@ -349,25 +352,28 @@ export default function SurvivalExplorer({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header
+    // 2. Header (publication-scaled)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 60px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("GSE225767: SBRT Pathologic Treatment Response (R vs. NR)", 120, 100);
+    drawFittedText(ctx, "GSE225767: SBRT Pathologic Treatment Response (R vs. NR)", 100, 96, size - 200, 70, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 32px monospace";
-    ctx.fillText(
-      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Neoadjuvant SBRT Cohort (N = 55)`,
-      120,
-      155
+    drawFittedText(
+      ctx,
+      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Unpaired Neoadjuvant SBRT Cohort (N = 55)`,
+      100,
+      156,
+      size - 200,
+      40,
+      "bold",
+      PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
     const padLeft = 280;
-    const padRight = 120;
+    const padRight = 100;
     const padTop = 320;
-    const padBottom = 420; // Room for X labels, legend, trajectory
+    const padBottom = 440; // Room for X labels, legend, trajectory
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -415,16 +421,16 @@ export default function SurvivalExplorer({
       ctx.lineWidth = 2;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = "bold 36px monospace";
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(val.toFixed(2), padLeft - 26, py + 12);
+      ctx.fillText(val.toFixed(2), padLeft - 28, py + 16);
     }
 
     // Zero baseline
     if (minY <= 0 && maxY >= 0) {
       const zeroY = mapY(0);
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(padLeft, zeroY);
       ctx.lineTo(padLeft + plotW, zeroY);
@@ -433,15 +439,15 @@ export default function SurvivalExplorer({
 
     // Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Y-Axis Title
     ctx.save();
-    ctx.translate(padLeft - 150, padTop + plotH / 2);
+    ctx.translate(padLeft - 165, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 58px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText(
       selectedGenes.length > 1 ? "Z-Score Composite Index (Mean ± SE)" : "Normalized Expression (log2)",
@@ -521,25 +527,25 @@ export default function SurvivalExplorer({
       // Mean Numerical Label with clear backing
       ctx.save();
       const numStr = (meanVal >= 0 ? "+" : "") + meanVal.toFixed(2);
-      ctx.font = "bold 36px monospace";
+      ctx.font = `bold 44px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
-      const labelY = meanVal >= 0 ? errTopY - 22 : errBottomY + 44;
+      const labelY = meanVal >= 0 ? errTopY - 24 : errBottomY + 50;
       const tw = ctx.measureText(numStr).width;
       ctx.fillStyle = isLight ? "#ffffff" : "#020617";
-      ctx.fillRect(cx - tw / 2 - 8, labelY - 30, tw + 16, 38);
+      ctx.fillRect(cx - tw / 2 - 10, labelY - 38, tw + 20, 48);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.fillText(numStr, cx, labelY);
       ctx.restore();
 
       // X-Axis Labels (Large & Crisp)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = `bold 50px ${PUB_FONT_SANS}`;
       ctx.textAlign = "center";
-      ctx.fillText(g.label, cx, padTop + plotH + 56);
+      ctx.fillText(g.label, cx, padTop + plotH + 62);
 
-      ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = "bold 34px monospace";
-      ctx.fillText(g.sub, cx, padTop + plotH + 104);
+      ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
+      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+      ctx.fillText(g.sub, cx, padTop + plotH + 114);
     });
 
     // 6. Publication Significance Brackets (The P-Values!)
@@ -553,8 +559,8 @@ export default function SurvivalExplorer({
       return `${pText} (${mark})`;
     };
 
-    const bracketY = padTop + 65;
-    const tickH = 20;
+    const bracketY = padTop + 72;
+    const tickH = 22;
 
     // Pre-SBRT Bracket (Col 0 to Col 1)
     const x0 = colCenters[0];
@@ -563,7 +569,7 @@ export default function SurvivalExplorer({
     const preP = formatPStr(sbrtResult.pre_comparison.p_value);
 
     ctx.strokeStyle = isPreSig ? "#059669" : (isLight ? "#0f172a" : "#cbd5e1");
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 4.5;
     ctx.beginPath();
     ctx.moveTo(x0, bracketY + tickH);
     ctx.lineTo(x0, bracketY);
@@ -572,9 +578,9 @@ export default function SurvivalExplorer({
     ctx.stroke();
 
     ctx.fillStyle = isPreSig ? "#059669" : (isLight ? "#0f172a" : "#f8fafc");
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 48px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(preP, (x0 + x1) / 2, bracketY - 16);
+    ctx.fillText(preP, (x0 + x1) / 2, bracketY - 18);
 
     // Post-SBRT Bracket (Col 2 to Col 3)
     const x2 = colCenters[2];
@@ -583,7 +589,7 @@ export default function SurvivalExplorer({
     const postP = formatPStr(sbrtResult.post_comparison.p_value);
 
     ctx.strokeStyle = isPostSig ? "#0284c7" : (isLight ? "#0f172a" : "#cbd5e1");
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 4.5;
     ctx.beginPath();
     ctx.moveTo(x2, bracketY + tickH);
     ctx.lineTo(x2, bracketY);
@@ -592,20 +598,20 @@ export default function SurvivalExplorer({
     ctx.stroke();
 
     ctx.fillStyle = isPostSig ? "#0284c7" : (isLight ? "#0f172a" : "#f8fafc");
-    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 48px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(postP, (x2 + x3) / 2, bracketY - 16);
+    ctx.fillText(postP, (x2 + x3) / 2, bracketY - 18);
 
     // 7. Bottom Legend & Trajectory Panel (Zero plot occlusion)
     const panelTop = padTop + plotH + 160;
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(padLeft, panelTop);
     ctx.lineTo(padLeft + plotW, panelTop);
     ctx.stroke();
 
-    // Legend Items
+    // Legend Items (evenly distributed across plotW)
     const legItems = [
       { label: "Pre-SBRT NR", color: "#f59e0b", n: "n=4" },
       { label: "Pre-SBRT R", color: "#10b981", n: "n=11" },
@@ -613,45 +619,52 @@ export default function SurvivalExplorer({
       { label: "Post-SBRT R", color: "#06b6d4", n: "n=15" },
     ];
 
-    let legX = padLeft + 10;
-    const legY = panelTop + 50;
+    const legStep = plotW / legItems.length;
+    const legY = panelTop + 58;
 
-    legItems.forEach((item) => {
+    legItems.forEach((item, i) => {
+      const legX = padLeft + i * legStep + 10;
       ctx.fillStyle = item.color;
-      ctx.fillRect(legX, legY - 26, 32, 32);
+      ctx.fillRect(legX, legY - 30, 34, 34);
       ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(legX, legY - 26, 32, 32);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(legX, legY - 30, 34, 34);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(`${item.label} (${item.n})`, legX + 44, legY);
-
-      legX += 360;
+      drawFittedText(ctx, `${item.label} (${item.n})`, legX + 46, legY, legStep - 64, 38, "bold", PUB_FONT_SANS, 28);
     });
 
     // Trajectory Summary (Clean bottom row)
-    const trajY = panelTop + 120;
+    const trajY = panelTop + 135;
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Treatment Response Trajectory (Post vs. Pre):", padLeft + 10, trajY);
-
-    ctx.font = "bold 32px monospace";
-    ctx.fillStyle = isLight ? "#047857" : "#34d399";
     const deltaRStr = `${sbrtResult.delta_r.delta >= 0 ? "+" : ""}${sbrtResult.delta_r.delta.toFixed(2)}`;
-    ctx.fillText(`• Responders: Δ = ${deltaRStr}`, padLeft + 780, trajY);
-
-    ctx.fillStyle = isLight ? "#b91c1c" : "#f87171";
     const deltaNrStr = `${sbrtResult.delta_nr.delta >= 0 ? "+" : ""}${sbrtResult.delta_nr.delta.toFixed(2)}`;
-    ctx.fillText(`• Non-Responders: Δ = ${deltaNrStr}`, padLeft + 1380, trajY);
+    drawFittedText(
+      ctx,
+      `Trajectory (Post vs. Pre):  Responders Δ = ${deltaRStr}   |   Non-Responders Δ = ${deltaNrStr}`,
+      padLeft + 10,
+      trajY,
+      plotW - 20,
+      38,
+      "bold",
+      PUB_FONT_NUM
+    );
 
     // Bottom citation watermark
-    ctx.fillStyle = isLight ? "#94a3b8" : "#64748b";
-    ctx.font = "bold 24px monospace";
+    ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
     ctx.textAlign = "left";
-    ctx.fillText("GSE225767 · Pancreatic Ductal Adenocarcinoma · Neoadjuvant SBRT Cohort", padLeft + 10, panelTop + 195);
+    drawFittedText(
+      ctx,
+      "GSE225767 · Pancreatic Ductal Adenocarcinoma · Unpaired Neoadjuvant SBRT Cohort",
+      padLeft + 10,
+      panelTop + 205,
+      plotW - 20,
+      32,
+      "bold",
+      PUB_FONT_NUM
+    );
 
     return offscreen;
   };
@@ -755,33 +768,36 @@ export default function SurvivalExplorer({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header
+    // 2. Header (fitted to prevent right-edge clipping; >=7 pt at 85 mm print width)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 60px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("TCGA-PAAD: Kaplan-Meier Overall Survival", 120, 100);
+    drawFittedText(ctx, "TCGA-PAAD: Kaplan-Meier Overall Survival", 100, 96, size - 200, 74, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-    ctx.font = "bold 32px monospace";
     const stratLabel =
       stratMethod === "optimal"
-        ? `Optimal Cutpoint (surv_cutpoint, cutoff = ${tcgaResult.cutoff_value ?? "NA"}, split: ${100 - (tcgaResult.cutoff_percentile ?? 50)}% High / ${tcgaResult.cutoff_percentile ?? 50}% Low)`
+        ? `Optimal Cutpoint (cutoff = ${tcgaResult.cutoff_value ?? "NA"}, ${100 - (tcgaResult.cutoff_percentile ?? 50)}% High / ${tcgaResult.cutoff_percentile ?? 50}% Low)`
         : stratMethod === "tertile"
         ? "Tertiles (Top 33% vs Bottom 33%)"
         : stratMethod === "quartile"
         ? "Quartiles (Top 25% vs Bottom 25%)"
         : "Median (50/50 Split)";
-    ctx.fillText(
-      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Stratification: ${stratLabel} (N = 177)`,
-      120,
-      155
+    drawFittedText(
+      ctx,
+      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · ${stratLabel} (N = 177)`,
+      100,
+      160,
+      size - 200,
+      42,
+      "bold",
+      PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
-    const padLeft = 340;
-    const padRight = 100;
-    const padTop = 260;
-    const padBottom = 580; // Ample room for numbers at risk table
+    const padLeft = 360;
+    const padRight = 90;
+    const padTop = 240;
+    const padBottom = 640; // Ample room for numbers at risk table
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -818,15 +834,15 @@ export default function SurvivalExplorer({
       ctx.lineWidth = 2;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = "bold 38px monospace";
+      ctx.font = `bold 52px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(`${Math.round(prob * 100)}%`, padLeft - 26, py + 13);
+      ctx.fillText(`${Math.round(prob * 100)}%`, padLeft - 28, py + 17);
     });
 
     // 50% Median Survival Reference Dashed Line
     const medianY = mapY(0.5);
     ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.setLineDash([14, 10]);
     ctx.beginPath();
     ctx.moveTo(padLeft, medianY);
@@ -846,39 +862,39 @@ export default function SurvivalExplorer({
       // Outer tick on bottom axis
       ctx.beginPath();
       ctx.moveTo(px, padTop + plotH);
-      ctx.lineTo(px, padTop + plotH + 16);
+      ctx.lineTo(px, padTop + plotH + 18);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.stroke();
       ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
       ctx.lineWidth = 2;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = "bold 38px monospace";
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
-      ctx.fillText(`${t} mo`, px, padTop + plotH + 54);
+      ctx.fillText(`${t} mo`, px, padTop + plotH + 64);
     });
 
     // Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Y-Axis Title
     ctx.save();
-    ctx.translate(padLeft - 150, padTop + plotH / 2);
+    ctx.translate(padLeft - 185, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText("Overall Survival Probability (%)", 0, 0);
     ctx.restore();
 
     // X-Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 48px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Overall Survival Time (Months)", padLeft + plotW / 2, padTop + plotH + 118);
+    ctx.fillText("Overall Survival Time (Months)", padLeft + plotW / 2, padTop + plotH + 144);
 
     // 5. Draw Stepped Curves (High = Crimson #d9534f, Low = Royal Blue #0275d8)
     const drawCurve = (curve: typeof tcgaResult.high_curve, color: string) => {
@@ -922,34 +938,37 @@ export default function SurvivalExplorer({
     drawCurve(tcgaResult.low_curve, "#0275d8");
     drawCurve(tcgaResult.high_curve, "#d9534f");
 
-    // 6. In-Plot Publication Annotation Box (Top-Right) - Vertically Stacked to Prevent Any Overlap
-    const annW = 760;
-    const annH = 280;
+    // 6. In-Plot Publication Annotation Box (Top-Right)
+    const annW = 920;
+    const annH = 335;
     const annX = padLeft + plotW - annW - 30;
-    const annY = padTop + 35;
+    const annY = padTop + 32;
 
     ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.98)" : "rgba(15, 23, 42, 0.98)";
     ctx.fillRect(annX, annY, annW, annH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(annX, annY, annW, annH);
 
     const isSig = tcgaResult.logrank_p_value < 0.05;
     ctx.fillStyle = isSig ? "#059669" : (isLight ? "#0f172a" : "#f8fafc");
-    ctx.font = "bold 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "left";
     const pStr =
       tcgaResult.logrank_p_value < 0.0001
         ? tcgaResult.logrank_p_value.toExponential(3)
         : tcgaResult.logrank_p_value.toFixed(4);
-    ctx.fillText(`Log-Rank Test: p = ${pStr}${isSig ? " *" : " (ns)"}`, annX + 28, annY + 54);
+    drawFittedText(ctx, `Log-Rank Test: p = ${pStr}${isSig ? " *" : " (ns)"}`, annX + 30, annY + 64, annW - 60, 48, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = "bold 32px monospace";
-    ctx.fillText(
-      `Hazard Ratio (HR): ${tcgaResult.hazard_ratio.toFixed(2)} (95% CI: ${tcgaResult.hr_ci_lower.toFixed(2)} – ${tcgaResult.hr_ci_upper.toFixed(2)})`,
-      annX + 28,
-      annY + 114
+    drawFittedText(
+      ctx,
+      `HR: ${tcgaResult.hazard_ratio.toFixed(2)} (95% CI: ${tcgaResult.hr_ci_lower.toFixed(2)}-${tcgaResult.hr_ci_upper.toFixed(2)})`,
+      annX + 30,
+      annY + 136,
+      annW - 60,
+      42,
+      "bold",
+      PUB_FONT_NUM
     );
 
     const highMed = tcgaResult.high_median_os ? `${tcgaResult.high_median_os.toFixed(1)} mo` : "NR";
@@ -957,21 +976,20 @@ export default function SurvivalExplorer({
     const highN = tcgaResult.high_n;
     const lowN = tcgaResult.low_n;
 
-    // Stacked vertically for zero horizontal overlap
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 42px ${PUB_FONT_SANS}`;
     ctx.fillStyle = "#d9534f";
-    ctx.fillText(`• High Index: Median = ${highMed} (n = ${highN})`, annX + 28, annY + 174);
+    ctx.fillText(`• High Index: Median = ${highMed} (n = ${highN})`, annX + 30, annY + 210);
 
     ctx.fillStyle = "#0275d8";
-    ctx.fillText(`• Low Index:  Median = ${lowMed} (n = ${lowN})`, annX + 28, annY + 232);
+    ctx.fillText(`• Low Index:  Median = ${lowMed} (n = ${lowN})`, annX + 30, annY + 282);
 
-    // 7. Publication Numbers at Risk Table (Wide margin to prevent label overlap)
-    const tableTop = padTop + plotH + 190;
-    const rowH = 70;
-    const tableLabelX = 60; // Clean left margin well separated from column 0 at padLeft
+    // 7. Publication Numbers at Risk Table
+    const tableTop = padTop + plotH + 210;
+    const rowH = 84;
+    const tableLabelX = 50;
 
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(tableLabelX, tableTop);
     ctx.lineTo(padLeft + plotW, tableTop);
@@ -979,64 +997,63 @@ export default function SurvivalExplorer({
 
     // Table Header
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Time (Months)", tableLabelX, tableTop + 48);
+    ctx.fillText("Time (Mo)", tableLabelX, tableTop + 56);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = "bold 38px monospace";
-        ctx.fillText(`${r.time}`, rx, tableTop + 48);
+        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.time}`, rx, tableTop + 56);
       }
     });
 
     // High Index Row
     const highRowY = tableTop + rowH;
     ctx.fillStyle = "#d9534f";
-    ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("High Index", tableLabelX, highRowY + 48);
+    ctx.fillText("High Index", tableLabelX, highRowY + 56);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = "bold 38px monospace";
-        ctx.fillText(`${r.high_risk}`, rx, highRowY + 48);
+        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.high_risk}`, rx, highRowY + 56);
       }
     });
 
     // Low Index Row
     const lowRowY = tableTop + rowH * 2;
     ctx.fillStyle = "#0275d8";
-    ctx.font = "bold 36px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Low Index", tableLabelX, lowRowY + 48);
+    ctx.fillText("Low Index", tableLabelX, lowRowY + 56);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = "bold 38px monospace";
-        ctx.fillText(`${r.low_risk}`, rx, lowRowY + 48);
+        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.low_risk}`, rx, lowRowY + 56);
       }
     });
 
     // Bottom subtle divider
     ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(tableLabelX, tableTop + rowH * 3 + 15);
-    ctx.lineTo(padLeft + plotW, tableTop + rowH * 3 + 15);
+    ctx.moveTo(tableLabelX, tableTop + rowH * 3 + 18);
+    ctx.lineTo(padLeft + plotW, tableTop + rowH * 3 + 18);
     ctx.stroke();
 
-    // Bottom citation watermark
-    ctx.fillStyle = isLight ? "#94a3b8" : "#64748b";
-    ctx.font = "bold 24px monospace";
+    // Bottom citation footer
+    ctx.fillStyle = isLight ? "#64748b" : "#94a3b8";
     ctx.textAlign = "left";
-    ctx.fillText("TCGA-PAAD · Pancreatic Adenocarcinoma · Primary Tumor Resection Cohort (n=177)", tableLabelX, tableTop + rowH * 3 + 55);
+    drawFittedText(ctx, "TCGA-PAAD Primary Tumor Resection Cohort (N = 177)", tableLabelX, tableTop + rowH * 3 + 72, size - 100, 36, "bold", PUB_FONT_NUM);
 
     return offscreen;
   };
