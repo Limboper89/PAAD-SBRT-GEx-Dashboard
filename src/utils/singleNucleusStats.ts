@@ -99,9 +99,9 @@ function tDistTwoTailedPValue(t: number, df: number): number {
 }
 
 /**
- * Non-parametric Mann-Whitney U test p-value calculation
+ * Non-parametric Mann-Whitney U test p-value calculation (two-tailed)
  */
-function calculateMannWhitneyU(sample1: number[], sample2: number[]): number {
+export function calculateMannWhitneyU(sample1: number[], sample2: number[]): number {
   const n1 = sample1.length;
   const n2 = sample2.length;
   if (n1 === 0 || n2 === 0) return 1.0;
@@ -139,11 +139,80 @@ function calculateMannWhitneyU(sample1: number[], sample2: number[]): number {
   const u = Math.min(u1, u2);
 
   const meanU = (n1 * n2) / 2;
-  const sigmaU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12);
+  // Tie correction for exact variance
+  const N = n1 + n2;
+  let tieCorrection = 0;
+  let ti = 0;
+  while (ti < combined.length) {
+    let tj = ti;
+    while (tj < combined.length - 1 && combined[tj + 1].val === combined[tj].val) tj++;
+    const tCount = tj - ti + 1;
+    if (tCount > 1) tieCorrection += tCount * tCount * tCount - tCount;
+    ti = tj + 1;
+  }
+  const varU = ((n1 * n2) / 12) * ((N + 1) - tieCorrection / (N * (N - 1) || 1));
+  const sigmaU = Math.sqrt(Math.max(0, varU));
   if (sigmaU === 0) return 1.0;
 
   const z = (u - meanU) / sigmaU;
-  return Math.min(1.0, 2 * normalCDF(z));
+  return Math.min(1.0, Math.max(1e-15, 2 * normalCDF(z)));
+}
+
+/**
+ * Paired Wilcoxon signed-rank test (two-tailed, exact for n <= 20, normal approx for n > 20)
+ */
+export function calculateWilcoxonSignedRank(a: number[], b: number[]): number {
+  const diffs: number[] = [];
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const d = a[i] - b[i];
+    if (Math.abs(d) > 1e-12) diffs.push(d);
+  }
+  const n = diffs.length;
+  if (n < 2) return 1.0;
+
+  const absSorted = diffs
+    .map(d => ({ abs: Math.abs(d), sign: d > 0 ? 1 : -1 }))
+    .sort((x, y) => x.abs - y.abs);
+
+  const ranks: number[] = new Array(n);
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j < n - 1 && Math.abs(absSorted[j + 1].abs - absSorted[j].abs) < 1e-12) j++;
+    const avgRank = (i + 1 + j + 1) / 2;
+    for (let k = i; k <= j; k++) ranks[k] = avgRank;
+    i = j + 1;
+  }
+
+  let wPos = 0;
+  let wNeg = 0;
+  for (let k = 0; k < n; k++) {
+    if (absSorted[k].sign > 0) wPos += ranks[k];
+    else wNeg += ranks[k];
+  }
+  const wMin = Math.min(wPos, wNeg);
+
+  // Exact permutation p-value when n <= 18 and no ties (fast: 2^16 = 65,536)
+  const hasTies = ranks.some((r, idx) => idx > 0 && r === ranks[idx - 1]);
+  if (n <= 18 && !hasTies) {
+    const total = 1 << n;
+    let extreme = 0;
+    for (let mask = 0; mask < total; mask++) {
+      let s = 0;
+      for (let bit = 0; bit < n; bit++) {
+        if ((mask >> bit) & 1) s += bit + 1;
+      }
+      if (s <= wMin + 1e-9) extreme++;
+    }
+    return Math.min(1.0, (2 * extreme) / total);
+  }
+
+  const meanW = (n * (n + 1)) / 4;
+  const sdW = Math.sqrt((n * (n + 1) * (2 * n + 1)) / 24);
+  if (sdW === 0) return 1.0;
+  const z = (wMin - meanW + 0.5) / sdW;
+  return Math.min(1.0, Math.max(1e-15, 2 * normalCDF(z)));
 }
 
 /**
@@ -188,6 +257,10 @@ export function computePatientPseudobulk(
     treatedNucleiAll: number[];
   }>();
 
+  const isDirectResponseMode =
+    treatedSubgroupFilter === "RESP_MOD_VS_POOR" ||
+    treatedSubgroupFilter === "RESP_MOD_VS_NONMOD";
+
   for (let i = 0; i < metadata.length; i++) {
     const cell = metadata[i];
     const expr = exprVector[i] || 0;
@@ -198,18 +271,48 @@ export function computePatientPseudobulk(
     const isNaive = pid.startsWith("U") || cell.treatment === "Untreated";
     const isTreated = !isNaive && (pid.startsWith("T") || (cell.treatment_group || "").toLowerCase().includes("treated"));
 
-    // Subgroup filtering for Treated patients
-    if (treatedSubgroupFilter && isTreated) {
-      if (treatedSubgroupFilter.startsWith("RESP_")) {
-        const respKeyword = treatedSubgroupFilter.replace("RESP_", "").toLowerCase();
-        if (!(cell.response || "").toLowerCase().includes(respKeyword)) {
-          continue;
-        }
+    let assignToGroupA = false;
+    let assignToGroupB = false;
+
+    if (isDirectResponseMode) {
+      if (!isTreated) continue;
+      const resp = (cell.response || "").toLowerCase();
+      if (treatedSubgroupFilter === "RESP_MOD_VS_POOR") {
+        if (resp.includes("moderate")) assignToGroupA = true;
+        else if (resp.includes("poor")) assignToGroupB = true;
+        else continue;
       } else {
-        if ((cell.treatment || "").trim() !== treatedSubgroupFilter.trim()) {
-          continue;
+        // RESP_MOD_VS_NONMOD: Moderate (Responder) vs Minimal + Poor (Non-Responder)
+        if (resp.includes("moderate")) assignToGroupA = true;
+        else if (resp.includes("minimal") || resp.includes("poor")) assignToGroupB = true;
+        else continue;
+      }
+    } else {
+      // Subgroup filtering for Treated patients vs Treatment-Naïve baseline
+      if (treatedSubgroupFilter && isTreated) {
+        if (treatedSubgroupFilter.startsWith("RESP_")) {
+          const respKeyword = treatedSubgroupFilter.replace("RESP_", "").toLowerCase();
+          if (!(cell.response || "").toLowerCase().includes(respKeyword)) {
+            continue;
+          }
+        } else if (treatedSubgroupFilter === "RT_CRT") {
+          const tr = (cell.treatment || "").trim();
+          if (tr !== "CRT" && tr !== "RT") {
+            continue;
+          }
+        } else if (treatedSubgroupFilter === "CRTn") {
+          const tr = (cell.treatment || "").trim();
+          if (tr !== "CRTn" && tr !== "CRTln") {
+            continue;
+          }
+        } else {
+          if ((cell.treatment || "").trim() !== treatedSubgroupFilter.trim()) {
+            continue;
+          }
         }
       }
+      assignToGroupA = isNaive;
+      assignToGroupB = isTreated;
     }
 
     if (!cellTypePatients.has(cType)) {
@@ -222,13 +325,13 @@ export function computePatientPseudobulk(
     }
 
     const groupData = cellTypePatients.get(cType)!;
-    if (isNaive) {
+    if (assignToGroupA) {
       groupData.naiveNucleiAll.push(expr);
       if (!groupData.naivePatients.has(pid)) {
         groupData.naivePatients.set(pid, []);
       }
       groupData.naivePatients.get(pid)!.push(expr);
-    } else if (isTreated) {
+    } else if (assignToGroupB) {
       groupData.treatedNucleiAll.push(expr);
       if (!groupData.treatedPatients.has(pid)) {
         groupData.treatedPatients.set(pid, []);
@@ -353,4 +456,228 @@ export function computePatientPseudobulk(
   results.sort((a, b) => a.pValueWelch - b.pValueWelch);
 
   return results;
+}
+
+// ─── Multi-Gene Pathologic Response (Moderate vs. Minimal vs. Poor) ──────────
+
+export interface ResponseGroupSummary {
+  patientCount: number;
+  nucleusCount: number;
+  mean: number;
+  se: number;
+  pctExpressing: number;
+  patientValues: { pid: string; mean: number; nNuclei: number }[];
+}
+
+export interface PathologicResponseGeneRow {
+  gene: string;
+  naive: ResponseGroupSummary;
+  moderate: ResponseGroupSummary;
+  minimal: ResponseGroupSummary;
+  poor: ResponseGroupSummary;
+  poorVsModLog2FC: number;
+  poorVsModPValue: number;
+  poorVsModWelchP: number;
+  rowMax: number;
+}
+
+function summarizePatientGroup(
+  patientMap: Map<string, number[]>,
+  minNucleiPerPatient: number
+): ResponseGroupSummary {
+  const patientValues: { pid: string; mean: number; nNuclei: number }[] = [];
+  let totalNuc = 0;
+  let posNuc = 0;
+
+  patientMap.forEach((vals, pid) => {
+    if (vals.length >= minNucleiPerPatient) {
+      const m = vals.reduce((a, b) => a + b, 0) / vals.length;
+      patientValues.push({ pid, mean: m, nNuclei: vals.length });
+      totalNuc += vals.length;
+      for (let i = 0; i < vals.length; i++) {
+        if (vals[i] > 0) posNuc++;
+      }
+    }
+  });
+
+  const n = patientValues.length;
+  if (n === 0) {
+    return { patientCount: 0, nucleusCount: 0, mean: 0, se: 0, pctExpressing: 0, patientValues: [] };
+  }
+  const mean = patientValues.reduce((s, p) => s + p.mean, 0) / n;
+  const variance = n > 1
+    ? patientValues.reduce((s, p) => s + Math.pow(p.mean - mean, 2), 0) / (n - 1)
+    : 0;
+  const se = Math.sqrt(variance) / Math.sqrt(n);
+  const pctExpressing = totalNuc > 0 ? (posNuc / totalNuc) * 100 : 0;
+
+  return { patientCount: n, nucleusCount: totalNuc, mean, se, pctExpressing, patientValues };
+}
+
+/**
+ * Computes patient-level pseudobulk means across Treatment-Naïve (baseline) and
+ * Moderate, Minimal, and Poor pathologic response groups inside Neoadjuvant-treated
+ * GSE202051 patients, with an optional treatment regimen predicate.
+ */
+export function computePathologicResponseRow(
+  gene: string,
+  exprVector: Float32Array,
+  metadata: CellMeta[],
+  compartmentFilter: (cell: CellMeta) => boolean,
+  minNucleiPerPatient: number = 5,
+  treatedRegimenFilter?: (cell: CellMeta) => boolean
+): PathologicResponseGeneRow {
+  const naiveMap = new Map<string, number[]>();
+  const modMap = new Map<string, number[]>();
+  const minMap = new Map<string, number[]>();
+  const poorMap = new Map<string, number[]>();
+
+  for (let i = 0; i < metadata.length; i++) {
+    const cell = metadata[i];
+    if (!compartmentFilter(cell)) continue;
+    const pid = cell.pid || "";
+    const isNaive = pid.startsWith("U") || cell.treatment === "Untreated";
+    const expr = exprVector[i] || 0;
+
+    if (isNaive) {
+      if (!naiveMap.has(pid)) naiveMap.set(pid, []);
+      naiveMap.get(pid)!.push(expr);
+      continue;
+    }
+
+    if (treatedRegimenFilter && !treatedRegimenFilter(cell)) continue;
+
+    const resp = (cell.response || "").toLowerCase();
+    let target: Map<string, number[]> | null = null;
+    if (resp.includes("moderate")) target = modMap;
+    else if (resp.includes("minimal")) target = minMap;
+    else if (resp.includes("poor")) target = poorMap;
+
+    if (!target) continue;
+    if (!target.has(pid)) target.set(pid, []);
+    target.get(pid)!.push(expr);
+  }
+
+  const naive = summarizePatientGroup(naiveMap, minNucleiPerPatient);
+  const moderate = summarizePatientGroup(modMap, minNucleiPerPatient);
+  const minimal = summarizePatientGroup(minMap, minNucleiPerPatient);
+  const poor = summarizePatientGroup(poorMap, minNucleiPerPatient);
+
+  const modVals = moderate.patientValues.map(p => p.mean);
+  const poorVals = poor.patientValues.map(p => p.mean);
+  const poorVsModPValue = (modVals.length >= 2 && poorVals.length >= 2)
+    ? calculateMannWhitneyU(poorVals, modVals)
+    : 1.0;
+
+  // Welch sensitivity p-value
+  let poorVsModWelchP = 1.0;
+  if (modVals.length >= 2 && poorVals.length >= 2) {
+    const varM = modVals.reduce((s, v) => s + Math.pow(v - moderate.mean, 2), 0) / (modVals.length - 1);
+    const varP = poorVals.reduce((s, v) => s + Math.pow(v - poor.mean, 2), 0) / (poorVals.length - 1);
+    const seDiff = Math.sqrt(varM / modVals.length + varP / poorVals.length);
+    if (seDiff > 1e-9) {
+      const t = (poor.mean - moderate.mean) / seDiff;
+      const df = Math.pow(varM / modVals.length + varP / poorVals.length, 2) /
+        (Math.pow(varM / modVals.length, 2) / (modVals.length - 1) +
+         Math.pow(varP / poorVals.length, 2) / (poorVals.length - 1));
+      poorVsModWelchP = tDistTwoTailedPValue(t, df);
+    }
+  }
+
+  const eps = 0.005;
+  const poorVsModLog2FC = Math.log2((poor.mean + eps) / (moderate.mean + eps));
+  const rowMax = Math.max(moderate.mean, minimal.mean, poor.mean, 1e-6);
+
+  return {
+    gene,
+    naive,
+    moderate,
+    minimal,
+    poor,
+    poorVsModLog2FC,
+    poorVsModPValue,
+    poorVsModWelchP,
+    rowMax,
+  };
+}
+
+// ─── Paired Within-Patient Malignant vs. Normal Ductal (Eliminates Acinar Bias) ──
+
+export interface PairedMalignantDuctalRow {
+  gene: string;
+  pairedPatientCount: number;
+  ductalMean: number;
+  malignantMean: number;
+  log2FC: number;
+  upregulatedPatients: number;
+  pValueWilcoxon: number;
+  patientPairs: { pid: string; ductal: number; malignant: number }[];
+}
+
+export function computePairedMalignantVsDuctal(
+  gene: string,
+  exprVector: Float32Array,
+  metadata: CellMeta[],
+  minNucleiPerCompartment: number = 5,
+  cellFilter?: (cell: CellMeta) => boolean
+): PairedMalignantDuctalRow {
+  const malMap = new Map<string, number[]>();
+  const ductMap = new Map<string, number[]>();
+
+  for (let i = 0; i < metadata.length; i++) {
+    const cell = metadata[i];
+    if (cellFilter && !cellFilter(cell)) continue;
+    const pid = cell.pid || "";
+    const expr = exprVector[i] || 0;
+    if (cell.level2 === "Malignant") {
+      if (!malMap.has(pid)) malMap.set(pid, []);
+      malMap.get(pid)!.push(expr);
+    } else if (cell.level2 === "Ductal") {
+      if (!ductMap.has(pid)) ductMap.set(pid, []);
+      ductMap.get(pid)!.push(expr);
+    }
+  }
+
+  const patientPairs: { pid: string; ductal: number; malignant: number }[] = [];
+  malMap.forEach((mVals, pid) => {
+    const dVals = ductMap.get(pid);
+    if (dVals && mVals.length >= minNucleiPerCompartment && dVals.length >= minNucleiPerCompartment) {
+      const mMean = mVals.reduce((a, b) => a + b, 0) / mVals.length;
+      const dMean = dVals.reduce((a, b) => a + b, 0) / dVals.length;
+      patientPairs.push({ pid, ductal: dMean, malignant: mMean });
+    }
+  });
+
+  const n = patientPairs.length;
+  if (n === 0) {
+    return {
+      gene,
+      pairedPatientCount: 0,
+      ductalMean: 0,
+      malignantMean: 0,
+      log2FC: 0,
+      upregulatedPatients: 0,
+      pValueWilcoxon: 1.0,
+      patientPairs: [],
+    };
+  }
+
+  const ductVals = patientPairs.map(p => p.ductal);
+  const malVals = patientPairs.map(p => p.malignant);
+  const ductalMean = ductVals.reduce((a, b) => a + b, 0) / n;
+  const malignantMean = malVals.reduce((a, b) => a + b, 0) / n;
+  const upregulatedPatients = patientPairs.filter(p => p.malignant > p.ductal).length;
+  const log2FC = Math.log2((malignantMean + 0.005) / (ductalMean + 0.005));
+  const pValueWilcoxon = calculateWilcoxonSignedRank(malVals, ductVals);
+
+  return {
+    gene,
+    pairedPatientCount: n,
+    ductalMean,
+    malignantMean,
+    log2FC,
+    upregulatedPatients,
+    pValueWilcoxon,
+    patientPairs,
+  };
 }

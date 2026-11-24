@@ -6,10 +6,11 @@ import React, {
 import {
   Search, Info, AlertTriangle, ChevronDown,
   TrendingUp, Cpu, X, HelpCircle, Layers, Users, Download, Bot,
-  BarChart3, GitCompare, Table, ShieldAlert, Sparkles, Filter, Activity
+  BarChart3, GitCompare, Table, ShieldAlert, Sparkles, Filter, Activity, Flame
 } from "lucide-react";
 
 import SingleNucleusPathwayExplorer from "./singleNucleus/SingleNucleusPathwayExplorer";
+import SingleNucleusResponseHeatmap from "./singleNucleus/SingleNucleusResponseHeatmap";
 import ExportButton from "./ExportButton";
 import {
   exportCanvasToPNG,
@@ -108,6 +109,7 @@ export type CohortFilter =
   | "ALL" 
   | "NAIVE" 
   | "TREATED" 
+  | "RT_CRT"
   | "CRT" 
   | "CRTl" 
   | "CRTn" 
@@ -116,12 +118,50 @@ export type CohortFilter =
   | "RT"
   | "RESP_MOD" 
   | "RESP_MIN" 
-  | "RESP_POOR";
+  | "RESP_POOR"
+  | "RESP_MOD_VS_POOR"
+  | "RESP_MOD_VS_NONMOD";
 
-export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table" | "pathway_analysis";
+export type AnalysisTab = "atlas" | "treatment_comparison" | "pseudobulk_table" | "pathway_analysis" | "response_analysis";
+
+function getGroupLabels(cohort: CohortFilter): {
+  groupA: string;
+  groupB: string;
+  groupAShort: string;
+  groupBShort: string;
+  groupACountText: string;
+} {
+  if (cohort === "RESP_MOD_VS_POOR") {
+    return {
+      groupA: "Moderate Response (n=7)",
+      groupB: "Poor Response (n=7)",
+      groupAShort: "Moderate",
+      groupBShort: "Poor",
+      groupACountText: "7 Patients",
+    };
+  }
+  if (cohort === "RESP_MOD_VS_NONMOD") {
+    return {
+      groupA: "Moderate Response (n=7)",
+      groupB: "Minimal + Poor (n=18)",
+      groupAShort: "Moderate",
+      groupBShort: "Min+Poor",
+      groupACountText: "7 Patients",
+    };
+  }
+  return {
+    groupA: "Treatment-Naïve (n=18)",
+    groupB: `Treated (${cohort})`,
+    groupAShort: "Naïve",
+    groupBShort: "Treated",
+    groupACountText: "18 Patients",
+  };
+}
 
 function getComparisonLabel(cohort: CohortFilter): string {
   switch (cohort) {
+    case "RT_CRT":
+      return "Treatment-Naïve (n=18) vs. RT / Standard CRT Combined (n=15)";
     case "CRT":
       return "Treatment-Naïve (n=18) vs. Standard CRT (n=14)";
     case "CRTl":
@@ -135,11 +175,15 @@ function getComparisonLabel(cohort: CohortFilter): string {
     case "RT":
       return "Treatment-Naïve (n=18) vs. Radiation Alone [RT] (n=1)";
     case "RESP_MOD":
-      return "Treatment-Naïve (n=18) vs. Moderate Response (n=8)";
+      return "Treatment-Naïve (n=18) vs. Moderate Response (n=7)";
     case "RESP_MIN":
       return "Treatment-Naïve (n=18) vs. Minimal Response (n=11)";
     case "RESP_POOR":
-      return "Treatment-Naïve (n=18) vs. Poor Response (n=6)";
+      return "Treatment-Naïve (n=18) vs. Poor Response (n=7)";
+    case "RESP_MOD_VS_POOR":
+      return "Moderate Response [Sensitive] (n=7) vs. Poor Response [Resistant] (n=7)";
+    case "RESP_MOD_VS_NONMOD":
+      return "Moderate Response [Responder] (n=7) vs. Minimal + Poor [Non-Responder] (n=18)";
     default:
       return "Treatment-Naïve (n=18) vs. Neoadjuvant-Treated [100% RT/CRT] (n=25)";
   }
@@ -261,24 +305,15 @@ export default function SingleNucleusExplorer() {
     setShowSuggest(true);
   }, [query, geneSymbols, geneIndex]);
 
-  // Load gene binary on-demand
-  const handleGene = useCallback(async (symbol: string) => {
+  // Shared binary vector loader (reused by multi-gene Response Heatmap & single-gene Atlas)
+  const loadGeneVector = useCallback(async (symbol: string): Promise<Float32Array | null> => {
     const upper = symbol.trim().toUpperCase();
     const entry = symbolMap.get(upper);
-    if (!entry) {
-      alert(`Gene "${symbol}" not found in the processed GSE202051 atlas.`);
-      return;
-    }
-    setQuery(""); setSuggestions([]); setShowSuggest(false);
+    if (!entry) return null;
 
-    // Caching
     const cached = cacheGet(entry.k);
-    if (cached) {
-      applyExpression(entry.s, cached);
-      return;
-    }
+    if (cached) return cached;
 
-    setLoadingGene(true);
     try {
       const chunkId = entry.c ?? 0;
       const offset = entry.o ?? 0;
@@ -294,21 +329,47 @@ export default function SingleNucleusExplorer() {
       }
 
       const buf = chunkBuf.slice(offset, offset + length);
-      const dv     = new DataView(buf);
-      const n_nz   = dv.getUint32(0, true);
+      const dv = new DataView(buf);
+      const n_nz = dv.getUint32(0, true);
       const idxArr = new Uint16Array(buf, 4, n_nz);
       const valU16 = new Uint16Array(buf, 4 + n_nz * 2, n_nz);
-      const vec    = new Float32Array(20000);
+      const vec = new Float32Array(20000);
       for (let i = 0; i < n_nz; i++) vec[idxArr[i]] = f16ToF32(valU16[i]);
-      
+
       cacheSet(entry.k, vec);
+      return vec;
+    } catch {
+      return null;
+    }
+  }, [symbolMap, DATA]);
+
+  // Load gene binary on-demand
+  const handleGene = useCallback(async (symbol: string) => {
+    const upper = symbol.trim().toUpperCase();
+    const entry = symbolMap.get(upper);
+    if (!entry) {
+      alert(`Gene "${symbol}" not found in the processed GSE202051 atlas.`);
+      return;
+    }
+    setQuery(""); setSuggestions([]); setShowSuggest(false);
+
+    const cached = cacheGet(entry.k);
+    if (cached) {
+      applyExpression(entry.s, cached);
+      return;
+    }
+
+    setLoadingGene(true);
+    try {
+      const vec = await loadGeneVector(entry.s);
+      if (!vec) throw new Error("Binary chunk load failed");
       applyExpression(entry.s, vec);
     } catch (e: any) {
       alert(`Failed to load expression: ${e.message}`);
     } finally {
       setLoadingGene(false);
     }
-  }, [symbolMap, DATA]);
+  }, [symbolMap, loadGeneVector]);
 
   function applyExpression(symbol: string, vec: Float32Array) {
     const nonzero = Array.from(vec).filter(v => v > 0).sort((a, b) => a - b);
@@ -340,7 +401,11 @@ export default function SingleNucleusExplorer() {
         if (selectedCohort === "TREATED" && !isTreated) return acc;
 
         // Regimen Subgroup Filters
-        if (["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT"].includes(selectedCohort)) {
+        if (selectedCohort === "RT_CRT") {
+          if (!isTreated || (c.treatment !== "CRT" && c.treatment !== "RT")) return acc;
+        } else if (selectedCohort === "CRTn") {
+          if (!isTreated || (c.treatment !== "CRTn" && c.treatment !== "CRTln")) return acc;
+        } else if (["CRT", "CRTl", "CRTx", "GART", "RT"].includes(selectedCohort)) {
           if (!isTreated || c.treatment !== selectedCohort) return acc;
         }
 
@@ -348,6 +413,8 @@ export default function SingleNucleusExplorer() {
         if (selectedCohort === "RESP_MOD" && (!isTreated || !c.response?.toLowerCase().includes("moderate"))) return acc;
         if (selectedCohort === "RESP_MIN" && (!isTreated || !c.response?.toLowerCase().includes("minimal"))) return acc;
         if (selectedCohort === "RESP_POOR" && (!isTreated || !c.response?.toLowerCase().includes("poor"))) return acc;
+        if (selectedCohort === "RESP_MOD_VS_POOR" && (!isTreated || !(c.response?.toLowerCase().includes("moderate") || c.response?.toLowerCase().includes("poor")))) return acc;
+        if (selectedCohort === "RESP_MOD_VS_NONMOD" && !isTreated) return acc;
 
         acc.activeCells.push(c);
         acc.activeOrigIdx.push(i);
@@ -526,7 +593,7 @@ export default function SingleNucleusExplorer() {
     if (!activeGene || !exprVec || cells.length === 0) return [];
     
     let subFilter: string | undefined = undefined;
-    if (["CRT", "CRTl", "CRTn", "CRTx", "GART", "RT", "RESP_MOD", "RESP_MIN", "RESP_POOR"].includes(selectedCohort)) {
+    if (["RT_CRT", "CRT", "CRTl", "CRTn", "CRTx", "GART", "RT", "RESP_MOD", "RESP_MIN", "RESP_POOR", "RESP_MOD_VS_POOR", "RESP_MOD_VS_NONMOD"].includes(selectedCohort)) {
       subFilter = selectedCohort;
     }
 
@@ -1002,19 +1069,21 @@ export default function SingleNucleusExplorer() {
     ctx.lineWidth = 3;
     ctx.strokeRect(legBoxX, legBoxY, legBoxW, legBoxH);
 
-    // Item 1: Naïve
+    const grpLabels = getGroupLabels(selectedCohort);
+
+    // Item 1: Baseline / Group A
     ctx.fillStyle = "#0d9488";
     ctx.fillRect(legBoxX + 44, legBoxY + 24, 36, 34);
     ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
     ctx.font = `bold 36px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Treatment-Naïve Cohort (n=18)", legBoxX + 98, legBoxY + 54);
+    ctx.fillText(grpLabels.groupA, legBoxX + 98, legBoxY + 54);
 
-    // Item 2: Treated
+    // Item 2: Comparator / Group B
     ctx.fillStyle = "#f97316";
     ctx.fillRect(legBoxX + 740, legBoxY + 24, 36, 34);
     ctx.fillStyle = isLight ? "#1e293b" : "#e2e8f0";
-    ctx.fillText("Treated Subgroup", legBoxX + 794, legBoxY + 54);
+    ctx.fillText(grpLabels.groupB, legBoxX + 794, legBoxY + 54);
 
     return offscreen;
   };
@@ -1076,6 +1145,15 @@ export default function SingleNucleusExplorer() {
             <Activity className="w-4 h-4 text-indigo-300" />
             Pathway Remodeling & Divergence (3-Layer)
           </button>
+          <button
+            onClick={() => setActiveTab("response_analysis")}
+            className={`px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "response_analysis" ? "bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow" : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Flame className="w-4 h-4 text-amber-300" />
+            Response Heatmap (Mod/Min/Poor)
+          </button>
         </div>
       </div>
 
@@ -1113,6 +1191,7 @@ export default function SingleNucleusExplorer() {
             <option value="NAIVE">Treatment-Naïve (n=18, 9,689 nuclei)</option>
             <option value="TREATED">Neoadjuvant-Treated [100% RT/CRT] (n=25, 10,311 nuclei)</option>
             <optgroup label="── Exploratory Regimen Subgroups ──">
+              <option value="RT_CRT">RT / CRT Combined (n=15 · 14 CRT + 1 RT)</option>
               <option value="CRT">Standard CRT (n=14, 6,455 nuclei)</option>
               <option value="CRTl">CRT + Losartan [CRTl] (n=5, 1,647 nuclei)</option>
               <option value="CRTn">CRT + Nivolumab [CRTn/ln] (n=2, 667 nuclei)</option>
@@ -1121,9 +1200,11 @@ export default function SingleNucleusExplorer() {
               <option value="RT">Radiation Alone [RT] (n=1, 260 nuclei)</option>
             </optgroup>
             <optgroup label="── Exploratory Pathological Response ──">
-              <option value="RESP_MOD">Moderate Response (n=8)</option>
-              <option value="RESP_MIN">Minimal Response (n=11)</option>
-              <option value="RESP_POOR">Poor Response (n=6)</option>
+              <option value="RESP_MOD_VS_POOR">Moderate (n=7) vs. Poor Response (n=7) [Direct]</option>
+              <option value="RESP_MOD_VS_NONMOD">Moderate (n=7) vs. Minimal+Poor (n=18) [R vs NR]</option>
+              <option value="RESP_MOD">Naïve vs. Moderate Response (n=7)</option>
+              <option value="RESP_MIN">Naïve vs. Minimal Response (n=11)</option>
+              <option value="RESP_POOR">Naïve vs. Poor Response (n=7)</option>
             </optgroup>
           </select>
         </div>
@@ -1226,17 +1307,19 @@ export default function SingleNucleusExplorer() {
                 {/* Cohort Summary Badges */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
-                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treatment-Naïve Baseline</span>
-                    <span className="text-lg font-bold text-teal-400">18 Patients</span>
-                    <span className="text-xxs text-slate-500">9,689 in-tissue nuclei</span>
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">{getGroupLabels(selectedCohort).groupA}</span>
+                    <span className="text-lg font-bold text-teal-400">{getGroupLabels(selectedCohort).groupACountText}</span>
+                    <span className="text-xxs text-slate-500">
+                      {pseudobulkResults.reduce((sum, r) => Math.max(sum, r.naiveNucleusCount), 0)} max lineage nuclei
+                    </span>
                   </div>
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
-                    <span className="text-xxs text-slate-500 uppercase tracking-wider">Treated Group ({selectedCohort})</span>
+                    <span className="text-xxs text-slate-500 uppercase tracking-wider">{getGroupLabels(selectedCohort).groupB}</span>
                     <span className="text-lg font-bold text-orange-400">
                       {pseudobulkResults[0]?.treatedPatientCount || 25} Patients
                     </span>
                     <span className="text-xxs text-slate-500">
-                      {pseudobulkResults.reduce((sum, r) => Math.max(sum, r.treatedNucleusCount), 0)} nuclei
+                      {pseudobulkResults.reduce((sum, r) => Math.max(sum, r.treatedNucleusCount), 0)} max lineage nuclei
                     </span>
                   </div>
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col gap-1">
@@ -1259,8 +1342,8 @@ export default function SingleNucleusExplorer() {
                 <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col gap-4">
                   <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
                     <span className="flex items-center gap-3">
-                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-teal-500"></span> Treatment-Naïve (n=18)</span>
-                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-500"></span> Treated ({selectedCohort})</span>
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-teal-500"></span> {getGroupLabels(selectedCohort).groupA}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-orange-500"></span> {getGroupLabels(selectedCohort).groupB}</span>
                     </span>
                     <span className="text-xxs text-slate-500">Error bars represent ± Standard Error (SE) across patient means</span>
                   </div>
@@ -1270,6 +1353,7 @@ export default function SingleNucleusExplorer() {
                       const maxBar = Math.max(...pseudobulkResults.map(x => Math.max(x.naiveMean + x.naiveSE, x.treatedMean + x.treatedSE)), 1.0);
                       const naivePctWidth = Math.min(100, (r.naiveMean / maxBar) * 100);
                       const treatPctWidth = Math.min(100, (r.treatedMean / maxBar) * 100);
+                      const gLabels = getGroupLabels(selectedCohort);
 
                       return (
                         <div key={r.cellType} className="bg-slate-900/60 border border-slate-855 rounded-xl p-4 flex flex-col gap-2.5">
@@ -1278,7 +1362,7 @@ export default function SingleNucleusExplorer() {
                               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BROAD_COLORS[r.cellType] || LEVEL2_COLORS[r.cellType] || "#64748b" }} />
                               <span className="font-bold text-slate-200 text-sm">{r.cellType}</span>
                               <span className="text-xxs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                                {r.naivePatientCount} Naïve pts · {r.treatedPatientCount} Treated pts
+                                {r.naivePatientCount} {gLabels.groupAShort} pts · {r.treatedPatientCount} {gLabels.groupBShort} pts
                               </span>
                             </div>
 
@@ -1294,9 +1378,9 @@ export default function SingleNucleusExplorer() {
 
                           {/* Dual Bars */}
                           <div className="flex flex-col gap-1.5 font-mono text-xxs">
-                            {/* Naive Bar */}
+                            {/* Group A Bar */}
                             <div className="flex items-center gap-2">
-                              <span className="w-16 text-slate-400 shrink-0">Naïve</span>
+                              <span className="w-16 text-slate-400 shrink-0">{gLabels.groupAShort}</span>
                               <div className="flex-1 bg-slate-950 rounded-full h-3.5 overflow-hidden flex items-center p-0.5">
                                 <div className="bg-teal-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(2, naivePctWidth)}%` }} />
                               </div>
@@ -1304,9 +1388,9 @@ export default function SingleNucleusExplorer() {
                               <span className="w-16 text-right text-slate-500">({r.naivePctExpressing.toFixed(1)}%)</span>
                             </div>
 
-                            {/* Treated Bar */}
+                            {/* Group B Bar */}
                             <div className="flex items-center gap-2">
-                              <span className="w-16 text-slate-400 shrink-0">Treated</span>
+                              <span className="w-16 text-slate-400 shrink-0">{gLabels.groupBShort}</span>
                               <div className="flex-1 bg-slate-950 rounded-full h-3.5 overflow-hidden flex items-center p-0.5">
                                 <div className="bg-orange-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(2, treatPctWidth)}%` }} />
                               </div>
@@ -1403,10 +1487,10 @@ export default function SingleNucleusExplorer() {
                 <thead>
                   <tr className="bg-slate-950 text-slate-400 text-xxs uppercase tracking-wider border-b border-slate-800">
                     <th className="p-3">Cell Lineage</th>
-                    <th className="p-3 text-center">Naïve (Pts / Nuc)</th>
-                    <th className="p-3 text-center">Treated (Pts / Nuc)</th>
-                    <th className="p-3 text-right">Naïve Mean ± SE</th>
-                    <th className="p-3 text-right">Treated Mean ± SE</th>
+                    <th className="p-3 text-center">{getGroupLabels(selectedCohort).groupAShort} (Pts / Nuc)</th>
+                    <th className="p-3 text-center">{getGroupLabels(selectedCohort).groupBShort} (Pts / Nuc)</th>
+                    <th className="p-3 text-right">{getGroupLabels(selectedCohort).groupAShort} Mean ± SE</th>
+                    <th className="p-3 text-right">{getGroupLabels(selectedCohort).groupBShort} Mean ± SE</th>
                     <th className="p-3 text-right">Δ Pseudobulk</th>
                     <th className="p-3 text-right">log2FC</th>
                     <th className="p-3 text-right">Cohen's d (95% CI)</th>
@@ -1461,6 +1545,18 @@ export default function SingleNucleusExplorer() {
       ) : activeTab === "pathway_analysis" ? (
         /* ─── TAB 4: UNBIASED 3-LAYER PATHWAY ANALYSIS ─── */
         <SingleNucleusPathwayExplorer />
+      ) : activeTab === "response_analysis" ? (
+        /* ─── TAB 5: PATHOLOGIC RESPONSE HEATMAP (MOD/MIN/POOR) & PAIRED DUCTAL ─── */
+        <SingleNucleusResponseHeatmap
+          cells={cells}
+          symbolMap={symbolMap}
+          geneSymbols={geneSymbols}
+          loadGeneVector={loadGeneVector}
+          onSelectGeneForAtlas={(sym) => {
+            handleGene(sym);
+            setActiveTab("atlas");
+          }}
+        />
       ) : (
         /* ─── TAB 1: UMAP ATLAS EXPLORER (EXISTING POOLED ATLAS) ─── */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
