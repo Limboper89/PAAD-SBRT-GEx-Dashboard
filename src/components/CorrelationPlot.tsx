@@ -500,27 +500,27 @@ export default function CorrelationPlot({
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, `Pairwise Gene-Set Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`, 100, 96, virtualSize - 200, 68, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `Pairwise Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`, 90, 110, virtualSize - 180, 96, "bold", PUB_FONT_SANS);
 
-    const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
+    const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT (N = ${samples.length})`;
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `${cohortLabel} · Metric: ${matrixMetric === "pearson" ? "Pearson r" : "Spearman ρ"} · Set Score r = ${r} (p = ${formatPValue(pVal)})`,
-      100,
-      154,
-      virtualSize - 200,
-      40,
+      `${cohortLabel} · ${matrixMetric === "pearson" ? "Pearson r" : "Spearman ρ"} · Set Score r = ${r} (p = ${formatPValue(pVal)})`,
+      90,
+      180,
+      virtualSize - 180,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
     const nRows = pairwiseMatrix.genesA.length;
     const nCols = pairwiseMatrix.genesB.length;
-    const padLeft = 360;
-    const padTop = 380;
-    const padRight = 120;
-    const padBottom = 180;
+    const padLeft = 400;
+    const padTop = 430;
+    const padRight = 100;
+    const padBottom = 160;
     const gridW = virtualSize - padLeft - padRight;
     const gridH = virtualSize - padTop - padBottom;
     const cellW = gridW / Math.max(1, nCols);
@@ -545,11 +545,11 @@ export default function CorrelationPlot({
 
     // Draw column headers (Gene Set B)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    const labelFontPx = Math.min(48, Math.max(28, Math.floor(Math.min(cellW, cellH) * 0.42)));
+    const labelFontPx = Math.min(62, Math.max(36, Math.floor(Math.min(cellW, cellH) * 0.46)));
     ctx.font = `bold ${labelFontPx}px ${PUB_FONT_NUM}`;
     pairwiseMatrix.genesB.forEach((gB, colIdx) => {
       const cx = padLeft + colIdx * cellW + cellW / 2;
-      const cy = padTop - 24;
+      const cy = padTop - 26;
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(-Math.PI / 4);
@@ -565,7 +565,7 @@ export default function CorrelationPlot({
       ctx.font = `bold ${labelFontPx}px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillText(row.geneA, padLeft - 24, ry + cellH / 2);
+      ctx.fillText(row.geneA, padLeft - 26, ry + cellH / 2);
 
       row.cells.forEach((cell, colIdx) => {
         const cx = padLeft + colIdx * cellW;
@@ -576,7 +576,7 @@ export default function CorrelationPlot({
         ctx.strokeRect(cx, ry, cellW, cellH);
 
         if (nRows <= 20 && nCols <= 20) {
-          const valFont = Math.min(40, Math.max(22, Math.floor(Math.min(cellW, cellH) * 0.34)));
+          const valFont = Math.min(52, Math.max(30, Math.floor(Math.min(cellW, cellH) * 0.36)));
           ctx.font = `bold ${valFont}px ${PUB_FONT_NUM}`;
           ctx.fillStyle = Math.abs(cell.r) > 0.5 ? "#ffffff" : "#0f172a";
           ctx.textAlign = "center";
@@ -608,30 +608,30 @@ export default function CorrelationPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, virtualSize, virtualSize);
 
-    // 2. Title & Subtitle Header (publication-scaled >= 7 pt at 85 mm width)
+    // 2. Title & Subtitle Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
     const headerTitle = isGeneSetMode
-      ? `Gene-Set Signature Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`
-      : `Gene-Gene Co-Expression: ${gene1Name} vs. ${gene2Name}`;
-    drawFittedText(ctx, headerTitle, 100, 92, virtualSize - 200, 70, "bold", PUB_FONT_SANS);
+      ? `Signature Correlation: ${geneSetALabel} vs. ${geneSetBLabel}`
+      : `Co-Expression: ${gene1Name} vs. ${gene2Name}`;
+    drawFittedText(ctx, headerTitle, 90, 110, virtualSize - 180, 100, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT Cohort (N = ${samples.length})`;
-    drawFittedText(ctx, `${cohortLabel} · Pearson r = ${r} · Spearman ρ = ${rho} · p = ${formatPValue(pVal)}`, 100, 152, virtualSize - 200, 44, "bold", PUB_FONT_NUM);
+    const cohortLabel = isTcgaGtex ? (filteredExpressionData?.cohortName || "TCGA/GTEx") : `GSE225767 SBRT (N = ${samples.length})`;
+    drawFittedText(ctx, `${cohortLabel} · r = ${r} · ρ = ${rho} · p = ${formatPValue(pVal)}`, 90, 180, virtualSize - 180, 56, "bold", PUB_FONT_NUM);
 
     if (isGeneSetMode) {
       ctx.fillStyle = isLight ? "#475569" : "#64748b";
       const setAStr = geneSetAExpressions.map((g) => g.gene).join(", ");
       const setBStr = geneSetBExpressions.map((g) => g.gene).join(", ");
-      drawFittedText(ctx, `Set A (${geneSetAExpressions.length}): ${setAStr.slice(0, 65)}${setAStr.length > 65 ? "..." : ""} | Set B (${geneSetBExpressions.length}): ${setBStr.slice(0, 65)}${setBStr.length > 65 ? "..." : ""}`, 100, 202, virtualSize - 200, 34, "bold", PUB_FONT_NUM);
+      drawFittedText(ctx, `Set A (${geneSetAExpressions.length}): ${setAStr.slice(0, 55)}${setAStr.length > 55 ? "..." : ""} | Set B (${geneSetBExpressions.length}): ${setBStr.slice(0, 55)}${setBStr.length > 55 ? "..." : ""}`, 90, 238, virtualSize - 180, 44, "bold", PUB_FONT_NUM);
     }
 
     // 3. Layout Dimensions
-    const padLeft = 280;
-    const padRight = 100;
-    const padTop = 260;
-    const padBottom = 270;
+    const padLeft = 320;
+    const padRight = 90;
+    const padTop = isGeneSetMode ? 280 : 245;
+    const padBottom = 310;
     const plotW = virtualSize - padLeft - padRight;
     const plotH = virtualSize - padTop - padBottom;
 
@@ -645,7 +645,7 @@ export default function CorrelationPlot({
 
     // 4. Grid Lines
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
 
     const numTicks = 6;
     for (let i = 0; i <= numTicks; i++) {
@@ -657,9 +657,9 @@ export default function CorrelationPlot({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 70px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 26, py + 17);
+      ctx.fillText(yVal.toFixed(1), padLeft - 30, py + 24);
 
       const xVal = minX + (i / numTicks) * (maxX - minX);
       const px = mapX(xVal);
@@ -669,23 +669,23 @@ export default function CorrelationPlot({
       ctx.stroke();
 
       ctx.textAlign = "center";
-      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 62);
+      ctx.fillText(xVal.toFixed(1), px, padTop + plotH + 84);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Axis Titles
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
-    drawFittedText(ctx, `${xLabelTitle} [${unitSuffix}]`, padLeft + plotW / 2, padTop + plotH + 150, plotW, 58, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `${xLabelTitle} [${unitSuffix}]`, padLeft + plotW / 2, padTop + plotH + 204, plotW, 84, "bold", PUB_FONT_SANS);
 
     ctx.save();
-    ctx.translate(padLeft - 155, padTop + plotH / 2);
+    ctx.translate(92, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
-    drawFittedText(ctx, `${yLabelTitle} [${unitSuffix}]`, 0, 0, plotH, 58, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `${yLabelTitle} [${unitSuffix}]`, 0, 0, plotH, 84, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Linear Regression Trendline
@@ -695,7 +695,7 @@ export default function CorrelationPlot({
     const trendY2 = m * trendX2 + b;
 
     ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
-    ctx.lineWidth = 7;
+    ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.moveTo(mapX(trendX1), mapY(trendY1));
     ctx.lineTo(mapX(trendX2), mapY(trendY2));
@@ -708,7 +708,7 @@ export default function CorrelationPlot({
       const py = mapY(p.y);
 
       ctx.beginPath();
-      ctx.arc(px, py, 16, 0, Math.PI * 2);
+      ctx.arc(px, py, 18, 0, Math.PI * 2);
       ctx.fillStyle = ptColor;
       ctx.globalAlpha = 0.85;
       ctx.fill();
@@ -718,34 +718,30 @@ export default function CorrelationPlot({
       ctx.stroke();
     });
 
-    // 8. Statistics Summary Card (Top-Left inside plot)
-    const cardX = padLeft + 40;
-    const cardY = padTop + 40;
-    const cardW = 920;
-    const cardH = 360;
+    // 8. Statistics Summary Card (Top-Left inside plot, GEPIA2-calibrated)
+    const cardX = padLeft + 34;
+    const cardY = padTop + 34;
+    const cardW = 1140;
+    const cardH = isGeneSetMode ? 450 : 390;
 
     ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.96)" : "rgba(11, 19, 41, 0.96)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 46px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText(isGeneSetMode ? "Signature Correlation" : "Correlation Statistics", cardX + 34, cardY + 64);
+    drawFittedText(ctx, isGeneSetMode ? "Signature Correlation" : "Correlation Statistics", cardX + 36, cardY + 82, cardW - 72, 62, "bold", PUB_FONT_SANS);
 
-    ctx.font = `bold 40px ${PUB_FONT_NUM}`;
     ctx.fillStyle = isLight ? "#0d9488" : "#2dd4bf";
-    ctx.fillText(`Pearson r  = ${r} (p = ${formatPValue(pVal)})`, cardX + 34, cardY + 132);
-    ctx.fillText(`Spearman ρ = ${rho}`, cardX + 34, cardY + 190);
+    drawFittedText(ctx, `Pearson r = ${r} (p = ${formatPValue(pVal)})`, cardX + 36, cardY + 170, cardW - 72, 56, "bold", PUB_FONT_NUM);
+    drawFittedText(ctx, `Spearman ρ = ${rho}`, cardX + 36, cardY + 250, cardW - 72, 56, "bold", PUB_FONT_NUM);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = `bold 38px ${PUB_FONT_NUM}`;
-    ctx.fillText(`Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 34, cardY + 252);
+    drawFittedText(ctx, `Fit: y = ${m}x ${b >= 0 ? `+ ${b.toFixed(2)}` : `- ${Math.abs(b).toFixed(2)}`} (N=${points.length})`, cardX + 36, cardY + 332, cardW - 72, 54, "bold", PUB_FONT_NUM);
     if (isGeneSetMode) {
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
-      ctx.fillText(`Method: ${signatureMethod === "zscore" ? "Mean Z-Score" : "Mean log2 Expr"} (${geneSetAExpressions.length} vs ${geneSetBExpressions.length} genes)`, cardX + 34, cardY + 310);
+      drawFittedText(ctx, `Method: ${signatureMethod === "zscore" ? "Mean Z-Score" : "Mean log2"} (${geneSetAExpressions.length} vs ${geneSetBExpressions.length})`, cardX + 36, cardY + 408, cardW - 72, 48, "bold", PUB_FONT_NUM);
     }
 
     return offscreen;

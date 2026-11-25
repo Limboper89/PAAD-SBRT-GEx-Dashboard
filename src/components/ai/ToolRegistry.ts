@@ -81,7 +81,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     description: "List all transcriptomic datasets available in PDAC BioPortal with modalities and sample metadata",
     requiredParameters: [],
     optionalParameters: ["datasetId"],
-    supportedDatasets: ["tcga_gtex", "gse225767", "gse202051", "gse274103"],
+    supportedDatasets: ["tcga_gtex", "gse225767", "gse202051", "gse274103", "cptac_pdac"],
     outputSchema: "DatasetRegistrySummary",
     validator: "validateDatasetRegistry",
     uiDestination: "/",
@@ -182,6 +182,18 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     validator: "validateCrossStudy",
     uiDestination: "/#pathways",
     actionType: "OPEN_CROSS_STUDY"
+  },
+
+  cptac_proteomics: {
+    name: "cptac_proteomics",
+    description: "Query CPTAC-PDAC (Cell 2021) Tumor vs NAT global protein abundance, matched mRNA-vs-protein concordance, and continuous Cox PH OS metrics",
+    requiredParameters: ["gene"],
+    optionalParameters: ["limit"],
+    supportedDatasets: ["cptac_pdac"],
+    outputSchema: "CptacProteomicsQueryResult",
+    validator: "validateGeneExpression",
+    uiDestination: "/#cptac",
+    actionType: "OPEN_CPTAC"
   }
 };
 

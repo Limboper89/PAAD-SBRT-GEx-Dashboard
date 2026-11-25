@@ -608,36 +608,36 @@ export default function VolcanoPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, virtualSize, virtualSize);
 
-    // 2. Title & Subtitle Header (publication-scaled)
+    // 2. Title & Subtitle Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
     drawFittedText(
       ctx,
-      isTcgaGtex ? "Differential Expression: TCGA vs. GTEx (n=345)" : "Differential Expression: GSE225767 Pre vs. Post SBRT",
-      100,
-      92,
-      virtualSize - 200,
-      72,
+      isTcgaGtex ? "Differential Expression: TCGA vs. GTEx (n=345)" : "Differential Expression: Pre vs. Post SBRT",
+      90,
+      110,
+      virtualSize - 180,
+      98,
       "bold",
       PUB_FONT_SANS
     );
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     const markedSummary = markedGeneNames.size > 0
-      ? ` · Marked Genes: ${markedGeneNames.size}`
+      ? ` · Marked: ${markedGeneNames.size}`
       : "";
     drawFittedText(
       ctx,
-      `Volcano Distribution · Total Genes: ${points.length.toLocaleString()} · |log2FC| ≥ ${fcThreshold.toFixed(1)}${markedSummary}`,
-      100,
-      154,
-      virtualSize - 200,
-      44,
+      `Volcano Distribution · ${points.length.toLocaleString()} Genes · |log₂FC| ≥ ${fcThreshold.toFixed(1)}${markedSummary}`,
+      90,
+      180,
+      virtualSize - 180,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
-    const pad = { left: 280, right: 100, top: 230, bottom: 260 };
+    const pad = { left: 320, right: 90, top: 245, bottom: 310 };
     const plotW = virtualSize - pad.left - pad.right;
     const plotH = virtualSize - pad.top - pad.bottom;
 
@@ -692,17 +692,17 @@ export default function VolcanoPlot({
     ctx.setLineDash([]);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = `bold 44px ${PUB_FONT_NUM}`;
+    ctx.font = `bold 56px ${PUB_FONT_NUM}`;
     ctx.textAlign = "left";
-    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 20, threshPt.y - 18);
+    ctx.fillText(isTcgaGtex ? "FDR = 0.05" : "p = 0.05", pad.left + 20, threshPt.y - 22);
 
     // Fold change threshold lines
     if (fcThreshold > 0) {
       const rPt = getExportScreenCoords(fcThreshold, 0);
       const lPt = getExportScreenCoords(-fcThreshold, 0);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([8, 8]);
       ctx.beginPath();
       ctx.moveTo(rPt.x, pad.top);
       ctx.lineTo(rPt.x, pad.top + plotH);
@@ -722,7 +722,7 @@ export default function VolcanoPlot({
     sortedPoints.forEach((p) => {
       const scr = getExportScreenCoords(p.x, p.y);
       let color = isLight ? "rgba(148, 163, 184, 0.45)" : "rgba(148, 163, 184, 0.25)";
-      let radius = 8;
+      let radius = 9;
 
       const isSig = isTcgaGtex
         ? (p.gene.qval !== undefined && p.gene.qval < 0.05)
@@ -731,10 +731,10 @@ export default function VolcanoPlot({
 
       if (isSig && passesFC) {
         color = p.x > 0 ? "#dc2626" : "#2563eb";
-        radius = 12;
+        radius = 13;
       } else if (isSig) {
         color = isLight ? "rgba(148, 163, 184, 0.65)" : "rgba(148, 163, 184, 0.4)";
-        radius = 9;
+        radius = 10;
       }
 
       ctx.beginPath();
@@ -758,29 +758,26 @@ export default function VolcanoPlot({
 
     // 1. Draw callout rings and center dots for all marked points
     exportScreenPts.forEach((sp) => {
-      // High-contrast outer halo
       ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 24, 0, 2 * Math.PI);
+      ctx.arc(sp.x, sp.y, 26, 0, 2 * Math.PI);
       ctx.strokeStyle = isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(2, 6, 23, 0.9)";
       ctx.lineWidth = 10;
       ctx.stroke();
 
-      // Amber ring
       ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 24, 0, 2 * Math.PI);
+      ctx.arc(sp.x, sp.y, 26, 0, 2 * Math.PI);
       ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 6.5;
       ctx.stroke();
 
-      // Center dot
       ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 11, 0, 2 * Math.PI);
+      ctx.arc(sp.x, sp.y, 12, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? "#d97706" : "#f59e0b";
       ctx.fill();
     });
 
     // 2. Place and render non-overlapping gene labels with leader lines
-    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 54px ${PUB_FONT_SANS}`;
     const placedExportBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     const expLeft = pad.left + 14;
     const expRight = pad.left + plotW - 14;
@@ -789,28 +786,28 @@ export default function VolcanoPlot({
 
     exportScreenPts.slice(0, maxExportLabels).forEach((sp) => {
       const textW = ctx.measureText(sp.geneName).width;
-      const boxW = textW + 32;
-      const boxH = 62;
+      const boxW = textW + 36;
+      const boxH = 74;
       const dir = sp.dataX >= 0 ? 1 : -1;
 
       const candidateOffsets = [
-        { dx: dir * (36 + boxW / 2), dy: 0 },
-        { dx: dir * (36 + boxW / 2), dy: -54 },
-        { dx: dir * (36 + boxW / 2), dy: 54 },
-        { dx: -dir * (36 + boxW / 2), dy: 0 },
-        { dx: 0, dy: -58 },
-        { dx: 0, dy: 58 },
-        { dx: dir * (70 + boxW / 2), dy: -85 },
-        { dx: dir * (70 + boxW / 2), dy: 85 },
-        { dx: -dir * (70 + boxW / 2), dy: -75 },
-        { dx: -dir * (70 + boxW / 2), dy: 75 },
-        { dx: dir * (110 + boxW / 2), dy: -125 },
-        { dx: dir * (110 + boxW / 2), dy: 125 },
-        { dx: -dir * (110 + boxW / 2), dy: -125 },
-        { dx: -dir * (110 + boxW / 2), dy: 125 },
-        { dx: dir * (150 + boxW / 2), dy: 0 },
-        { dx: 0, dy: -135 },
-        { dx: 0, dy: 135 },
+        { dx: dir * (40 + boxW / 2), dy: 0 },
+        { dx: dir * (40 + boxW / 2), dy: -66 },
+        { dx: dir * (40 + boxW / 2), dy: 66 },
+        { dx: -dir * (40 + boxW / 2), dy: 0 },
+        { dx: 0, dy: -70 },
+        { dx: 0, dy: 70 },
+        { dx: dir * (80 + boxW / 2), dy: -100 },
+        { dx: dir * (80 + boxW / 2), dy: 100 },
+        { dx: -dir * (80 + boxW / 2), dy: -90 },
+        { dx: -dir * (80 + boxW / 2), dy: 90 },
+        { dx: dir * (120 + boxW / 2), dy: -145 },
+        { dx: dir * (120 + boxW / 2), dy: 145 },
+        { dx: -dir * (120 + boxW / 2), dy: -145 },
+        { dx: -dir * (120 + boxW / 2), dy: 145 },
+        { dx: dir * (165 + boxW / 2), dy: 0 },
+        { dx: 0, dy: -155 },
+        { dx: 0, dy: 155 },
       ];
 
       let bestBox = {
@@ -852,30 +849,27 @@ export default function VolcanoPlot({
 
       placedExportBoxes.push(bestBox);
 
-      // Draw callout leader line from ring edge to label box
       const anchorX = Math.max(bestBox.x1, Math.min(sp.x, bestBox.x2));
       const anchorY = Math.max(bestBox.y1, Math.min(sp.y, bestBox.y2));
       const distToBox = Math.hypot(anchorX - sp.x, anchorY - sp.y);
       if (distToBox > 26) {
         const angle = Math.atan2(anchorY - sp.y, anchorX - sp.x);
         ctx.beginPath();
-        ctx.moveTo(sp.x + Math.cos(angle) * 24, sp.y + Math.sin(angle) * 24);
+        ctx.moveTo(sp.x + Math.cos(angle) * 26, sp.y + Math.sin(angle) * 26);
         ctx.lineTo(anchorX, anchorY);
         ctx.strokeStyle = isLight ? "#b45309" : "#fbbf24";
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 4;
         ctx.stroke();
       }
 
-      // Label pill box
-      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.94)" : "rgba(15, 23, 42, 0.94)";
+      ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.95)" : "rgba(15, 23, 42, 0.94)";
       ctx.strokeStyle = isLight ? "#d97706" : "#f59e0b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.roundRect(bestBox.x1, bestBox.y1, boxW, boxH, 10);
+      ctx.roundRect(bestBox.x1, bestBox.y1, boxW, boxH, 12);
       ctx.fill();
       ctx.stroke();
 
-      // Gene name text
       ctx.fillStyle = isLight ? "#0f172a" : "#ffffff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -885,39 +879,39 @@ export default function VolcanoPlot({
 
     // Outer Axis Frame
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.strokeRect(pad.left, pad.top, plotW, plotH);
 
-    // Axis Ticks & Numbers
+    // Axis Ticks & Numbers (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-    ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+    ctx.font = `bold 70px ${PUB_FONT_NUM}`;
     for (let x = startX; x <= bounds.maxX; x += xStep) {
       const pt = getExportScreenCoords(x, 0);
       if (pt.x >= pad.left - 5 && pt.x <= pad.left + plotW + 5) {
         ctx.textAlign = "center";
-        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 62);
+        ctx.fillText(x.toString(), pt.x, pad.top + plotH + 84);
       }
     }
     for (let y = 0; y <= bounds.maxY; y += yStep) {
       const pt = getExportScreenCoords(0, y);
       if (pt.y >= pad.top - 5 && pt.y <= pad.top + plotH + 5) {
         ctx.textAlign = "right";
-        ctx.fillText(y.toString(), pad.left - 26, pt.y + 16);
+        ctx.fillText(y.toString(), pad.left - 30, pt.y + 24);
       }
     }
 
-    // Axis Titles
+    // Axis Titles (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 84px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
     ctx.fillText(
       isTcgaGtex ? "Wilcoxon log₂(Fold Change)" : "DESeq2 log₂(Fold Change)",
       pad.left + plotW / 2,
-      pad.top + plotH + 152
+      pad.top + plotH + 204
     );
 
     ctx.save();
-    ctx.translate(pad.left - 155, pad.top + plotH / 2);
+    ctx.translate(92, pad.top + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(isTcgaGtex ? "−log₁₀(Wilcoxon FDR)" : "−log₁₀(p-value)", 0, 0);
     ctx.restore();

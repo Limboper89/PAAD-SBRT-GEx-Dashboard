@@ -159,7 +159,7 @@ export class EvidenceValidator {
     errors: ValidationError[]
   ): void {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
-    const datasetKeys = ["tcga_gtex", "gse225767"];
+    const datasetKeys = ["tcga_gtex", "gse225767", "cptac_pdac"];
 
     const allLog2FCs: number[] = [];
     for (const key of datasetKeys) {
@@ -243,7 +243,7 @@ export class EvidenceValidator {
     errors: ValidationError[]
   ): void {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
-    const datasetKeys = ["tcga_gtex", "gse225767"];
+    const datasetKeys = ["tcga_gtex", "gse225767", "cptac_pdac"];
 
     const allSigs: boolean[] = [];
     for (const key of datasetKeys) {
@@ -425,7 +425,7 @@ export class EvidenceValidator {
     errors: ValidationError[]
   ): void {
     const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
-    const datasetKeys = ["tcga_gtex", "gse225767"];
+    const datasetKeys = ["tcga_gtex", "gse225767", "cptac_pdac"];
 
     const authoritativeLog2FCs: number[] = [];
     const authoritativeFDRs: number[] = [];

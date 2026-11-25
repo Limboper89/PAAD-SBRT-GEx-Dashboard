@@ -80,26 +80,26 @@ export default function PathwayGeneMatrix({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title (publication-scaled)
+    // Title (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, contrast.shortTitle, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, contrast.shortTitle, 80, 110, size - 160, 98, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · ${isGsea ? "Leading-Edge Gene Matrix" : "Gene Overlap Matrix"} · Top ${topPathways.length} Pathways × ${topGenes.length} Genes`,
+      `${contrast.datasetName} · ${isGsea ? "Leading-Edge Matrix" : "Gene Overlap Matrix"} · ${topPathways.length} × ${topGenes.length}`,
       80,
-      150,
+      180,
       size - 160,
-      38,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
-    const padLeft = 1000;
+    const padLeft = 1020;
     const padRight = 80;
-    const padTop = 420;
+    const padTop = 470;
     const padBottom = 100;
 
     const matrixW = size - padLeft - padRight;
@@ -112,10 +112,10 @@ export default function PathwayGeneMatrix({
     topGenes.forEach((gene, cIdx) => {
       const x = padLeft + cIdx * cellW + cellW / 2;
       ctx.save();
-      ctx.translate(x, padTop - 26);
+      ctx.translate(x, padTop - 28);
       ctx.rotate(-Math.PI / 3);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 52px ${PUB_FONT_NUM}`;
       ctx.textAlign = "left";
       ctx.fillText(gene, 0, 0);
       ctx.restore();
@@ -128,12 +128,12 @@ export default function PathwayGeneMatrix({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(48, Math.max(34, Math.round(rowH * 0.42)));
+      const fontSize = Math.min(58, Math.max(40, Math.round(rowH * 0.46)));
       ctx.textAlign = "right";
 
-      const maxLen = 38;
+      const maxLen = 36;
       const displayName = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      drawFittedText(ctx, displayName, padLeft - 28, y + rowH * 0.62, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, displayName, padLeft - 28, y + rowH * 0.64, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 32);
 
       // Cells
       topGenes.forEach((gene, cIdx) => {

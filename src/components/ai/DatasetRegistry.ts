@@ -194,6 +194,47 @@ export const DATASET_REGISTRY: Record<string, DatasetDefinition> = {
     ],
     dataPath: "/PAAD-SBRT-GEx-Dashboard/data/gse274103/master_index.json",
     pairedPrePost: false
+  },
+
+  cptac_pdac: {
+    id: "cptac_pdac",
+    name: "CPTAC-PDAC Proteomics & Proteogenomics (Cao et al., Cell 2021)",
+    accession: "paad_cptac_2021",
+    modality: ["global proteomics (TMT)", "paired bulk RNA-seq", "clinical survival"],
+    biologicalQuestions: [
+      "tumor vs normal adjacent tissue differential protein abundance (11,662 proteins)",
+      "matched mRNA-vs-protein concordance and post-translational decoupling",
+      "overall survival validation via continuous Cox PH and maxstat Kaplan-Meier"
+    ],
+    groups: [
+      { id: "Tumor_Prot", label: "Primary Tumors (TMT Proteomics)", sampleCount: 140, description: "140 primary tumors (135 PDAC + 5 adenosquamous)" },
+      { id: "NAT_Prot", label: "Normal Adjacent Tissue (NAT Proteomics)", sampleCount: 75, description: "75 NAT controls (67 case-matched pairs + 8 NAT-only)" },
+      { id: "Tumor_RNA", label: "Matched Bulk RNA-seq (RSEM log2)", sampleCount: 140, description: "140 tumors matched 1:1 to proteomics + 21 NAT RNA-seq" },
+      { id: "OS_Valid", label: "Clinical OS Follow-Up", sampleCount: 134, description: "134 valid OS cases (76 deaths; 129 PDAC-only; 6 excluded lacking positive follow-up)" }
+    ],
+    analyses: [
+      "protein_differential_abundance",
+      "mrna_protein_concordance",
+      "multi_protein_heatmap_correlation",
+      "survival_cox_maxstat"
+    ],
+    capabilities: {
+      geneExpression: true,
+      differentialExpression: true,
+      singleNucleus: false,
+      spatialExpression: false
+    },
+    limitations: [
+      "Shotgun TMT proteomics does not quantify NFE2L2 (NRF2), HIF1A, or SLC7A11 protein (present in matched RNA-seq n=140 only)",
+      "6 of 140 clinical cases lack positive OS follow-up days (leaving n=134 valid OS, 129 PDAC-only)",
+      "NAT controls originate from tumor-adjacent non-neoplastic pancreas resections"
+    ],
+    queryFunctions: [
+      "queryCptacProteomics",
+      "queryCptacDifferential"
+    ],
+    dataPath: "/PAAD-SBRT-GEx-Dashboard/data/cptac_pdac/cptac_protein_stats.json",
+    pairedPrePost: false
   }
 };
 

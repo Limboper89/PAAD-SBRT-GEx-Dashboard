@@ -70,12 +70,24 @@ export function exportToCSV({
 export type ExportTheme = "light" | "dark";
 
 /**
- * Publication typography constants calibrated for GPB (Oxford Academic) and
- * Advanced Science (Wiley-VCH): clean sans-serif (Arial/Helvetica) ensures
- * >= 6.5-8.5 pt legibility when a 2400 px panel is scaled to 85-90 mm width.
+ * Publication typography constants calibrated to GEPIA2 / Nature / Cell / GPB /
+ * Advanced Science multi-panel figure proportions on a 2400×2400 px canvas
+ * (ensures >= 6.5-9.0 pt crisp legibility even when scaled down to 60-85 mm panel width).
  */
 export const PUB_FONT_SANS = "Arial, Helvetica, -apple-system, BlinkMacSystemFont, sans-serif";
 export const PUB_FONT_NUM = "Arial, Helvetica, -apple-system, BlinkMacSystemFont, sans-serif";
+
+export const PUB_TYPE = {
+  title: 100,       // Main panel title (~4.2% of 2400px width, matching GEPIA2)
+  subtitle: 56,     // Cohort / statistical subtitle (~2.3%)
+  axisTitle: 84,    // X / Y axis titles (~3.5%, matching GEPIA2)
+  tick: 70,         // X / Y axis tick numbers (~2.9%, matching GEPIA2)
+  cardTitle: 62,    // In-plot legend / stats box heading (~2.6%)
+  cardBody: 56,     // In-plot stats / legend lines (~2.3%, matching GEPIA2)
+  legend: 48,       // Top/bottom legend swatches & colorbar ticks (~2.0%)
+  callout: 54,      // Volcano callout gene labels & significance brackets
+  rowLabel: 54,     // Heatmap / pathway / risk-table row labels
+} as const;
 
 /**
  * Format p-values for publication figures without ever printing "p=0.00".

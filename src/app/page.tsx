@@ -29,6 +29,7 @@ import SpatialTranscriptomicsView from "@/components/SpatialPrototypeView";
 import SummaryCard from "@/components/SummaryCard";
 import PathwayExplorer from "@/components/pathways/PathwayExplorer";
 import SurvivalExplorer from "@/components/SurvivalExplorer";
+import CptacProteomicsExplorer from "@/components/cptac/CptacProteomicsExplorer";
 import { useAIContext } from "@/components/ai/AIProvider";
 import { RankedGene } from "@/utils/pathwayEngine";
 import { DegTransferMetadata } from "@/components/GeneTable";
@@ -60,10 +61,11 @@ interface SnCell {
   expressions: { [gene: string]: number };
 }
 
-// Available study options (added TCGA vs GTEx)
+// Available study options (added TCGA vs GTEx and CPTAC-PDAC Proteomics)
 const STUDIES = [
   { id: "GSE225767", name: "GSE225767: Ductal Adenocarcinoma Bulk RNA-seq", type: "Bulk RNA-seq" },
   { id: "TCGA_GTEX", name: "TCGA-PAAD vs GTEx Pancreas (Normal Reference)", type: "Tumor vs Normal" },
+  { id: "CPTAC_PDAC", name: "CPTAC-PDAC (Cell 2021): Global Proteomics & Proteogenomics", type: "Proteogenomics (TMT + RNA-seq)" },
   { id: "GSE274103", name: "GSE274103: Patient Tumor Spatial Transcriptomics", type: "Spatial Transcriptomics" },
   { id: "GSE202051", name: "GSE202051: PDAC Single-Nucleus Reference Atlas", type: "Single-Nucleus" }
 ];
@@ -72,7 +74,7 @@ export default function Dashboard() {
   const [activeStudy, setActiveStudy] = useState<string>("GSE225767");
   // Hard‑coded base path for static export
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
-  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "survival" | "about" | "pathway">("de");
+  const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "survival" | "cptac" | "about" | "pathway">("de");
   const [portalTheme, setPortalTheme] = useState<"dark" | "light">("dark");
 
   // Initialize and sync Light / Dark theme class on <html>
@@ -146,7 +148,10 @@ export default function Dashboard() {
       const action = customEvent.detail?.action?.toUpperCase() || "";
       const target = customEvent.detail?.target || "";
 
-      if (action.includes("SINGLE_NUCLEUS") || target === "sn") {
+      if (action.includes("CPTAC") || action.includes("PROTEOMIC") || target === "cptac" || target === "proteomics") {
+        setActiveTab("cptac");
+        setActiveStudy("CPTAC_PDAC");
+      } else if (action.includes("SINGLE_NUCLEUS") || target === "sn") {
         setActiveTab("sn");
         setActiveStudy("GSE202051");
       } else if (action.includes("SPATIAL") || target === "spatial" || target === "tme") {
@@ -173,7 +178,10 @@ export default function Dashboard() {
 
     const handleHashChange = () => {
       const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (hash === "sn" || hash === "single-nucleus") {
+      if (hash === "cptac" || hash === "proteomics" || hash === "proteome") {
+        setActiveTab("cptac");
+        setActiveStudy("CPTAC_PDAC");
+      } else if (hash === "sn" || hash === "single-nucleus") {
         setActiveTab("sn");
         setActiveStudy("GSE202051");
       } else if (hash === "spatial" || hash === "tme") {
@@ -328,7 +336,9 @@ export default function Dashboard() {
   // Sync activeStudy selection to tabs
   const handleStudyChange = (studyId: string) => {
     setActiveStudy(studyId);
-    if (studyId === "GSE274103" || studyId === "PDAC_Spatial") {
+    if (studyId === "CPTAC_PDAC") {
+      setActiveTab("cptac");
+    } else if (studyId === "GSE274103" || studyId === "PDAC_Spatial") {
       setActiveTab("tme");
     } else if (studyId === "GSE202051") {
       setActiveTab("sn");
@@ -528,7 +538,8 @@ export default function Dashboard() {
   }, [activeBulkData, activeStudy]);
 
   // Active module key for context-aware summary statistics
-  const activeModuleKey = useMemo<"bulk" | "spatial" | "singleNucleus">(() => {
+  const activeModuleKey = useMemo<"bulk" | "spatial" | "singleNucleus" | "cptac">(() => {
+    if (activeTab === "cptac" || activeStudy === "CPTAC_PDAC") return "cptac";
     if (activeTab === "sn" || activeStudy === "GSE202051") return "singleNucleus";
     if (activeTab === "tme" || activeStudy === "GSE274103" || activeStudy === "PDAC_Spatial") return "spatial";
     return "bulk";
@@ -554,6 +565,13 @@ export default function Dashboard() {
         return [
           "Kaplan-Meier Survival Plot",
           "Pathologic Response Bar Chart"
+        ];
+      case "cptac":
+        return [
+          "Tumor vs Normal Protein Volcano & Distribution",
+          "Matched mRNA-vs-Protein Proteogenomics Concordance",
+          "Multi-Protein Heatmap & Signature Correlation",
+          "CPTAC-PDAC Overall Survival (Cox PH & maxstat KM)"
         ];
       case "sn":
         return [
@@ -583,6 +601,7 @@ export default function Dashboard() {
       case "correlation": return "Correlation Scatter Plot";
       case "de": return "Volcano Plot";
       case "survival": return "Kaplan-Meier Survival Plot";
+      case "cptac": return "Tumor vs Normal Protein Volcano & Distribution";
       case "sn": return "Single-Nucleus UMAP Atlas";
       case "tme": return "Spatial Visium Spot Map";
       case "pathway": return "Pathway Enrichment Dot Plot";
@@ -594,6 +613,7 @@ export default function Dashboard() {
 
   // Sync state to PDACopilot context provider
   useEffect(() => {
+    if (activeTab === "cptac" || activeStudy === "CPTAC_PDAC") return;
     const studyObj = STUDIES.find(s => s.id === activeStudy);
     const studyName = studyObj ? studyObj.name : activeStudy;
 
@@ -644,6 +664,39 @@ export default function Dashboard() {
 
   // Context-aware summary cards configuration for active module
   const summaryCards = useMemo(() => {
+    if (activeModuleKey === "cptac") {
+      return [
+        {
+          title: "Quantified Proteins",
+          value: "11,662",
+          icon: Database,
+          valueColorClass: "text-amber-300",
+          iconClass: "text-amber-500/50",
+        },
+        {
+          title: "Samples (Tumor / NAT)",
+          value: "140 / 75",
+          icon: Layers,
+          valueColorClass: "text-emerald-400",
+          iconClass: "text-emerald-500/50",
+        },
+        {
+          title: "Matched mRNA-Protein",
+          value: "11,651",
+          icon: GitFork,
+          valueColorClass: "text-sky-400",
+          iconClass: "text-sky-500/50",
+        },
+        {
+          title: "OS Follow-Up Cases",
+          value: "134 (76 Events)",
+          icon: HeartPulse,
+          valueColorClass: "text-rose-400",
+          iconClass: "text-rose-500/50",
+        },
+      ];
+    }
+
     if (activeModuleKey === "singleNucleus") {
       return [
         {
@@ -866,7 +919,11 @@ export default function Dashboard() {
         {/* Global Cross-Study Disclaimer / Provenance Panel */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex gap-2.5 shadow-xl text-xxs font-mono text-slate-400">
           <Info className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
-          {activeStudy === "TCGA_GTEX" ? (
+          {activeStudy === "CPTAC_PDAC" ? (
+            <p className="leading-relaxed">
+              <strong>CPTAC-PDAC Discovery Proteomics &amp; Proteogenomics (Cao et al., Cell 2021; PMID:34534465):</strong> Authentic TMT log2 global protein abundance (11,662 proteins across 140 primary tumors and 75 normal adjacent tissues, including 67 case-matched Tumor–NAT pairs), paired RSEM log2 RNA-seq (140 tumors, 21 NATs), and 134 overall survival cases (LinkedOmics + cBioPortal <code>paad_cptac_2021</code> verified parity).
+            </p>
+          ) : activeStudy === "TCGA_GTEX" ? (
             <p className="leading-relaxed">
               <strong>TCGA vs GTEx Baseline Transcriptomics:</strong> log₂(TPM + 0.001) values from uniformly processed Toil RNA-seq data were used for relative expression visualization across samples. TCGA and GTEx RNA-seq data were reprocessed through a common Toil computational pipeline, reducing computational processing heterogeneity and improving cross-cohort comparability. Residual cohort, pre-analytical, biological, and tissue-composition differences may remain.
             </p>
@@ -878,7 +935,7 @@ export default function Dashboard() {
         </div>
 
         {/* Global Active Gene Highlight card */}
-        {activeGeneData && (
+        {activeGeneData && activeTab !== "cptac" && (
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center font-bold text-amber-500 text-base">
@@ -1039,6 +1096,18 @@ export default function Dashboard() {
             <Activity className="w-4 h-4" />
             Spatial Transcriptomics
           </button>
+
+          <button
+            onClick={() => { setActiveTab("cptac"); setActiveStudy("CPTAC_PDAC"); }}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === "cptac"
+                ? "bg-slate-900 text-amber-300 border border-amber-500/40 shadow-md"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Database className="w-4 h-4 text-amber-400" />
+            CPTAC-PDAC Proteomics
+          </button>
           
           <button
             onClick={() => setActiveTab("about")}
@@ -1165,20 +1234,7 @@ export default function Dashboard() {
                           Reset to 1×1 Gene
                         </button>
                       </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGeneSetALabel("NRF2 / Antioxidant Set");
-                          setGeneSetBLabel("Serine Synthesis Set");
-                          setGeneSetA(["NFE2L2", "NQO1", "HMOX1", "GCLC"]);
-                          setGeneSetB(["PHGDH", "PSAT1", "PSPH", "SHMT2"]);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 text-[11px] font-semibold cursor-pointer"
-                      >
-                        + Load Example Gene Sets (NRF2 vs. Serine)
-                      </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -1229,33 +1285,6 @@ export default function Dashboard() {
                           </button>
                         )}
                       </div>
-                    </div>
-
-                    {/* Quick Preset Buttons for X-Axis */}
-                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
-                      <span className="text-slate-500">Presets:</span>
-                      {[
-                        { label: "NRF2 Targets", genes: ["NFE2L2", "NQO1", "GCLC", "GCLM", "HMOX1", "TXNRD1", "SRXN1", "AKR1C1"] },
-                        { label: "Serine Biosynthesis", genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2"] },
-                        { label: "Serine Transport Index", genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC3A2", "SLC38A1", "SLC38A2"] },
-                        { label: "Basal-like PDAC", genes: ["KRT5", "KRT14", "KRT17", "TP63", "S100A2", "SLC2A1"] },
-                      ].map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => {
-                            const validSet = new Set(activeBulkData.map((d) => d.gene_name));
-                            const matched = preset.genes.filter((g) => validSet.has(g));
-                            if (matched.length > 0) {
-                              setGeneSetALabel(preset.label);
-                              setGeneSetA(matched);
-                            }
-                          }}
-                          className="px-2 py-0.5 rounded bg-slate-900 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 transition cursor-pointer"
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1377,33 +1406,6 @@ export default function Dashboard() {
                           </button>
                         )}
                       </div>
-                    </div>
-
-                    {/* Quick Preset Buttons for Y-Axis */}
-                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
-                      <span className="text-slate-500">Presets:</span>
-                      {[
-                        { label: "Serine Biosynthesis", genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2"] },
-                        { label: "Serine Transport Index", genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC3A2", "SLC38A1", "SLC38A2"] },
-                        { label: "NRF2 Targets", genes: ["NFE2L2", "NQO1", "GCLC", "GCLM", "HMOX1", "TXNRD1", "SRXN1", "AKR1C1"] },
-                        { label: "EMT Signature", genes: ["VIM", "FN1", "ZEB1", "SNAI1", "SNAI2", "MMP2", "CDH2"] },
-                      ].map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => {
-                            const validSet = new Set(activeBulkData.map((d) => d.gene_name));
-                            const matched = preset.genes.filter((g) => validSet.has(g));
-                            if (matched.length > 0) {
-                              setGeneSetBLabel(preset.label);
-                              setGeneSetB(matched);
-                            }
-                          }}
-                          className="px-2 py-0.5 rounded bg-slate-900 hover:bg-amber-500/15 text-slate-300 hover:text-amber-300 border border-slate-800 hover:border-amber-500/30 transition cursor-pointer"
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1546,6 +1548,20 @@ export default function Dashboard() {
                         setHeatmapGenes((prev) => prev.filter((g) => g !== gene));
                       }
                     }}
+                    onAddGenes={(genes) => {
+                      if (activeStudy === "TCGA_GTEX") {
+                        setTcgaGtexHeatmapGenes((prev) => Array.from(new Set([...prev, ...genes])).slice(0, 50));
+                      } else {
+                        setHeatmapGenes((prev) => Array.from(new Set([...prev, ...genes])).slice(0, 50));
+                      }
+                    }}
+                    onClearGenes={() => {
+                      if (activeStudy === "TCGA_GTEX") {
+                        setTcgaGtexHeatmapGenes([]);
+                      } else {
+                        setHeatmapGenes([]);
+                      }
+                    }}
                     allGenes={activeBulkData.map((d) => d.gene_name)}
                     isTcgaGtex={activeStudy === "TCGA_GTEX"}
                     tcgaGtexExpressions={tcgaGtexExpressions}
@@ -1627,6 +1643,16 @@ export default function Dashboard() {
           {activeTab === "sn" && (
             <div className="flex-1">
               <SingleNucleusExplorer />
+            </div>
+          )}
+
+          {activeTab === "cptac" && (
+            <div className="flex-1">
+              <CptacProteomicsExplorer
+                basePath={basePath}
+                selectedGene={selectedGene || "NQO1"}
+                onSelectGene={handleSelectGene}
+              />
             </div>
           )}
 

@@ -1329,25 +1329,6 @@ export default function SpatialPrototypeView() {
                 {loadingGene && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-rose-500"></div>}
               </div>
 
-              {/* Quick-load suggested marker chips */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xxs font-mono">
-                <span className="text-slate-500">Suggested:</span>
-                {["PHGDH", "EPCAM", "COL1A1", "KRT18"].map((sym) => {
-                  const g = searchableGenes.find(item => item.s === sym);
-                  return (
-                    <button
-                      key={sym}
-                      type="button"
-                      onClick={() => g && loadGene(g)}
-                      className="px-2 py-0.5 rounded bg-slate-950 hover:bg-rose-500/20 text-rose-300 hover:text-white border border-slate-800 transition cursor-pointer"
-                      title={`Load ${sym} spatial expression`}
-                    >
-                      {sym}
-                    </button>
-                  );
-                })}
-              </div>
-
               {/* Suggestions dropdown */}
               {showSuggestions && suggestions.length > 0 && (
                 <ul className="absolute left-0 right-0 mt-1.5 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl z-50 max-h-56 overflow-y-auto divide-y divide-slate-900">

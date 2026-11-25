@@ -90,7 +90,13 @@ export function QuickActions() {
       label: "Cross-module summary",
       icon: Sparkles,
       color: "text-indigo-300 border-indigo-700/60 bg-indigo-950/50 hover:bg-indigo-900/60",
-      handler: () => sendMessage(`Perform a cross-module conservative summary for ${geneName} aggregating TCGA-GTEx, SBRT bulk, Single Nucleus, and Spatial datasets.`, "cross_module")
+      handler: () => sendMessage(`Perform a cross-module conservative summary for ${geneName} aggregating TCGA-GTEx, SBRT bulk, CPTAC-PDAC proteomics, Single Nucleus, and Spatial datasets.`, "cross_module")
+    },
+    {
+      label: "CPTAC protein validation",
+      icon: Activity,
+      color: "text-amber-300 border-amber-700/60 bg-amber-950/40 hover:bg-amber-900/50",
+      handler: () => sendMessage(`Query CPTAC-PDAC global proteomics, Tumor vs NAT protein log2FC, mRNA-protein concordance, and survival hazard ratio for ${geneName}.`, "cptac_proteomics")
     },
     {
       label: "Download AI summary",

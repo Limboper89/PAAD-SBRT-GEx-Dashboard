@@ -764,30 +764,30 @@ export default function SingleNucleusExplorer() {
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Title and Subtitle Header (publication-scaled)
+    // 2. Title and Subtitle Header (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, "Single-Nucleus Transcriptomic Atlas (GSE202051)", 80, 92, size - 160, 72, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "Single-Nucleus Atlas (GSE202051)", 80, 110, size - 160, 98, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    let sub = `Cohort: ${selectedCohort} · ${activeCells.length.toLocaleString()} nuclei · Patient: ${selectedPid === "ALL" ? "All Cohort (n=43)" : selectedPid}`;
+    let sub = `Cohort: ${selectedCohort} · ${activeCells.length.toLocaleString()} nuclei · ${selectedPid === "ALL" ? "All (n=43)" : selectedPid}`;
     if (colorMode === "expression") {
-      sub = `Target Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max Log-Expr: ${exprActualMax.toFixed(2)}`;
+      sub = `Gene: ${activeGene || "None"} · ${activeCells.length.toLocaleString()} nuclei · Max: ${exprActualMax.toFixed(2)}`;
     }
-    drawFittedText(ctx, sub, 80, 152, size - 160, 40, "bold", PUB_FONT_NUM);
+    drawFittedText(ctx, sub, 80, 180, size - 160, 54, "bold", PUB_FONT_NUM);
 
     // Divider
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(80, 180);
-    ctx.lineTo(size - 80, 180);
+    ctx.moveTo(80, 206);
+    ctx.lineTo(size - 80, 206);
     ctx.stroke();
 
     // 3. Coordinate Layout (leave generous bottom legend band)
     const pad = 110;
-    const plotTop = 210;
-    const footerH = 240;
+    const plotTop = 235;
+    const footerH = 290;
     const plotW = size - pad * 2;
     const plotH = size - plotTop - footerH;
 
@@ -814,14 +814,13 @@ export default function SingleNucleusExplorer() {
       ctx.fill();
     }
 
-    // 4. Colorbar / Legend Footer on High-Res Canvas (publication-scaled)
-    const legY = size - 135;
+    // 4. Colorbar / Legend Footer on High-Res Canvas (GEPIA2-calibrated)
+    const legY = size - 165;
     if (colorMode === "expression" && activeGene) {
-      const barW = 1100;
-      const barH = 38;
+      const barW = 1160;
+      const barH = 46;
       const barX = (size - barW) / 2;
 
-      // Draw gradient
       const grad = ctx.createLinearGradient(barX, legY, barX + barW, legY);
       grad.addColorStop(0.0, "rgba(51,65,85,0.85)");
       grad.addColorStop(0.2, "rgba(20,184,166,0.95)");
@@ -831,69 +830,66 @@ export default function SingleNucleusExplorer() {
       ctx.fillStyle = grad;
       ctx.fillRect(barX, legY, barW, barH);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#334155";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(barX, legY, barW, barH);
 
-      // Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 52px ${PUB_FONT_NUM}`;
       ctx.textAlign = "left";
-      ctx.fillText("0.00 (Unexpressed)", barX, legY + barH + 46);
+      ctx.fillText("0.00", barX, legY + barH + 62);
 
       ctx.textAlign = "center";
-      ctx.fillText(`${(exprCap * 0.5).toFixed(2)} (Mid)`, barX + barW / 2, legY + barH + 46);
+      ctx.fillText(`${(exprCap * 0.5).toFixed(2)}`, barX + barW / 2, legY + barH + 62);
 
       ctx.textAlign = "right";
-      ctx.fillText(`${exprCap.toFixed(2)} log1p (${capped ? "99th %ile" : "Max"})`, barX + barW, legY + barH + 46);
+      ctx.fillText(`${exprCap.toFixed(2)} (${capped ? "p99" : "Max"})`, barX + barW, legY + barH + 62);
 
       ctx.textAlign = "center";
-      ctx.font = `bold 44px ${PUB_FONT_SANS}`;
-      ctx.fillText(`${activeGene} Expression Scale`, barX + barW / 2, legY - 20);
+      ctx.font = `bold 60px ${PUB_FONT_SANS}`;
+      ctx.fillText(`${activeGene} Expression (log1p)`, barX + barW / 2, legY - 26);
     } else if (colorMode === "broad") {
       const entries = Object.entries(BROAD_COLORS);
-      const boxW = 34;
+      const boxW = 40;
       const perRow = Math.ceil(entries.length / 2);
-      const colW = (size - 200) / Math.max(1, perRow);
+      const colW = (size - 180) / Math.max(1, perRow);
 
       entries.forEach(([name, col], idx) => {
         const row = Math.floor(idx / perRow);
         const colIdx = idx % perRow;
-        const itemX = 110 + colIdx * colW;
-        const itemY = size - 165 + row * 72;
+        const itemX = 90 + colIdx * colW;
+        const itemY = size - 205 + row * 90;
 
         ctx.fillStyle = col;
         ctx.fillRect(itemX, itemY, boxW, boxW);
         ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         ctx.strokeRect(itemX, itemY, boxW, boxW);
 
         ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
         ctx.textAlign = "left";
-        drawFittedText(ctx, name, itemX + boxW + 14, itemY + 29, colW - boxW - 30, 40, "bold", PUB_FONT_SANS, 28);
+        drawFittedText(ctx, name, itemX + boxW + 16, itemY + 34, colW - boxW - 30, 52, "bold", PUB_FONT_SANS, 34);
       });
     } else if (colorMode === "treatment") {
       const tEntries = Object.entries(TREATMENT_COLORS);
-      const boxW = 38;
-      const itemX1 = size / 2 - 760;
-      const itemX2 = size / 2 - 20;
+      const boxW = 46;
+      const itemX1 = size / 2 - 860;
+      const itemX2 = size / 2 - 40;
 
-      // Item 1
       ctx.fillStyle = tEntries[0][1];
       ctx.fillRect(itemX1, legY, boxW, boxW);
       ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(itemX1, legY, boxW, boxW);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 42px ${PUB_FONT_SANS}`;
+      ctx.font = `bold 54px ${PUB_FONT_SANS}`;
       ctx.textAlign = "left";
-      ctx.fillText("Treatment-naïve (n=18)", itemX1 + boxW + 16, legY + 33);
+      ctx.fillText("Treatment-naïve (n=18)", itemX1 + boxW + 20, legY + 40);
 
-      // Item 2
       ctx.fillStyle = tEntries[1][1];
       ctx.fillRect(itemX2, legY, boxW, boxW);
       ctx.strokeRect(itemX2, legY, boxW, boxW);
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.fillText("Neoadjuvant-treated [RT/CRT] (n=25)", itemX2 + boxW + 16, legY + 33);
+      ctx.fillText("Neoadjuvant RT/CRT (n=25)", itemX2 + boxW + 20, legY + 40);
     }
 
     return offscreen;
@@ -915,52 +911,52 @@ export default function SingleNucleusExplorer() {
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, w, h);
 
-    // Title & Header (publication-scaled >= 7 pt at 85 mm print width)
+    // Title & Header (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
     drawFittedText(
       ctx,
-      `Single-Nucleus Treatment-Stratified Comparison: ${activeGene || "Target Gene"}`,
+      `snRNA-seq Treatment Comparison: ${activeGene || "Target Gene"}`,
       80,
-      86,
+      100,
       w - 160,
-      64,
+      86,
       "bold",
       PUB_FONT_SANS
     );
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `GSE202051 snRNA-seq · Patient Pseudobulk: ${getComparisonLabel(selectedCohort)}`,
+      `GSE202051 · Patient Pseudobulk: ${getComparisonLabel(selectedCohort)}`,
       80,
-      142,
+      160,
       w - 160,
-      38,
+      48,
       "bold",
       PUB_FONT_NUM
     );
 
     // Divider
     ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(80, 174);
-    ctx.lineTo(w - 80, 174);
+    ctx.moveTo(80, 186);
+    ctx.lineTo(w - 80, 186);
     ctx.stroke();
 
     // Plot Dimensions
-    const padLeft = 215;
-    const padRight = 90;
-    const padTop = 240;
-    const padBottom = 300;
+    const padLeft = 260;
+    const padRight = 80;
+    const padTop = 250;
+    const padBottom = 330;
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
     const plotBottom = padTop + plotH;
 
     const items = pseudobulkResults.slice(0, 8);
     const maxVal = Math.max(...items.flatMap(r => [r.naiveMean + r.naiveSE, r.treatedMean + r.treatedSE]), 1.0);
-    const axisMax = Math.ceil(maxVal * 1.3 * 10) / 10;
+    const axisMax = Math.ceil(maxVal * 1.32 * 10) / 10;
 
     // Grid
     for (let i = 0; i <= 5; i++) {
@@ -969,23 +965,23 @@ export default function SingleNucleusExplorer() {
       ctx.moveTo(padLeft, y);
       ctx.lineTo(padLeft + plotW, y);
       ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-      ctx.lineWidth = i === 5 ? 3.5 : 1.5;
+      ctx.lineWidth = i === 5 ? 4 : 2;
       ctx.stroke();
 
       const val = ((axisMax * (5 - i)) / 5).toFixed(2);
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 54px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(val, padLeft - 24, y + 13);
+      ctx.fillText(val, padLeft - 24, y + 18);
     }
 
     // Y-Axis Title
     ctx.save();
-    ctx.translate(68, padTop + plotH / 2);
+    ctx.translate(72, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
-    drawFittedText(ctx, "Patient Pseudobulk Mean (log1p ± SE)", 0, 0, plotH + 80, 44, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "Pseudobulk Mean (log1p ± SE)", 0, 0, plotH + 80, 62, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // Bars
@@ -999,62 +995,56 @@ export default function SingleNucleusExplorer() {
       const xNaive = cx - groupW / 2;
       const xTreated = cx + groupW / 2 - barW;
 
-      // 1. Naïve Bar (Teal)
       const hNaive = (r.naiveMean / axisMax) * plotH;
       const yNaive = plotBottom - hNaive;
       ctx.fillStyle = "#0d9488";
       ctx.fillRect(xNaive, yNaive, barW, hNaive);
 
-      // Error bar Naïve
       const errTopN = plotBottom - ((r.naiveMean + r.naiveSE) / axisMax) * plotH;
       const errBotN = plotBottom - ((Math.max(0, r.naiveMean - r.naiveSE)) / axisMax) * plotH;
       ctx.strokeStyle = isLight ? "#0f172a" : "#ffffff";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(xNaive + barW / 2, errTopN);
       ctx.lineTo(xNaive + barW / 2, errBotN);
-      ctx.moveTo(xNaive + barW / 2 - 8, errTopN);
-      ctx.lineTo(xNaive + barW / 2 + 8, errTopN);
-      ctx.moveTo(xNaive + barW / 2 - 8, errBotN);
-      ctx.lineTo(xNaive + barW / 2 + 8, errBotN);
+      ctx.moveTo(xNaive + barW / 2 - 10, errTopN);
+      ctx.lineTo(xNaive + barW / 2 + 10, errTopN);
+      ctx.moveTo(xNaive + barW / 2 - 10, errBotN);
+      ctx.lineTo(xNaive + barW / 2 + 10, errBotN);
       ctx.stroke();
 
-      // 2. Treated Bar (Orange)
       const hTreated = (r.treatedMean / axisMax) * plotH;
       const yTreated = plotBottom - hTreated;
       ctx.fillStyle = "#f97316";
       ctx.fillRect(xTreated, yTreated, barW, hTreated);
 
-      // Error bar Treated
       const errTopT = plotBottom - ((r.treatedMean + r.treatedSE) / axisMax) * plotH;
       const errBotT = plotBottom - ((Math.max(0, r.treatedMean - r.treatedSE)) / axisMax) * plotH;
       ctx.beginPath();
       ctx.moveTo(xTreated + barW / 2, errTopT);
       ctx.lineTo(xTreated + barW / 2, errBotT);
-      ctx.moveTo(xTreated + barW / 2 - 8, errTopT);
-      ctx.lineTo(xTreated + barW / 2 + 8, errTopT);
-      ctx.moveTo(xTreated + barW / 2 - 8, errBotT);
-      ctx.lineTo(xTreated + barW / 2 + 8, errBotT);
+      ctx.moveTo(xTreated + barW / 2 - 10, errTopT);
+      ctx.lineTo(xTreated + barW / 2 + 10, errTopT);
+      ctx.moveTo(xTreated + barW / 2 - 10, errBotT);
+      ctx.lineTo(xTreated + barW / 2 + 10, errBotT);
       ctx.stroke();
 
-      // Delta / Significance label above pair (never prints p=0.00)
-      const topY = Math.min(errTopN, errTopT) - 24;
+      const topY = Math.min(errTopN, errTopT) - 28;
       const sigText = r.qValue < 0.05
         ? `q=${r.qValue.toExponential(1)}*`
         : `p=${formatPublicationPValue(r.pValueWelch)}`;
       ctx.fillStyle = r.isSignificant ? "#f43f5e" : (isLight ? "#475569" : "#94a3b8");
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 44px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
       ctx.fillText(sigText, cx, topY);
 
-      // X-Axis Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "center";
-      drawFittedText(ctx, r.cellType, cx, plotBottom + 54, slotW - 14, 38, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, r.cellType, cx, plotBottom + 64, slotW - 14, 50, "bold", PUB_FONT_SANS, 32);
 
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = `bold 30px ${PUB_FONT_NUM}`;
-      ctx.fillText(`N:${r.naivePatientCount} / T:${r.treatedPatientCount}`, cx, plotBottom + 100);
+      ctx.font = `bold 40px ${PUB_FONT_NUM}`;
+      ctx.fillText(`N:${r.naivePatientCount} / T:${r.treatedPatientCount}`, cx, plotBottom + 118);
     });
 
     // Legend

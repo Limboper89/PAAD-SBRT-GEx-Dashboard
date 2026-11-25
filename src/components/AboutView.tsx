@@ -70,6 +70,12 @@ export default function AboutView() {
                 <td className="p-3 text-slate-300">5 treatment-naïve human PDAC patients (10x Genomics Visium Spatial)</td>
                 <td className="p-3 text-slate-400">Explore tissue-level spatial coordinates and gene-expression overlays.</td>
               </tr>
+              <tr className="hover:bg-slate-850/30 transition-colors">
+                <td className="p-3 font-bold text-amber-400">CPTAC-PDAC (Cell 2021)</td>
+                <td className="p-3">Proteomics &amp; Proteogenomics</td>
+                <td className="p-3 text-slate-300">140 primary tumors &amp; 75 normal adjacent tissues (67 paired Tumor–NAT); 11,662 global proteins &amp; 140 matched RSEM RNA-seq; 134 OS cases (76 events)</td>
+                <td className="p-3 text-slate-400">Validate Tumor vs Normal protein abundance, test post-translational mRNA–protein concordance/decoupling (e.g. NFE2L2/HIF1A), and run continuous Cox PH &amp; maxstat survival modeling.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -145,6 +151,20 @@ export default function AboutView() {
                   Visium capture spots are 55µm in diameter and contain mixed cellular populations (typically 1-10 cells per spot). Individual marker expression overlays do not resolve single-cell expression or guarantee specific cell presence.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* CPTAC-PDAC Proteogenomics Methods */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col gap-3">
+            <h4 className="text-slate-100 font-semibold text-sm flex items-center gap-2 border-b border-slate-850 pb-2 font-mono">
+              <Database className="w-4 h-4 text-amber-400" />
+              CPTAC-PDAC Proteomics &amp; Proteogenomics Methods
+            </h4>
+            <div className="text-xs leading-relaxed text-slate-400 flex flex-col gap-2 font-mono text-[10px]">
+              <p>• **Provenance &amp; Parity:** Global TMT-11 proteome (11,662 genes; 140 tumors, 75 NATs including 67 case-matched pairs) and paired RSEM UQ log2 RNA-seq (140 tumors, 21 NATs) sourced from LinkedOmics CPTAC-PDAC and verified 1:1 on all 140 tumors against cBioPortal <code>paad_cptac_2021</code>.</p>
+              <p>• **Differential Abundance &amp; Survival:** Two-sided Mann-Whitney U and Welch t-tests with BH FDR q-values, matched tumor–NAT paired differences (n=67 pairs), two-sided Pearson r &amp; Spearman rho, standardized continuous Cox PH (Efron ties), and Lausen &amp; Schumacher (1992) <code>maxstat Lau92</code> optimal cutpoint KM testing across 134 positive OS patients (6 cases lacking valid positive follow-up excluded; PDAC-only n=129 subset filterable).</p>
+              <p>• **TMT Sensitivity Note:** Low-abundance/rapidly turned-over transcription factors &amp; multi-pass membrane proteins including <code>NFE2L2</code>, <code>HIF1A</code>, and <code>SLC7A11</code> are quantified in paired RNA-seq (n=140) but absent from TMT global proteomics.</p>
+              <p>• **Citations:** Cao L, Huang C, Cui Zhou D, et al. *"Proteogenomic characterization of pancreatic ductal adenocarcinoma."* **Cell** (2021) | PMID: [34534465](https://pubmed.ncbi.nlm.nih.gov/34534465/)</p>
             </div>
           </div>
 

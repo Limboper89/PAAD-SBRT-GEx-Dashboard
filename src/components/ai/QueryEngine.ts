@@ -149,6 +149,62 @@ export interface SpatialQueryResult {
   success: boolean;
 }
 
+export interface CptacProteomicsQueryResult {
+  type: "gene";
+  datasetId: string;
+  datasetName: string;
+  gene: string;
+  found: boolean;
+  proteinDetected: boolean;
+  metrics: VerifiedGeneMetrics | null;
+  proteomicsStats?: {
+    nT: number;
+    nN: number;
+    nPairedNat: number;
+    tMean: number | null;
+    nMean: number | null;
+    log2FC: number | null;
+    mwP: number | null;
+    mwQ: number | null;
+    welchP: number | null;
+    welchQ: number | null;
+    pairedLog2FC: number | null;
+    pairedP: number | null;
+    nPairMP: number;
+    pearsonR: number | null;
+    pearsonP: number | null;
+    spearmanRho: number | null;
+    spearmanP: number | null;
+    coxN: number;
+    coxHR: number | null;
+    coxCiL: number | null;
+    coxCiH: number | null;
+    coxP: number | null;
+    mrnaLog2FC: number | null;
+    mrnaMwP: number | null;
+  };
+  limitations: string[];
+  success: boolean;
+  validationError?: string;
+}
+
+export interface CptacDifferentialQueryResult {
+  type: "differential";
+  datasetId: string;
+  datasetName: string;
+  totalProteins: number;
+  filteredCount: number;
+  globalConcordance?: {
+    median_pearson_r: number;
+    median_spearman_rho: number;
+    pct_positive_r: number;
+  };
+  topUpregulated: Array<DEGeneRecord & { pearsonR?: number | null; coxHR?: number | null; coxP?: number | null }>;
+  topDownregulated: Array<DEGeneRecord & { pearsonR?: number | null; coxHR?: number | null; coxP?: number | null }>;
+  success: boolean;
+  validationError?: string;
+}
+
 // In-memory cache for loaded data files
 const dataCache: Map<string, any> = new Map();
 
@@ -262,6 +318,14 @@ export class QueryEngine {
         const name = (item.symbol || item.gene_name || "").toUpperCase();
         if (name && name.length >= 2) this.knownGeneSymbols.add(name);
       });
+
+      try {
+        const cptacProt = await fetchCachedJson(`${this.basePath}/data/cptac_pdac/cptac_protein_stats.json`);
+        (cptacProt || []).forEach((item: any) => {
+          const name = (item.g || "").toUpperCase();
+          if (name && name.length >= 2) this.knownGeneSymbols.add(name);
+        });
+      } catch {}
 
       this.isIndexLoaded = true;
     } catch (e) {
@@ -1165,6 +1229,251 @@ export class QueryEngine {
       evidenceObject,
       success: true
     };
+  }
+
+  /**
+   * Query CPTAC-PDAC (Cell 2021) Global Proteomics, Paired mRNA-Protein Concordance, and Cox PH Survival for a single target
+   */
+  async queryCptacProteomics(geneSymbol: string): Promise<CptacProteomicsQueryResult> {
+    const dataset = DATASET_REGISTRY.cptac_pdac;
+    const targetUpper = geneSymbol.trim().toUpperCase();
+
+    try {
+      const protStats: any[] = await fetchCachedJson(
+        `${this.basePath}/data/cptac_pdac/cptac_protein_stats.json`
+      );
+      const match = protStats.find((p) => (p.g || "").toUpperCase() === targetUpper);
+
+      if (match) {
+        const log2FC = typeof match.log2FC === "number" ? match.log2FC : 0;
+        const mwP = typeof match.mwP === "number" ? match.mwP : 1;
+        const mwQ = typeof match.mwQ === "number" ? match.mwQ : 1;
+        const isSig = mwQ < 0.05;
+
+        const verifiedMetrics: VerifiedGeneMetrics = {
+          log2FC,
+          log2FCFormatted: `${log2FC > 0 ? "+" : ""}${log2FC.toFixed(4)}`,
+          pValue: mwP,
+          pValueFormatted: formatStatNum(mwP),
+          adjPValue: mwQ,
+          adjPValueFormatted: formatStatNum(mwQ),
+          tumorMean: typeof match.tMean === "number" ? match.tMean : undefined,
+          tumorMeanFormatted: typeof match.tMean === "number" ? match.tMean.toFixed(4) : "N/A",
+          normalMean: typeof match.nMean === "number" ? match.nMean : undefined,
+          normalMeanFormatted: typeof match.nMean === "number" ? match.nMean.toFixed(4) : "N/A",
+          isSignificant: isSig,
+          significanceSummary: isSig
+            ? "Statistically significant (Mann-Whitney BH FDR < 0.05)"
+            : "Not statistically significant (Mann-Whitney BH FDR >= 0.05)"
+        };
+
+        return {
+          type: "gene",
+          datasetId: "cptac_pdac",
+          datasetName: dataset.name,
+          gene: match.g || geneSymbol,
+          found: true,
+          proteinDetected: true,
+          metrics: verifiedMetrics,
+          proteomicsStats: {
+            nT: match.nT,
+            nN: match.nN,
+            nPairedNat: match.nPairedNat,
+            tMean: match.tMean,
+            nMean: match.nMean,
+            log2FC: match.log2FC,
+            mwP: match.mwP,
+            mwQ: match.mwQ,
+            welchP: match.welchP,
+            welchQ: match.welchQ,
+            pairedLog2FC: match.pairedLog2FC,
+            pairedP: match.pairedP,
+            nPairMP: match.nPairMP,
+            pearsonR: match.r,
+            pearsonP: match.rP,
+            spearmanRho: match.rho,
+            spearmanP: match.rhoP,
+            coxN: match.coxN,
+            coxHR: match.coxHR,
+            coxCiL: match.coxCiL,
+            coxCiH: match.coxCiH,
+            coxP: match.coxP,
+            mrnaLog2FC: match.mLog2FC,
+            mrnaMwP: match.mMwP
+          },
+          limitations: dataset.limitations,
+          success: true
+        };
+      }
+
+      // Check mRNA-only index (e.g. NFE2L2, HIF1A, SLC7A11)
+      const mrnaOnly: any[] = await fetchCachedJson(
+        `${this.basePath}/data/cptac_pdac/cptac_mrna_only_stats.json`
+      );
+      const mMatch = mrnaOnly.find((m) => (m.g || "").toUpperCase() === targetUpper);
+      if (mMatch) {
+        const log2FC = typeof mMatch.log2FC === "number" ? mMatch.log2FC : 0;
+        const mwP = typeof mMatch.mwP === "number" ? mMatch.mwP : 1;
+        const mwQ = typeof mMatch.mwQ === "number" ? mMatch.mwQ : 1;
+        const isSig = mwQ < 0.05;
+
+        const verifiedMetrics: VerifiedGeneMetrics = {
+          log2FC,
+          log2FCFormatted: `${log2FC > 0 ? "+" : ""}${log2FC.toFixed(4)}`,
+          pValue: mwP,
+          pValueFormatted: formatStatNum(mwP),
+          adjPValue: mwQ,
+          adjPValueFormatted: formatStatNum(mwQ),
+          tumorMean: typeof mMatch.tMean === "number" ? mMatch.tMean : undefined,
+          tumorMeanFormatted: typeof mMatch.tMean === "number" ? mMatch.tMean.toFixed(4) : "N/A",
+          normalMean: typeof mMatch.nMean === "number" ? mMatch.nMean : undefined,
+          normalMeanFormatted: typeof mMatch.nMean === "number" ? mMatch.nMean.toFixed(4) : "N/A",
+          isSignificant: isSig,
+          significanceSummary: isSig
+            ? "Paired mRNA only: Significant (FDR < 0.05; protein below TMT detection limit)"
+            : "Paired mRNA only: Not significant (FDR >= 0.05; protein below TMT detection limit)"
+        };
+
+        return {
+          type: "gene",
+          datasetId: "cptac_pdac",
+          datasetName: dataset.name,
+          gene: mMatch.g || geneSymbol,
+          found: true,
+          proteinDetected: false,
+          metrics: verifiedMetrics,
+          proteomicsStats: {
+            nT: mMatch.nT,
+            nN: mMatch.nN,
+            nPairedNat: 0,
+            tMean: mMatch.tMean,
+            nMean: mMatch.nMean,
+            log2FC: mMatch.log2FC,
+            mwP: mMatch.mwP,
+            mwQ: mMatch.mwQ,
+            welchP: null,
+            welchQ: null,
+            pairedLog2FC: null,
+            pairedP: null,
+            nPairMP: 0,
+            pearsonR: null,
+            pearsonP: null,
+            spearmanRho: null,
+            spearmanP: null,
+            coxN: mMatch.coxN,
+            coxHR: mMatch.coxHR,
+            coxCiL: mMatch.coxCiL,
+            coxCiH: mMatch.coxCiH,
+            coxP: mMatch.coxP,
+            mrnaLog2FC: mMatch.log2FC,
+            mrnaMwP: mMatch.mwP
+          },
+          limitations: [
+            `${geneSymbol} is quantified in CPTAC matched bulk RNA-seq (n=${mMatch.nT} tumors, n=${mMatch.nN} NATs) but is NOT detected in the 11,662-protein shotgun TMT proteomics matrix.`,
+            ...dataset.limitations
+          ],
+          success: true
+        };
+      }
+
+      return {
+        type: "gene",
+        datasetId: "cptac_pdac",
+        datasetName: dataset.name,
+        gene: geneSymbol,
+        found: false,
+        proteinDetected: false,
+        metrics: null,
+        limitations: dataset.limitations,
+        success: true
+      };
+    } catch (e: any) {
+      return {
+        type: "gene",
+        datasetId: "cptac_pdac",
+        datasetName: dataset.name,
+        gene: geneSymbol,
+        found: false,
+        proteinDetected: false,
+        metrics: null,
+        limitations: dataset.limitations,
+        success: false,
+        validationError: e?.message || "Failed to query CPTAC-PDAC proteomics"
+      };
+    }
+  }
+
+  /**
+   * Retrieve top Tumor vs NAT differential proteins from CPTAC-PDAC
+   */
+  async queryCptacDifferential(limit: number = 10): Promise<CptacDifferentialQueryResult> {
+    const dataset = DATASET_REGISTRY.cptac_pdac;
+    try {
+      const [protStats, meta] = await Promise.all([
+        fetchCachedJson(`${this.basePath}/data/cptac_pdac/cptac_protein_stats.json`),
+        fetchCachedJson(`${this.basePath}/data/cptac_pdac/cptac_metadata.json`)
+      ]);
+
+      const sig = (protStats as any[]).filter(
+        (p) => typeof p.log2FC === "number" && typeof p.mwQ === "number" && p.mwQ < 0.05 && Math.abs(p.log2FC) >= 0.5
+      );
+      const up = sig
+        .filter((p) => p.log2FC > 0)
+        .sort((a, b) => b.log2FC - a.log2FC)
+        .slice(0, limit)
+        .map((p) => ({
+          gene: p.g,
+          log2FC: p.log2FC,
+          log2FCFormatted: `+${p.log2FC.toFixed(4)}`,
+          pValue: p.mwP,
+          pValueFormatted: formatStatNum(p.mwP),
+          adjPValue: p.mwQ,
+          adjPValueFormatted: formatStatNum(p.mwQ),
+          pearsonR: p.r,
+          coxHR: p.coxHR,
+          coxP: p.coxP
+        }));
+      const down = sig
+        .filter((p) => p.log2FC < 0)
+        .sort((a, b) => a.log2FC - b.log2FC)
+        .slice(0, limit)
+        .map((p) => ({
+          gene: p.g,
+          log2FC: p.log2FC,
+          log2FCFormatted: p.log2FC.toFixed(4),
+          pValue: p.mwP,
+          pValueFormatted: formatStatNum(p.mwP),
+          adjPValue: p.mwQ,
+          adjPValueFormatted: formatStatNum(p.mwQ),
+          pearsonR: p.r,
+          coxHR: p.coxHR,
+          coxP: p.coxP
+        }));
+
+      return {
+        type: "differential",
+        datasetId: "cptac_pdac",
+        datasetName: dataset.name,
+        totalProteins: (protStats as any[]).length,
+        filteredCount: sig.length,
+        globalConcordance: meta?.global_concordance,
+        topUpregulated: up,
+        topDownregulated: down,
+        success: true
+      };
+    } catch (e: any) {
+      return {
+        type: "differential",
+        datasetId: "cptac_pdac",
+        datasetName: dataset.name,
+        totalProteins: 0,
+        filteredCount: 0,
+        topUpregulated: [],
+        topDownregulated: [],
+        success: false,
+        validationError: e?.message || "Failed to query CPTAC differential proteins"
+      };
+    }
   }
 }
 

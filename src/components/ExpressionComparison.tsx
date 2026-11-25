@@ -356,28 +356,28 @@ export default function ExpressionComparison({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header (publication-scaled, unpaired label)
+    // 2. Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, "Pre-SBRT vs. Post-SBRT Gene Expression Comparison (GSE225767)", 100, 96, size - 200, 72, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "Pre-SBRT vs. Post-SBRT Expression (GSE225767)", 90, 110, size - 180, 98, "bold", PUB_FONT_SANS);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `Target Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Unpaired Pre-SBRT (n=26) vs. Post-SBRT (n=29)`,
-      100,
-      158,
-      size - 200,
-      42,
+      `Genes (${SbrtData.length}): ${selectedGenes.join(", ")} · Pre-SBRT (n=26) vs. Post-SBRT (n=29)`,
+      90,
+      180,
+      size - 180,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
-    const padLeft = 280;
-    const padRight = 100;
-    const padTop = 320;
-    const padBottom = 360;
+    const padLeft = 320;
+    const padRight = 90;
+    const padTop = 340;
+    const padBottom = 410;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -389,13 +389,13 @@ export default function ExpressionComparison({
       if (topPre > rawMax) rawMax = topPre;
       if (topPost > rawMax) rawMax = topPost;
     });
-    const maxVal = Math.ceil(rawMax * 1.25 * 10) / 10 || 10;
+    const maxVal = Math.ceil(rawMax * 1.28 * 10) / 10 || 10;
 
     const mapY = (y: number) => padTop + plotH - (y / maxVal) * plotH;
 
     // 4. Grid Lines & Ticks
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
 
     const numTicks = 6;
     for (let i = 0; i <= numTicks; i++) {
@@ -407,34 +407,32 @@ export default function ExpressionComparison({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      // Outer tick
       ctx.beginPath();
-      ctx.moveTo(padLeft - 16, py);
+      ctx.moveTo(padLeft - 18, py);
       ctx.lineTo(padLeft, py);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 70px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 28, py + 16);
+      ctx.fillText(yVal.toFixed(1), padLeft - 30, py + 24);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 155, padTop + plotH / 2);
+    ctx.translate(92, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Normalized log2-Expression (Mean ± SE)", 0, 0);
+    drawFittedText(ctx, "Normalized log₂ Expression (Mean ± SE)", 0, 0, plotH, 80, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Draw Grouped Bars with Error Bars and Significance Brackets
@@ -836,28 +834,28 @@ export default function ExpressionComparison({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header (publication-scaled)
+    // 2. Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, `Tumor vs. Normal Expression: ${selectedGeneSymbol || "Target Gene"}`, 100, 96, size - 1020, 72, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `Tumor vs. Normal: ${selectedGeneSymbol || "Target Gene"}`, 90, 110, size - 980, 98, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `TCGA-PAAD Tumors (n=178) vs GTEx Normal (n=167) · Primary Atlas (n=345)`,
-      100,
-      154,
-      size - 1020,
-      40,
+      `TCGA-PAAD (n=178) vs GTEx Normal (n=167)`,
+      90,
+      180,
+      size - 980,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
-    // 3. Layout Dimensions (Clean Top Headroom)
-    const padLeft = 280;
-    const padRight = 100;
+    // 3. Layout Dimensions
+    const padLeft = 320;
+    const padRight = 90;
     const padTop = 310;
-    const padBottom = 250;
+    const padBottom = 310;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -867,13 +865,13 @@ export default function ExpressionComparison({
     const rawMaxY = Math.max(...yVals);
     const ySpan = Math.max(rawMaxY - rawMinY, 2.0);
     const minY = Math.max(0, Math.floor(rawMinY - ySpan * 0.06));
-    const maxY = Math.ceil(rawMaxY + ySpan * 0.22); // Generous headroom
+    const maxY = Math.ceil(rawMaxY + ySpan * 0.22);
 
     const mapY = (y: number) => padTop + plotH - ((y - minY) / (maxY - minY)) * plotH;
 
     // 4. Grid Lines & Ticks
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
 
     const numTicks = 6;
     const tickStep = (maxY - minY) / numTicks;
@@ -887,23 +885,22 @@ export default function ExpressionComparison({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 70px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(yVal.toFixed(1), padLeft - 28, py + 16);
+      ctx.fillText(yVal.toFixed(1), padLeft - 30, py + 24);
     }
 
     // 5. Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     ctx.save();
-    ctx.translate(padLeft - 155, padTop + plotH / 2);
+    ctx.translate(92, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Expression log2(TPM + 0.001)", 0, 0);
+    drawFittedText(ctx, "Expression log₂(TPM + 0.001)", 0, 0, plotH, 84, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Cohort Columns
@@ -912,7 +909,7 @@ export default function ExpressionComparison({
     const col2X = showSolid ? padLeft + plotW * 0.55 : padLeft + plotW * 0.72;
     const col3X = padLeft + plotW * 0.85;
 
-    // Draw Jitter Points (Crisp, High Contrast)
+    // Draw Jitter Points
     points.forEach((p: any, pIdx: number) => {
       const isTumor = p.cohortName.includes("Tumor");
       const isGtex = p.cohortName.includes("GTEx");
@@ -921,12 +918,12 @@ export default function ExpressionComparison({
 
       const baseX = isGtex ? col1X : (isTumor ? col2X : col3X);
       const pseudoRand = (((pIdx * 9301 + 49297) % 233280) / 233280) - 0.5;
-      const jitter = pseudoRand * (isSolid ? 70 : 160);
+      const jitter = pseudoRand * (isSolid ? 70 : 165);
       const px = baseX + jitter;
       const py = mapY(p.y);
 
       ctx.beginPath();
-      ctx.arc(px, py, 12, 0, Math.PI * 2);
+      ctx.arc(px, py, 14, 0, Math.PI * 2);
       ctx.fillStyle = isGtex ? "#3b82f6" : (isTumor ? "#f43f5e" : "#fbbf24");
       ctx.globalAlpha = 0.65;
       ctx.fill();
@@ -944,7 +941,7 @@ export default function ExpressionComparison({
       if (isSolid && !showSolid) return;
 
       const cx = isGtex ? col1X : (isTumor ? col2X : col3X);
-      const boxW = isSolid ? 130 : 220;
+      const boxW = isSolid ? 130 : 230;
 
       const q1Y = mapY(b.q1);
       const q3Y = mapY(b.q3);
@@ -952,9 +949,8 @@ export default function ExpressionComparison({
       const minYpos = mapY(b.minW);
       const maxYpos = mapY(b.maxW);
 
-      // Whisker vertical line
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5.5;
       ctx.beginPath();
       ctx.moveTo(cx, minYpos);
       ctx.lineTo(cx, q1Y);
@@ -962,24 +958,21 @@ export default function ExpressionComparison({
       ctx.lineTo(cx, maxYpos);
       ctx.stroke();
 
-      // Whisker caps
       ctx.beginPath();
-      ctx.moveTo(cx - 40, minYpos);
-      ctx.lineTo(cx + 40, minYpos);
-      ctx.moveTo(cx - 40, maxYpos);
-      ctx.lineTo(cx + 40, maxYpos);
+      ctx.moveTo(cx - 46, minYpos);
+      ctx.lineTo(cx + 46, minYpos);
+      ctx.moveTo(cx - 46, maxYpos);
+      ctx.lineTo(cx + 46, maxYpos);
       ctx.stroke();
 
-      // Box Rect
       ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.92)" : "rgba(15, 23, 42, 0.92)";
       ctx.fillRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
       ctx.strokeStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5.5;
       ctx.strokeRect(cx - boxW / 2, q3Y, boxW, q1Y - q3Y);
 
-      // Median Line (Bold Contrast)
       ctx.strokeStyle = isGtex ? "#1d4ed8" : (isTumor ? "#be123c" : "#b45309");
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 8;
       ctx.beginPath();
       ctx.moveTo(cx - boxW / 2, medY);
       ctx.lineTo(cx + boxW / 2, medY);
@@ -987,22 +980,21 @@ export default function ExpressionComparison({
 
       // Median label badge
       const medText = `Med: ${b.median.toFixed(2)}`;
-      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 48px ${PUB_FONT_NUM}`;
       const textW = ctx.measureText(medText).width;
       ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.96)" : "rgba(2, 6, 23, 0.96)";
-      ctx.fillRect(cx + boxW / 2 + 12, medY - 26, textW + 22, 52);
+      ctx.fillRect(cx + boxW / 2 + 12, medY - 32, textW + 26, 64);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(cx + boxW / 2 + 12, medY - 26, textW + 22, 52);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(cx + boxW / 2 + 12, medY - 32, textW + 26, 64);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
-      ctx.fillText(medText, cx + boxW / 2 + 22, medY + 12);
+      ctx.fillText(medText, cx + boxW / 2 + 24, medY + 16);
 
-      // Diamond Mean Marker (if showMean is active)
       if (showMean && b.mean !== undefined) {
         const meanY = mapY(b.mean);
-        const dR = 18;
+        const dR = 20;
         ctx.beginPath();
         ctx.moveTo(cx, meanY - dR);
         ctx.lineTo(cx + dR, meanY);
@@ -1012,58 +1004,56 @@ export default function ExpressionComparison({
         ctx.fillStyle = "#fbbf24";
         ctx.fill();
         ctx.strokeStyle = "#0f172a";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3.5;
         ctx.stroke();
       }
     });
 
-    // Column X-Axis Labels (Bold Large)
+    // Column X-Axis Labels (GEPIA2-calibrated)
     ctx.fillStyle = "#2563eb";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 72px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("GTEx Normal Pancreas", col1X, padTop + plotH + 72);
+    ctx.fillText("GTEx Normal", col1X, padTop + plotH + 94);
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = `bold 42px ${PUB_FONT_NUM}`;
-    ctx.fillText("n = 167 samples", col1X, padTop + plotH + 126);
+    ctx.font = `bold 56px ${PUB_FONT_NUM}`;
+    ctx.fillText("n = 167", col1X, padTop + plotH + 170);
 
     ctx.fillStyle = "#dc2626";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
-    ctx.fillText("TCGA Primary Tumors", col2X, padTop + plotH + 72);
+    ctx.font = `bold 72px ${PUB_FONT_SANS}`;
+    ctx.fillText("TCGA Tumor", col2X, padTop + plotH + 94);
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = `bold 42px ${PUB_FONT_NUM}`;
-    ctx.fillText("n = 178 samples", col2X, padTop + plotH + 126);
+    ctx.font = `bold 56px ${PUB_FONT_NUM}`;
+    ctx.fillText("n = 178", col2X, padTop + plotH + 170);
 
     if (showSolid) {
       ctx.fillStyle = "#d97706";
-      ctx.font = `bold 46px ${PUB_FONT_SANS}`;
-      ctx.fillText("Solid Normal", col3X, padTop + plotH + 72);
+      ctx.font = `bold 62px ${PUB_FONT_SANS}`;
+      ctx.fillText("Solid Norm", col3X, padTop + plotH + 94);
       ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
-      ctx.fillText("n = 4 samples", col3X, padTop + plotH + 126);
+      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.fillText("n = 4", col3X, padTop + plotH + 170);
     }
 
-    // Top Summary Statistics Card (Placed Outside Plot Area at Header)
+    // Top Summary Statistics Card
     const cardW = 860;
-    const cardH = 195;
+    const cardH = 225;
     const cardX = padLeft + plotW - cardW;
     const cardY = 26;
 
     ctx.fillStyle = isLight ? "rgba(248, 250, 252, 0.98)" : "rgba(11, 19, 41, 0.98)";
     ctx.fillRect(cardX, cardY, cardW, cardH);
     ctx.strokeStyle = isLight ? "#94a3b8" : "#334155";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(cardX, cardY, cardW, cardH);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 40px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Differential Expression Summary", cardX + cardW / 2, cardY + 54);
+    drawFittedText(ctx, "Differential Summary", cardX + cardW / 2, cardY + 66, cardW - 48, 54, "bold", PUB_FONT_SANS);
 
-    ctx.font = `bold 36px ${PUB_FONT_NUM}`;
     const delta = (stats.tumorMean - stats.gtexMean).toFixed(2);
     ctx.fillStyle = Number(delta) >= 0 ? (isLight ? "#be123c" : "#f43f5e") : "#2563eb";
-    ctx.fillText(`Tumor: ${stats.tumorMean.toFixed(2)} | Normal: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 112);
-    ctx.fillText(`Difference (log2FC): ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 164);
+    drawFittedText(ctx, `Tumor: ${stats.tumorMean.toFixed(2)} | Norm: ${stats.gtexMean.toFixed(2)}`, cardX + cardW / 2, cardY + 134, cardW - 48, 48, "bold", PUB_FONT_NUM);
+    drawFittedText(ctx, `log₂FC: ${Number(delta) >= 0 ? "+" : ""}${delta}`, cardX + cardW / 2, cardY + 196, cardW - 48, 48, "bold", PUB_FONT_NUM);
 
     return offscreen;
   };

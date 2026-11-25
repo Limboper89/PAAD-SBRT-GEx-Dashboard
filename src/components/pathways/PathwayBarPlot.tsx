@@ -118,28 +118,28 @@ export default function PathwayBarPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Main Title: Contrast & Analysis Method (publication-scaled)
+    // Main Title: Contrast & Analysis Method (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 110, size - 160, 98, "bold", PUB_FONT_SANS);
 
-    // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    // Subtitle: Cohort name according to data
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
       `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · Top ${displayResults.length} Pathways`,
       80,
-      152,
+      180,
       size - 160,
-      40,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
-    const padLeft = 980;
-    const padRight = 320;
-    const padTop = 210;
-    const padBottom = 365;
+    const padLeft = 1000;
+    const padRight = 350;
+    const padTop = 235;
+    const padBottom = 420;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
@@ -167,12 +167,12 @@ export default function PathwayBarPlot({
 
       // Pathway name
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(46, Math.max(32, Math.round(rowH * 0.54)));
+      const fontSize = Math.min(56, Math.max(40, Math.round(rowH * 0.6)));
       ctx.textAlign = "right";
 
-      const maxLen = 38;
+      const maxLen = 36;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      drawFittedText(ctx, displayName, padLeft - 28, y + barH * 0.72, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, displayName, padLeft - 28, y + barH * 0.74, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 32);
 
       const isUp = d.direction === "Upregulated" || d.metric >= 0;
 
@@ -181,20 +181,20 @@ export default function PathwayBarPlot({
       ctx.fillRect(barX, y, barW, barH);
 
       ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 3.5;
       ctx.strokeRect(barX, y, barW, barH);
 
       // Value label at end of bar
       ctx.fillStyle = isLight ? "#0f172a" : "#cbd5e1";
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 44px ${PUB_FONT_NUM}`;
       ctx.textAlign = d.metric >= 0 ? "left" : "right";
       const labelX = d.metric >= 0 ? getX(d.metric) + 18 : getX(d.metric) - 18;
-      ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.72);
+      ctx.fillText(`${d.metric > 0 ? "+" : ""}${d.metric.toFixed(2)} (q=${d.fdr.toExponential(1)})`, labelX, y + barH * 0.74);
     });
 
     // Zero line
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(zeroX, padTop);
     ctx.lineTo(zeroX, axisY);
@@ -206,8 +206,8 @@ export default function PathwayBarPlot({
     ctx.lineTo(padLeft + plotW, axisY);
     ctx.stroke();
 
-    // Clean Integer / Half Ticks
-    ctx.font = `bold 48px ${PUB_FONT_NUM}`;
+    // Clean Integer / Half Ticks (GEPIA2-calibrated)
+    ctx.font = `bold 66px ${PUB_FONT_NUM}`;
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
 
@@ -215,81 +215,82 @@ export default function PathwayBarPlot({
       const xPos = getX(val);
       ctx.beginPath();
       ctx.moveTo(xPos, axisY);
-      ctx.lineTo(xPos, axisY + 16);
+      ctx.lineTo(xPos, axisY + 18);
       ctx.stroke();
-      ctx.fillText(formatTickValue(val), xPos, axisY + 62);
+      ctx.fillText(formatTickValue(val), xPos, axisY + 80);
     });
 
     // X Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(
+    drawFittedText(
+      ctx,
       isGsea
         ? "Rank-Sum Enrichment Z-Score (Z_GSEA)"
         : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      axisY + 132
+      axisY + 178,
+      plotW + 300,
+      74,
+      "bold",
+      PUB_FONT_SANS
     );
 
     // Dedicated Full-Width Legend Container Box
     const legBoxX = 80;
     const legBoxW = size - 160;
-    const legBoxY = axisY + 185;
-    const legBoxH = 98;
-    const midY = legBoxY + 50;
+    const legBoxY = axisY + 235;
+    const legBoxH = 114;
+    const midY = legBoxY + 58;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
     ctx.fill();
     ctx.stroke();
 
     if (isGsea) {
-      // 1. Negative Z_GSEA (Blue swatch on left)
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
-      ctx.fillRect(legBoxX + 42, midY - 16, 32, 32);
+      ctx.fillRect(legBoxX + 40, midY - 18, 36, 36);
       ctx.strokeStyle = "#1e40af";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(legBoxX + 42, midY - 16, 32, 32);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(legBoxX + 40, midY - 18, 36, 36);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
-      drawFittedText(ctx, contrast.negLegend, legBoxX + 88, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, contrast.negLegend, legBoxX + 92, midY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // 2. Positive Z_GSEA (Red swatch in middle)
       const midColX = legBoxX + 780;
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
-      ctx.fillRect(midColX, midY - 16, 32, 32);
+      ctx.fillRect(midColX, midY - 18, 36, 36);
       ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(midColX, midY - 16, 32, 32);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(midColX, midY - 18, 36, 36);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      drawFittedText(ctx, contrast.posLegend, midColX + 46, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, contrast.posLegend, midColX + 52, midY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // 3. Metric Note
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
       ctx.textAlign = "right";
-      drawFittedText(ctx, "Bar Length = |Z_GSEA| · q = BH FDR", legBoxX + legBoxW - 42, midY + 11, 680, 34, "bold", PUB_FONT_NUM, 26);
+      drawFittedText(ctx, "Bar = |Z_GSEA| · q = FDR", legBoxX + legBoxW - 40, midY + 15, 650, 44, "bold", PUB_FONT_NUM, 32);
     } else {
       ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
-      ctx.fillRect(legBoxX + 42, midY - 16, 32, 32);
+      ctx.fillRect(legBoxX + 40, midY - 18, 36, 36);
       ctx.strokeStyle = "#0d9488";
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(legBoxX + 42, midY - 16, 32, 32);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(legBoxX + 40, midY - 18, 36, 36);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 36px ${PUB_FONT_SANS}`;
+      ctx.font = `bold 46px ${PUB_FONT_SANS}`;
       ctx.textAlign = "left";
-      ctx.fillText("Fold Enrichment (BH FDR < 0.05)", legBoxX + 88, midY + 12);
+      ctx.fillText("Fold Enrichment (BH FDR < 0.05)", legBoxX + 92, midY + 16);
 
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 44px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText("q = BH Adjusted P-value", legBoxX + legBoxW - 42, midY + 11);
+      ctx.fillText("q = BH Adjusted P-value", legBoxX + legBoxW - 40, midY + 15);
     }
 
     return offscreen;

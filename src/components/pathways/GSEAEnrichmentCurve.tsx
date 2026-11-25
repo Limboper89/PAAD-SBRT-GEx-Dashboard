@@ -129,10 +129,10 @@ export default function GSEAEnrichmentCurve({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title (publication-scaled)
+    // Title (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, pathway.pathwayName, 80, 88, size - 160, 72, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, pathway.pathwayName, 80, 106, size - 160, 96, "bold", PUB_FONT_SANS);
 
     // Subtitle 1: Cohort & Contrast
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
@@ -140,9 +140,9 @@ export default function GSEAEnrichmentCurve({
       ctx,
       `Cohort: ${contrast.datasetName} (${contrast.fullContrast})`,
       80,
-      142,
+      172,
       size - 160,
-      40,
+      52,
       "bold",
       PUB_FONT_NUM
     );
@@ -155,16 +155,16 @@ export default function GSEAEnrichmentCurve({
     ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
     drawFittedText(
       ctx,
-      `Database: ${pathway.database} | Z_GSEA: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Hits: ${totalHits} | Leading Edge: ${leadingHits} (${pctLeading}%)`,
+      `${pathway.database} | Z_GSEA: ${pathway.nes !== undefined ? (pathway.nes > 0 ? "+" + pathway.nes.toFixed(3) : pathway.nes.toFixed(3)) : "N/A"} | FDR: ${pathway.adjPValue ? pathway.adjPValue.toExponential(2) : "N/A"} | Hits: ${totalHits} | Leading: ${leadingHits} (${pctLeading}%)`,
       80,
-      190,
+      230,
       size - 160,
-      36,
+      46,
       "bold",
       PUB_FONT_NUM
     );
 
-    const padLeft = 240;
+    const padLeft = 300;
     const padRight = 80;
     const plotW = size - padLeft - padRight;
 
@@ -173,14 +173,14 @@ export default function GSEAEnrichmentCurve({
 
     const getX = (rank: number) => padLeft + (rank / Math.max(1, maxRank)) * plotW;
 
-    // --- PANEL A: Mountain Plot (y: 230 to 1080, height 850) ---
-    const panelATop = 230;
-    const panelAH = 850;
+    // --- PANEL A: Mountain Plot (y: 265 to 1080, height 815) ---
+    const panelATop = 265;
+    const panelAH = 815;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
     ctx.fillRect(padLeft, panelATop, plotW, panelAH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(padLeft, panelATop, plotW, panelAH);
 
     const minES = esDomain[0];
@@ -190,19 +190,19 @@ export default function GSEAEnrichmentCurve({
 
     // Zero line
     ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(padLeft, zeroY);
     ctx.lineTo(padLeft + plotW, zeroY);
     ctx.stroke();
 
     // Panel A Y-axis ticks (top, zero, bottom)
-    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+    ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
+    ctx.font = `bold 58px ${PUB_FONT_NUM}`;
     ctx.textAlign = "right";
-    ctx.fillText(maxES.toFixed(2), padLeft - 18, panelATop + 36);
-    ctx.fillText("0.00", padLeft - 18, zeroY + 13);
-    ctx.fillText(minES.toFixed(2), padLeft - 18, panelATop + panelAH - 8);
+    ctx.fillText(maxES.toFixed(2), padLeft - 22, panelATop + 52);
+    ctx.fillText("0.00", padLeft - 22, zeroY + 20);
+    ctx.fillText(minES.toFixed(2), padLeft - 22, panelATop + panelAH - 10);
 
     // ES Mountain Area + Line
     if (chartData.length > 0) {
@@ -234,61 +234,60 @@ export default function GSEAEnrichmentCurve({
         else ctx.lineTo(x, y);
       });
       ctx.strokeStyle = isUp ? "#dc2626" : "#2563eb";
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 7;
       ctx.stroke();
 
       // Peak line
       const peakX = getX(peakIndex);
       const peakY = getESY(pathway.enrichmentScore ?? 0);
       ctx.strokeStyle = "rgba(217, 119, 6, 0.95)";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([10, 8]);
+      ctx.lineWidth = 5;
+      ctx.setLineDash([12, 8]);
       ctx.beginPath();
       ctx.moveTo(peakX, panelATop);
       ctx.lineTo(peakX, panelATop + panelAH);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Peak label (auto-flip near edges so it never clips)
+      // Peak label
       ctx.fillStyle = isLight ? "#b45309" : "#fbbf24";
-      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 58px ${PUB_FONT_NUM}`;
       const placeRight = peakX < padLeft + plotW * 0.55;
       ctx.textAlign = placeRight ? "left" : "right";
-      const peakLabelX = placeRight ? peakX + 20 : peakX - 20;
-      const peakLabelY = Math.max(panelATop + 52, Math.min(panelATop + panelAH - 24, peakY - 18));
-      ctx.fillText(`Peak ES = ${pathway.enrichmentScore?.toFixed(3)} (Rank #${peakIndex})`, peakLabelX, peakLabelY);
+      const peakLabelX = placeRight ? peakX + 24 : peakX - 24;
+      const peakLabelY = Math.max(panelATop + 72, Math.min(panelATop + panelAH - 28, peakY - 22));
+      ctx.fillText(`Peak ES = ${pathway.enrichmentScore?.toFixed(3)} (#${peakIndex})`, peakLabelX, peakLabelY);
     }
 
     // Panel A Y Axis label
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 72px ${PUB_FONT_SANS}`;
     ctx.save();
-    ctx.translate(72, panelATop + panelAH / 2);
+    ctx.translate(82, panelATop + panelAH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = "center";
     ctx.fillText("Enrichment Score (ES)", 0, 0);
     ctx.restore();
 
-    // --- PANEL B: Hit Barcode Strip (y: 1150 to 1345, height 195) ---
-    const panelBTop = 1150;
-    const panelBH = 195;
+    // --- PANEL B: Hit Barcode Strip ---
+    const panelBTop = 1160;
+    const panelBH = 185;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
     ctx.fillRect(padLeft, panelBTop, plotW, panelBH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(padLeft, panelBTop, plotW, panelBH);
 
-    // Panel B Header / Legend over Barcode
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     ctx.textAlign = "left";
     drawFittedText(
       ctx,
-      `Mapped Hits: ${totalHits} genes  (● ${leadingHits} Core Leading Edge [${isUp ? "Red" : "Blue"}]  |  ● ${totalHits - leadingHits} Trailing Hits [Slate])`,
+      `Hits: ${totalHits} genes (● ${leadingHits} Leading Edge [${isUp ? "Red" : "Blue"}] | ● ${totalHits - leadingHits} Trailing [Slate])`,
       padLeft,
-      panelBTop - 16,
+      panelBTop - 20,
       plotW,
-      34,
+      46,
       "bold",
       PUB_FONT_NUM
     );
@@ -301,7 +300,7 @@ export default function GSEAEnrichmentCurve({
       const x = getX(rankIdx);
       const isLeading = isUp ? rankIdx <= peakIndex : rankIdx >= peakIndex;
       ctx.strokeStyle = isLeading ? (isUp ? "#dc2626" : "#2563eb") : (isLight ? "#64748b" : "#475569");
-      ctx.lineWidth = isLeading ? 4 : 2.5;
+      ctx.lineWidth = isLeading ? 4.5 : 2.5;
       ctx.beginPath();
       ctx.moveTo(x, panelBTop + 8);
       ctx.lineTo(x, panelBTop + panelBH - 8);
@@ -309,22 +308,22 @@ export default function GSEAEnrichmentCurve({
     });
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 50px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 66px ${PUB_FONT_SANS}`;
     ctx.save();
-    ctx.translate(72, panelBTop + panelBH / 2);
+    ctx.translate(82, panelBTop + panelBH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = "center";
     ctx.fillText("Hits", 0, 0);
     ctx.restore();
 
-    // --- PANEL C: Ranked Metric (y: 1400 to 2010, height 610) ---
+    // --- PANEL C: Ranked Metric ---
     const panelCTop = 1400;
-    const panelCH = 610;
+    const panelCH = 580;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0f172a";
     ctx.fillRect(padLeft, panelCTop, plotW, panelCH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.strokeRect(padLeft, panelCTop, plotW, panelCH);
 
     const minMetric = chartData.length > 0 ? Math.min(...chartData.map((d) => d.rankMetric)) : -5;
@@ -332,15 +331,13 @@ export default function GSEAEnrichmentCurve({
     const getMetricY = (m: number) => panelCTop + ((maxMetric - m) / (maxMetric - minMetric)) * panelCH;
     const zeroMetricY = getMetricY(0);
 
-    // Zero Metric Line
     ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(padLeft, zeroMetricY);
     ctx.lineTo(padLeft + plotW, zeroMetricY);
     ctx.stroke();
 
-    // Ranked Metric Area + Line
     if (chartData.length > 0) {
       ctx.beginPath();
       chartData.forEach((d, i) => {
@@ -350,26 +347,26 @@ export default function GSEAEnrichmentCurve({
         else ctx.lineTo(x, y);
       });
       ctx.strokeStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5;
       ctx.stroke();
     }
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 50px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 66px ${PUB_FONT_SANS}`;
     ctx.save();
-    ctx.translate(72, panelCTop + panelCH / 2);
+    ctx.translate(82, panelCTop + panelCH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = "center";
     ctx.fillText("Rank Metric", 0, 0);
     ctx.restore();
 
-    // Bottom X Axis (Ranks — 5 clean intervals so 46px ticks never collide)
+    // Bottom X Axis (GEPIA2-calibrated)
     const numXTicks = 5;
     const rankStep = Math.round(maxRank / numXTicks);
-    ctx.font = `bold 46px ${PUB_FONT_NUM}`;
+    ctx.font = `bold 62px ${PUB_FONT_NUM}`;
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.textAlign = "center";
 
     for (let i = 0; i <= numXTicks; i++) {
@@ -377,25 +374,25 @@ export default function GSEAEnrichmentCurve({
       const xPos = getX(r);
       ctx.beginPath();
       ctx.moveTo(xPos, panelCTop + panelCH);
-      ctx.lineTo(xPos, panelCTop + panelCH + 14);
+      ctx.lineTo(xPos, panelCTop + panelCH + 16);
       ctx.stroke();
-      ctx.fillText(r.toLocaleString(), xPos, panelCTop + panelCH + 62);
+      ctx.fillText(r.toLocaleString(), xPos, panelCTop + panelCH + 78);
     }
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 74px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(`Rank in Ordered Gene List (${maxRank.toLocaleString()} genes)`, padLeft + plotW / 2, panelCTop + panelCH + 140);
+    ctx.fillText(`Rank in Ordered Gene List (${maxRank.toLocaleString()} genes)`, padLeft + plotW / 2, panelCTop + panelCH + 178);
 
-    // Directional Phenotype Indicators on dedicated row below X-axis title (zero collisions)
-    ctx.font = `bold 42px ${PUB_FONT_SANS}`;
+    // Directional Phenotype Indicators on dedicated row below X-axis title
+    ctx.font = `bold 54px ${PUB_FONT_SANS}`;
     ctx.fillStyle = isLight ? "#dc2626" : "#f87171";
     ctx.textAlign = "left";
-    ctx.fillText(`◄ ${contrast.posShort}`, padLeft + 10, panelCTop + panelCH + 215);
+    ctx.fillText(`◄ ${contrast.posShort}`, padLeft + 10, panelCTop + panelCH + 266);
 
     ctx.fillStyle = isLight ? "#2563eb" : "#60a5fa";
     ctx.textAlign = "right";
-    ctx.fillText(`${contrast.negShort} ►`, padLeft + plotW - 10, panelCTop + panelCH + 215);
+    ctx.fillText(`${contrast.negShort} ►`, padLeft + plotW - 10, panelCTop + panelCH + 266);
 
     return offscreen;
   };

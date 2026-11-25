@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   applicationName: "PDAC BioPortal",
   description:
-    "PDAC BioPortal (featuring PDACopilot AI) is an open-access multi-scale pancreatic ductal adenocarcinoma (PDAC) transcriptomics knowledgebase integrating TCGA-PAAD vs GTEx normal pancreas (n=349), neoadjuvant SBRT radiotherapy bulk RNA-seq (GSE225767, n=55), single-nucleus RNA-seq reference atlas (GSE202051, 224,988 nuclei), and 10x Visium spatial transcriptomics (GSE274103).",
+    "PDAC BioPortal (featuring PDACopilot AI) is an open-access multi-scale pancreatic ductal adenocarcinoma (PDAC) transcriptomics and proteomics knowledgebase integrating TCGA-PAAD vs GTEx normal pancreas (n=349), CPTAC-PDAC global TMT proteomics and paired RNA-seq (Cao et al., Cell 2021; n=140 tumors, 75 NATs, 11,662 proteins), neoadjuvant SBRT bulk RNA-seq (GSE225767, n=55), single-nucleus RNA-seq atlas (GSE202051, 224,988 nuclei), and 10x Visium spatial transcriptomics (GSE274103).",
   keywords: [
     "PDAC BioPortal",
     "PDACopilot",
@@ -210,6 +210,13 @@ const jsonLd = {
             "10x Genomics Visium spatial transcriptomics across 23,436 tissue spots and 17,943 genes from five human PDAC sections aligned with H&E brightfield histology.",
           identifier: "GSE274103",
         },
+        {
+          "@type": "Dataset",
+          name: "CPTAC-PDAC Discovery Proteomics & Proteogenomics Cohort (Cao et al., Cell 2021)",
+          description:
+            "CPTAC Pancreatic Ductal Adenocarcinoma global TMT proteomics (11,662 proteins across 140 tumors and 75 NATs with 67 paired Tumor-NAT samples), matched bulk RNA-seq (140 tumors, 21 NATs), and 134 clinical overall survival follow-up cases.",
+          identifier: "paad_cptac_2021",
+        },
       ],
     },
   ],
@@ -250,7 +257,11 @@ export default function RootLayout({
             post-treatment resections), a single-nucleus RNA-seq reference atlas
             (GSE202051; 224,988 nuclei across 43 patients), and 10x Genomics
             Visium spatial transcriptomics (GSE274103; 23,436 tissue spots
-            across 5 clinical sections with H&amp;E histology overlay).
+            across 5 clinical sections with H&amp;E histology overlay), and
+            CPTAC-PDAC global TMT proteomics and matched RNA-seq (Cao et al.,
+            Cell 2021, PMID:34534465; 11,662 quantified proteins across 140
+            primary tumors and 75 normal adjacent tissues, 11,651 paired
+            mRNA-protein genes, and 134 overall survival follow-up cases).
           </p>
           <p>
             Interactive analytical modules include Differential Expression

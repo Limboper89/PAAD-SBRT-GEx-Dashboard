@@ -171,28 +171,28 @@ export default function PathwayBubblePlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Main Title: Contrast & Analysis Method (publication-scaled)
+    // Main Title: Contrast & Analysis Method (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `${contrast.shortTitle} (${isGsea ? "GSEA" : "ORA"})`, 80, 110, size - 160, 98, "bold", PUB_FONT_SANS);
 
-    // Subtitle: Cohort name according to data (TCGA, GTEx, etc.)
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    // Subtitle
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
       `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · Top ${displayResults.length} Pathways`,
       80,
-      152,
+      180,
       size - 160,
-      40,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
-    const padLeft = 1000;
-    const padRight = 100;
-    const padTop = 210;
-    const padBottom = 365;
+    const padLeft = 1020;
+    const padRight = 90;
+    const padTop = 235;
+    const padBottom = 420;
 
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
@@ -226,9 +226,9 @@ export default function PathwayBubblePlot({
     if (isGsea) {
       const zeroX = getXCoord(0);
       ctx.save();
-      ctx.setLineDash([10, 8]);
+      ctx.setLineDash([12, 8]);
       ctx.strokeStyle = isLight ? "#94a3b8" : "#475569";
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(zeroX, padTop);
       ctx.lineTo(zeroX, axisY);
@@ -241,17 +241,17 @@ export default function PathwayBubblePlot({
       const x = getXCoord(d.xValue);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f1f5f9";
-      const fontSize = Math.min(46, Math.max(32, Math.round(rowH * 0.56)));
+      const fontSize = Math.min(56, Math.max(40, Math.round(rowH * 0.6)));
       ctx.textAlign = "right";
 
-      const maxLen = 38;
+      const maxLen = 36;
       const displayName = d.fullName.length > maxLen ? d.fullName.slice(0, maxLen - 3) + "..." : d.fullName;
-      drawFittedText(ctx, displayName, padLeft - 28, y + fontSize * 0.35, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, displayName, padLeft - 28, y + fontSize * 0.35, padLeft - 70, fontSize, "bold", PUB_FONT_SANS, 32);
 
       const maxCount = Math.max(...chartData.map((cd) => cd.size), 20);
       const minCount = Math.min(...chartData.map((cd) => cd.size), 1);
       const normalizedSize = (d.size - minCount) / Math.max(1, maxCount - minCount);
-      const radius = 18 + normalizedSize * 30;
+      const radius = 20 + normalizedSize * 32;
 
       const isUp = d.direction === "Upregulated" || d.xValue >= 0;
 
@@ -261,13 +261,13 @@ export default function PathwayBubblePlot({
       ctx.fill();
 
       ctx.strokeStyle = isUp ? (isLight ? "#991b1b" : "#fca5a5") : (isLight ? "#1e40af" : "#93c5fd");
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 4.5;
       ctx.stroke();
     });
 
     // Axis Border Lines (Left Y and Bottom X)
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(padLeft, axisY);
     ctx.lineTo(padLeft + plotW, axisY);
@@ -275,49 +275,52 @@ export default function PathwayBubblePlot({
     ctx.lineTo(padLeft, axisY);
     ctx.stroke();
 
-    // Clean Integer / Half Ticks
+    // Clean Integer / Half Ticks (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 48px ${PUB_FONT_NUM}`;
+    ctx.font = `bold 66px ${PUB_FONT_NUM}`;
     ctx.textAlign = "center";
 
     tickInfo.ticks.forEach((val) => {
       const xPos = getXCoord(val);
       ctx.beginPath();
       ctx.moveTo(xPos, axisY);
-      ctx.lineTo(xPos, axisY + 16);
+      ctx.lineTo(xPos, axisY + 18);
       ctx.stroke();
-      ctx.fillText(formatTickValue(val), xPos, axisY + 62);
+      ctx.fillText(formatTickValue(val), xPos, axisY + 80);
     });
 
     // X-Axis Metric Title in Center
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 52px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(
+    drawFittedText(
+      ctx,
       isGsea ? "Rank-Sum Enrichment Z-Score (Z_GSEA)" : `Fold Enrichment (${contrast.shortTitle})`,
       padLeft + plotW / 2,
-      axisY + 132
+      axisY + 178,
+      plotW + 280,
+      74,
+      "bold",
+      PUB_FONT_SANS
     );
 
-    // Dedicated Full-Width Legend Container Box (prevents text collisions)
+    // Dedicated Full-Width Legend Container Box
     const legBoxX = 80;
     const legBoxW = size - 160;
-    const legBoxY = axisY + 185;
-    const legBoxH = 98;
-    const midY = legBoxY + 50;
+    const legBoxY = axisY + 235;
+    const legBoxH = 114;
+    const midY = legBoxY + 58;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
     ctx.fill();
     ctx.stroke();
 
     if (isGsea) {
-      // 1. Negative Z_GSEA (Blue circle on left)
       ctx.beginPath();
-      ctx.arc(legBoxX + 52, midY, 18, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, midY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
@@ -326,12 +329,11 @@ export default function PathwayBubblePlot({
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "left";
-      drawFittedText(ctx, contrast.negLegend, legBoxX + 86, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, contrast.negLegend, legBoxX + 88, midY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // 2. Positive Z_GSEA (Red circle in middle)
       const midColX = legBoxX + 780;
       ctx.beginPath();
-      ctx.arc(midColX, midY, 18, 0, 2 * Math.PI);
+      ctx.arc(midColX, midY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#991b1b";
@@ -339,13 +341,12 @@ export default function PathwayBubblePlot({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      drawFittedText(ctx, contrast.posLegend, midColX + 34, midY + 12, 650, 36, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, contrast.posLegend, midColX + 36, midY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // 3. Bubble Size (Gray sample bubbles on right)
-      const rightColX = legBoxX + 1520;
+      const rightColX = legBoxX + 1500;
       ctx.beginPath();
-      ctx.arc(rightColX, midY, 11, 0, 2 * Math.PI);
-      ctx.arc(rightColX + 34, midY, 19, 0, 2 * Math.PI);
+      ctx.arc(rightColX, midY, 12, 0, 2 * Math.PI);
+      ctx.arc(rightColX + 36, midY, 21, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
       ctx.fill();
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
@@ -353,10 +354,10 @@ export default function PathwayBubblePlot({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
-      drawFittedText(ctx, "Size ∝ Leading-Edge Genes", rightColX + 68, midY + 12, legBoxW - 1610, 34, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, "Size ∝ Leading Edge", rightColX + 72, midY + 16, legBoxW - 1590, 44, "bold", PUB_FONT_SANS, 32);
     } else {
       ctx.beginPath();
-      ctx.arc(legBoxX + 52, midY, 18, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, midY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(20, 184, 166, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#0d9488";
@@ -364,14 +365,14 @@ export default function PathwayBubblePlot({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 36px ${PUB_FONT_SANS}`;
+      ctx.font = `bold 46px ${PUB_FONT_SANS}`;
       ctx.textAlign = "left";
-      ctx.fillText("Significant Overlap (BH FDR < 0.05)", legBoxX + 86, midY + 12);
+      ctx.fillText("Significant Overlap (BH FDR < 0.05)", legBoxX + 88, midY + 16);
 
       const rightColX = legBoxX + 1220;
       ctx.beginPath();
-      ctx.arc(rightColX, midY, 11, 0, 2 * Math.PI);
-      ctx.arc(rightColX + 34, midY, 19, 0, 2 * Math.PI);
+      ctx.arc(rightColX, midY, 12, 0, 2 * Math.PI);
+      ctx.arc(rightColX + 36, midY, 21, 0, 2 * Math.PI);
       ctx.fillStyle = isLight ? "rgba(100, 116, 139, 0.35)" : "rgba(148, 163, 184, 0.35)";
       ctx.fill();
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
@@ -379,8 +380,8 @@ export default function PathwayBubblePlot({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
-      ctx.font = `bold 34px ${PUB_FONT_SANS}`;
-      ctx.fillText("Bubble Size ∝ Overlapping Genes", rightColX + 68, midY + 12);
+      ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+      ctx.fillText("Size ∝ Overlapping Genes", rightColX + 72, midY + 16);
     }
 
     return offscreen;

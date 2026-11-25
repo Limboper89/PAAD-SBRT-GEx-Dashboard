@@ -79,7 +79,7 @@ export default function SearchableGeneSelect({
                   <button
                     type="button"
                     onClick={() => handleSelect(opt)}
-                    className={`w-full text-left px-3 py-1.5 hover:bg-slate-850 transition-colors ${
+                    className={`w-full text-left px-3 py-1.5 hover:bg-slate-800 transition-colors ${
                       opt === value ? "text-teal-400 font-bold bg-slate-900" : "text-slate-300"
                     }`}
                   >

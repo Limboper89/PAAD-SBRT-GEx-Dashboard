@@ -94,41 +94,41 @@ export default function SpatialCrossPatientPlot({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Title & Header Block (publication-scaled)
+    // 2. Title & Header Block (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, `Cross-Patient Spatial Expression: ${geneSymbol} (${ensemblId})`, 80, 86, w - 160, 62, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `Cross-Patient Spatial Expression: ${geneSymbol}`, 80, 100, w - 160, 86, "bold", PUB_FONT_SANS);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `10x Genomics Visium Spatial (GSE274103) · 5 Treatment-Naïve PDAC Patients · Analyzed Spots: ${metrics.reduce((a, b) => a + b.totalSpots, 0).toLocaleString()}`,
+      `10x Visium Spatial (GSE274103) · 5 PDAC Patients · ${metrics.reduce((a, b) => a + b.totalSpots, 0).toLocaleString()} Spots`,
       80,
-      142,
+      160,
       w - 160,
-      36,
+      46,
       "bold",
       PUB_FONT_NUM
     );
 
     // Divider Line
     ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(80, 174);
-    ctx.lineTo(w - 80, 174);
+    ctx.moveTo(80, 186);
+    ctx.lineTo(w - 80, 186);
     ctx.stroke();
 
     // 3. Plot Dimensions & Generous Spacing
-    const padLeft = 215;
-    const padRight = 215;
-    const padTop = 240;
-    const padBottom = 300;
+    const padLeft = 260;
+    const padRight = 260;
+    const padTop = 250;
+    const padBottom = 330;
     const plotW = w - padLeft - padRight;
     const plotH = h - padTop - padBottom;
     const plotBottom = padTop + plotH;
 
-    // Headroom for right Y-axis (Intensity) so peak values and labels never hit the ceiling
+    // Headroom for right Y-axis (Intensity)
     const maxObservedIntensity = Math.max(...meanExprValues, 0.5);
     const rightAxisMax = Math.max(1.0, Math.ceil(maxObservedIntensity * 1.35 * 10) / 10);
 
@@ -139,38 +139,38 @@ export default function SpatialCrossPatientPlot({
       ctx.moveTo(padLeft, y);
       ctx.lineTo(padLeft + plotW, y);
       ctx.strokeStyle = isLight ? "#e2e8f0" : "#1e293b";
-      ctx.lineWidth = i === 5 ? 3.5 : 1.5;
+      ctx.lineWidth = i === 5 ? 4 : 2;
       ctx.stroke();
 
       // Left Y-Axis labels (% Positive Spots)
       const val = 100 - i * 20;
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 54px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(`${val}%`, padLeft - 24, y + 13);
+      ctx.fillText(`${val}%`, padLeft - 24, y + 18);
 
       // Right Y-Axis labels (Mean Intensity)
       const exprVal = ((rightAxisMax * (5 - i)) / 5).toFixed(2);
       ctx.textAlign = "left";
       ctx.fillStyle = "#f43f5e";
-      ctx.fillText(exprVal, padLeft + plotW + 24, y + 13);
+      ctx.fillText(exprVal, padLeft + plotW + 24, y + 18);
     }
 
     // 5. Y-Axis Titles
     ctx.save();
-    ctx.translate(64, padTop + plotH / 2);
+    ctx.translate(72, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "center";
-    drawFittedText(ctx, "Spatial Tissue Coverage (% Positive Spots)", 0, 0, plotH + 60, 42, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "Spatial Coverage (% Positive)", 0, 0, plotH + 80, 62, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     ctx.save();
-    ctx.translate(w - 58, padTop + plotH / 2);
+    ctx.translate(w - 72, padTop + plotH / 2);
     ctx.rotate(Math.PI / 2);
     ctx.fillStyle = "#f43f5e";
     ctx.textAlign = "center";
-    drawFittedText(ctx, "Mean Positive Spot Intensity (log1p)", 0, 0, plotH + 60, 42, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "Mean Spot Intensity (log1p)", 0, 0, plotH + 80, 62, "bold", PUB_FONT_SANS);
     ctx.restore();
 
     // 6. Bars & Points
@@ -184,76 +184,72 @@ export default function SpatialCrossPatientPlot({
       const barX = cx - barW / 2;
       const barY = plotBottom - barH;
 
-      // Draw % Bar with Gradient
       const grad = ctx.createLinearGradient(barX, barY, barX, plotBottom);
-      grad.addColorStop(0, "#0d9488"); // Teal 600
-      grad.addColorStop(1, "#115e59"); // Teal 800
+      grad.addColorStop(0, "#0d9488");
+      grad.addColorStop(1, "#115e59");
 
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY, barW, barH);
       ctx.strokeStyle = isLight ? "#0f766e" : "#2dd4bf";
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.strokeRect(barX, barY, barW, barH);
 
-      // Label above bar with pill background
       const pctText = `${m.pctPositive.toFixed(1)}%`;
-      ctx.font = `bold 36px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 46px ${PUB_FONT_NUM}`;
       const textMetrics = ctx.measureText(pctText);
-      const pillW = textMetrics.width + 24;
-      const pillH = 48;
-      const pillY = barY - pillH - 8;
+      const pillW = textMetrics.width + 28;
+      const pillH = 58;
+      const pillY = barY - pillH - 10;
 
       ctx.fillStyle = isLight ? "rgba(241, 245, 249, 0.95)" : "rgba(15, 23, 42, 0.95)";
       ctx.fillRect(cx - pillW / 2, pillY, pillW, pillH);
       ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(cx - pillW / 2, pillY, pillW, pillH);
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
       ctx.textAlign = "center";
-      ctx.fillText(pctText, cx, pillY + 35);
+      ctx.fillText(pctText, cx, pillY + 42);
 
-      // Mean Intensity Point (Right Axis with Headroom)
       const pointY = plotBottom - (m.meanPositiveExpr / rightAxisMax) * plotH;
 
       ctx.beginPath();
-      ctx.arc(cx, pointY, 17, 0, 2 * Math.PI);
-      ctx.fillStyle = "#f43f5e"; // Rose 500
+      ctx.arc(cx, pointY, 19, 0, 2 * Math.PI);
+      ctx.fillStyle = "#f43f5e";
       ctx.fill();
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5;
       ctx.stroke();
 
-      // Intensity Label Badge above Point
       const exprText = m.meanPositiveExpr.toFixed(2);
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
-      const exprTextW = ctx.measureText(exprText).width + 24;
-      const exprPillH = 44;
-      const exprPillY = pointY - exprPillH - 16;
+      ctx.font = `bold 44px ${PUB_FONT_NUM}`;
+      const exprTextW = ctx.measureText(exprText).width + 26;
+      const exprPillH = 54;
+      const exprPillY = pointY - exprPillH - 18;
 
       ctx.fillStyle = "#f43f5e";
       ctx.fillRect(cx - exprTextW / 2, exprPillY, exprTextW, exprPillH);
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.strokeRect(cx - exprTextW / 2, exprPillY, exprTextW, exprPillH);
 
       ctx.fillStyle = "#ffffff";
       ctx.textAlign = "center";
-      ctx.fillText(exprText, cx, exprPillY + 33);
+      ctx.fillText(exprText, cx, exprPillY + 40);
 
-      // 7. X-Axis Labels (Hierarchy & Breathing Room)
+      // 7. X-Axis Labels
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+      ctx.font = `bold 58px ${PUB_FONT_SANS}`;
       ctx.textAlign = "center";
-      ctx.fillText(m.patientId, cx, plotBottom + 56);
+      ctx.fillText(m.patientId, cx, plotBottom + 66);
 
       ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
-      ctx.font = `bold 32px ${PUB_FONT_NUM}`;
-      ctx.fillText(m.gsm, cx, plotBottom + 98);
+      ctx.font = `bold 42px ${PUB_FONT_NUM}`;
+      ctx.fillText(m.gsm, cx, plotBottom + 116);
 
       ctx.fillStyle = isLight ? "#0f766e" : "#2dd4bf";
-      ctx.font = `bold 30px ${PUB_FONT_NUM}`;
-      ctx.fillText(`${m.positiveSpots.toLocaleString()} / ${m.totalSpots.toLocaleString()} spots`, cx, plotBottom + 136);
+      ctx.font = `bold 38px ${PUB_FONT_NUM}`;
+      ctx.fillText(`${m.positiveSpots.toLocaleString()} / ${m.totalSpots.toLocaleString()}`, cx, plotBottom + 162);
     });
 
     // 8. Dedicated Clean Legend Box at the Bottom

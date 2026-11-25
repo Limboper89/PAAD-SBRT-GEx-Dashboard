@@ -103,19 +103,19 @@ export default function PathwayNetworkGraph({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // Title (publication-scaled)
+    // Title (GEPIA2-calibrated)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, contrast.shortTitle, 80, 92, size - 160, 74, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, contrast.shortTitle, 80, 110, size - 160, 98, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `Cohort: ${contrast.datasetName} (${contrast.fullContrast}) · ${isGsea ? "Crosstalk Network" : "Overlap Network"} · Top ${topPathways.length} Pathways`,
+      `${contrast.datasetName} · ${isGsea ? "Crosstalk Network" : "Overlap Network"} · Top ${topPathways.length} Pathways`,
       80,
-      150,
+      180,
       size - 160,
-      38,
+      54,
       "bold",
       PUB_FONT_NUM
     );
@@ -156,17 +156,15 @@ export default function PathwayNetworkGraph({
       const p = pos.pathway;
       const isUp = p.direction === "Upregulated" || (p.nes !== undefined && p.nes >= 0);
 
-      // Outer circle
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 36, 0, 2 * Math.PI);
+      ctx.arc(pos.x, pos.y, 40, 0, 2 * Math.PI);
       ctx.fillStyle = isUp ? "rgba(220, 38, 38, 0.9)" : "rgba(37, 99, 235, 0.9)";
       ctx.fill();
 
       ctx.strokeStyle = isUp ? "#991b1b" : "#1e40af";
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = 5;
       ctx.stroke();
 
-      // Label text (bounded to stay inside canvas edges)
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
 
       const cosA = Math.cos(pos.angle);
@@ -178,30 +176,30 @@ export default function PathwayNetworkGraph({
 
       if (Math.abs(cosA) > 0.3) {
         ctx.textAlign = cosA > 0 ? "left" : "right";
-        labelX += cosA > 0 ? 50 : -50;
-        labelY += 12;
+        labelX += cosA > 0 ? 54 : -54;
+        labelY += 16;
         availW = cosA > 0 ? Math.max(240, size - labelX - 40) : Math.max(240, labelX - 40);
       } else {
         ctx.textAlign = "center";
-        labelY += sinA > 0 ? 74 : -54;
+        labelY += sinA > 0 ? 84 : -60;
         availW = 860;
       }
 
-      const maxLen = 30;
+      const maxLen = 28;
       const displayLabel = p.pathwayName.length > maxLen ? p.pathwayName.slice(0, maxLen - 3) + "..." : p.pathwayName;
-      drawFittedText(ctx, displayLabel, labelX, labelY, availW, 40, "bold", PUB_FONT_SANS, 28);
+      drawFittedText(ctx, displayLabel, labelX, labelY, availW, 52, "bold", PUB_FONT_SANS, 34);
     });
 
     // 3. Full-Width Legend Box at Bottom
     const legBoxX = 80;
     const legBoxW = size - 160;
-    const legBoxY = size - 135;
-    const legBoxH = 92;
-    const legY = legBoxY + 46;
+    const legBoxY = size - 150;
+    const legBoxH = 110;
+    const legY = legBoxY + 56;
 
     ctx.fillStyle = isLight ? "#f8fafc" : "#0b1329";
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#1e293b";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.roundRect(legBoxX, legBoxY, legBoxW, legBoxH, 14);
     ctx.fill();
@@ -210,9 +208,8 @@ export default function PathwayNetworkGraph({
     ctx.textAlign = "left";
 
     if (isGsea) {
-      // Red dot
       ctx.beginPath();
-      ctx.arc(legBoxX + 52, legY, 18, 0, 2 * Math.PI);
+      ctx.arc(legBoxX + 52, legY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(220, 38, 38, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#991b1b";
@@ -220,12 +217,11 @@ export default function PathwayNetworkGraph({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      drawFittedText(ctx, `Positive Z_GSEA: ${contrast.posShort}`, legBoxX + 86, legY + 12, 660, 34, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, `+Z_GSEA: ${contrast.posShort}`, legBoxX + 88, legY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // Blue dot
       const midX = legBoxX + 780;
       ctx.beginPath();
-      ctx.arc(midX, legY, 18, 0, 2 * Math.PI);
+      ctx.arc(midX, legY, 20, 0, 2 * Math.PI);
       ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
       ctx.fill();
       ctx.strokeStyle = "#1e40af";
@@ -233,17 +229,16 @@ export default function PathwayNetworkGraph({
       ctx.stroke();
 
       ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-      drawFittedText(ctx, `Negative Z_GSEA: ${contrast.negShort}`, midX + 34, legY + 12, 660, 34, "bold", PUB_FONT_SANS, 26);
+      drawFittedText(ctx, `−Z_GSEA: ${contrast.negShort}`, midX + 36, legY + 16, 650, 46, "bold", PUB_FONT_SANS, 32);
 
-      // Edge thickness text
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
       ctx.textAlign = "right";
-      drawFittedText(ctx, "Edge Width ∝ Shared Leading-Edge Genes", legBoxX + legBoxW - 42, legY + 12, 700, 32, "bold", PUB_FONT_NUM, 24);
+      drawFittedText(ctx, "Edge ∝ Shared Genes", legBoxX + legBoxW - 42, legY + 16, 640, 44, "bold", PUB_FONT_NUM, 32);
     } else {
       ctx.fillStyle = isLight ? "#334155" : "#cbd5e1";
       ctx.textAlign = "center";
-      ctx.font = `bold 34px ${PUB_FONT_NUM}`;
-      ctx.fillText("Edge Width ∝ Shared Overlapping DEGs", size / 2, legY + 12);
+      ctx.font = `bold 46px ${PUB_FONT_NUM}`;
+      ctx.fillText("Edge Width ∝ Shared Overlapping DEGs", size / 2, legY + 16);
     }
 
     return offscreen;

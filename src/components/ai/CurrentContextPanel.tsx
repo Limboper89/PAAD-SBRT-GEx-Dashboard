@@ -100,7 +100,7 @@ export function CurrentContextPanel() {
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                Global Dataset Registry (4)
+                Global Dataset Registry ({Object.keys(DATASET_REGISTRY).length})
               </button>
             </div>
             <span className="text-[10px] text-slate-500 font-mono">Provider: {currentProviderName}</span>

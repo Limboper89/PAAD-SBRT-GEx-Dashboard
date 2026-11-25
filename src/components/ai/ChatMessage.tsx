@@ -123,6 +123,7 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
 
   const formatActionTitle = (action: string) => {
     const upper = action.toUpperCase();
+    if (upper.includes("CPTAC") || upper.includes("PROTEOMIC")) return "Open CPTAC-PDAC Proteomics";
     if (upper.includes("SINGLE_NUCLEUS") || upper.includes("SINGLE NUCLEUS")) return "Open Single-Nucleus Atlas";
     if (upper.includes("SPATIAL")) return "Open Spatial Transcriptomics";
     if (upper.includes("GSEA") || upper.includes("PATHWAY") || upper.includes("PATHWAYS")) return "Open Pathway Explorer";
@@ -137,7 +138,10 @@ export function ChatMessage({ message, onRetry }: { message: ChatMessageItem; on
     let target = "de";
     let hash = "deg";
 
-    if (textUpper.includes("SINGLE_NUCLEUS") || textUpper.includes("SINGLE NUCLEUS")) {
+    if (textUpper.includes("CPTAC") || textUpper.includes("PROTEOMIC")) {
+      target = "cptac";
+      hash = "cptac";
+    } else if (textUpper.includes("SINGLE_NUCLEUS") || textUpper.includes("SINGLE NUCLEUS")) {
       target = "sn";
       hash = "sn";
     } else if (textUpper.includes("SPATIAL")) {

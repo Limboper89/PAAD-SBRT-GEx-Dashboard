@@ -279,6 +279,9 @@ export function CustomGeneInput({
   }, [initialRankedGenes, initialGeneList]);
 
   const [loadedDatasetInfo, setLoadedDatasetInfo] = useState<string | null>(null);
+  const [showQuickGseaPaste, setShowQuickGseaPaste] = useState<boolean>(false);
+  const [quickGseaPasteText, setQuickGseaPasteText] = useState<string>("");
+  const [quickGseaPasteNotice, setQuickGseaPasteNotice] = useState<string | null>(null);
 
   // Load full ranked dataset (TCGA or SBRT) with correct basePath
   const loadFullRankedDataset = async (datasetKey: "tcga" | "sbrt") => {
@@ -871,6 +874,20 @@ export function CustomGeneInput({
               >
                 📋 Textarea Paste Mode
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuickGseaPaste((v) => !v);
+                  setQuickGseaPasteNotice(null);
+                }}
+                className={`px-3 py-1 rounded-lg border transition cursor-pointer ${
+                  showQuickGseaPaste
+                    ? "bg-teal-950/50 border-teal-500/60 text-teal-300 font-bold"
+                    : "bg-slate-950 border-slate-700 text-slate-200 hover:border-teal-500/50"
+                }`}
+              >
+                + Paste Gene List (Auto-Rank)
+              </button>
             </div>
 
             {/* Quick Action Load Buttons */}
@@ -907,6 +924,83 @@ export function CustomGeneInput({
               </button>
             </div>
           </div>
+
+          {/* Expandable Paste Gene List Drawer for GSEA (auto-fills log2FC from selected cohort) */}
+          {showQuickGseaPaste && (
+            <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2">
+              <div className="text-[11px] font-mono text-slate-400">
+                Paste comma-, space-, or newline-separated gene symbols (metrics auto-filled from{" "}
+                <strong className="text-teal-300">
+                  {activeCohortSource === "sbrt" ? "GSE225767 SBRT" : "TCGA-PAAD vs GTEx"}
+                </strong>
+                ), or paste <code className="text-indigo-300">GENE &lt;tab&gt; SCORE</code> lines:
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <textarea
+                  rows={3}
+                  value={quickGseaPasteText}
+                  onChange={(e) => setQuickGseaPasteText(e.target.value)}
+                  placeholder="KRAS, TP53, SMAD4, CDKN2A, GATA6, PHGDH, NQO1..."
+                  className="flex-1 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:border-teal-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const metricMap = activeCohortSource === "sbrt" ? sbrtMetricMap : tcgaMetricMap;
+                    const lines = quickGseaPasteText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+                    const parsedRows: Array<{ id: string; symbol: string; metricStr: string }> = [];
+                    const seen = new Set<string>();
+                    let autoFilled = 0;
+
+                    for (const line of lines) {
+                      const parts = line.split(/[\t,; ]+/).filter(Boolean);
+                      // Check if line is "GENE SCORE" pair (2 tokens where 2nd is numeric)
+                      if (parts.length === 2 && !Number.isNaN(Number(parts[1]))) {
+                        const sym = parts[0].toUpperCase();
+                        if (!seen.has(sym)) {
+                          seen.add(sym);
+                          parsedRows.push({ id: `${Date.now()}-${parsedRows.length}`, symbol: sym, metricStr: parts[1] });
+                        }
+                      } else {
+                        for (const rawSym of parts) {
+                          const sym = rawSym.toUpperCase();
+                          if (!sym || !Number.isNaN(Number(sym)) || seen.has(sym)) continue;
+                          seen.add(sym);
+                          const mVal = metricMap.get(sym);
+                          if (mVal !== undefined) autoFilled++;
+                          parsedRows.push({
+                            id: `${Date.now()}-${parsedRows.length}`,
+                            symbol: sym,
+                            metricStr: mVal !== undefined ? String(mVal) : "",
+                          });
+                        }
+                      }
+                    }
+
+                    if (parsedRows.length > 0) {
+                      const existingClean = structuredRows.filter((r) => r.symbol.trim());
+                      const existingSet = new Set(existingClean.map((r) => r.symbol.trim().toUpperCase()));
+                      const merged = [
+                        ...existingClean,
+                        ...parsedRows.filter((r) => !existingSet.has(r.symbol)),
+                      ];
+                      updateStructuredRowsAndSync(merged);
+                      setQuickGseaPasteNotice(
+                        `Loaded ${parsedRows.length} gene(s) (${autoFilled} auto-ranked from ${activeCohortSource === "sbrt" ? "SBRT" : "TCGA/GTEx"})`
+                      );
+                      setQuickGseaPasteText("");
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white shrink-0 cursor-pointer"
+                >
+                  Parse &amp; Add Genes
+                </button>
+              </div>
+              {quickGseaPasteNotice && (
+                <div className="text-[11px] font-mono text-teal-300">{quickGseaPasteNotice}</div>
+              )}
+            </div>
+          )}
 
           {/* Structured Table Entry UI */}
           {gseaInputMode === "structured" && (

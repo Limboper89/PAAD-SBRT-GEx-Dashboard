@@ -179,33 +179,7 @@ const PAIRED_COHORT_OPTIONS: { id: PairedCohortId; label: string; shortLabel: st
   },
 ];
 
-const GENE_PRESETS: { id: string; label: string; genes: string[] }[] = [
-  {
-    id: "serine_12",
-    label: "Serine / 1C / AA Transporters (12-Gene)",
-    genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2", "MTHFD1", "MTHFD2", "SLC1A5", "SLC1A4", "SLC7A5", "SLC38A1", "SLC38A2"],
-  },
-  {
-    id: "resistance_axis",
-    label: "Treatment Resistance Axis (Transport + ISR + Redox)",
-    genes: ["SLC7A5", "SLC3A2", "SLC7A11", "SLC1A5", "SLC38A1", "SFXN1", "ATF4", "NFE2L2", "GPX4", "GLS", "PHGDH", "PSAT1"],
-  },
-  {
-    id: "nrf2_ferroptosis",
-    label: "NRF2 & Ferroptosis Defense",
-    genes: ["NFE2L2", "NQO1", "HMOX1", "SLC7A11", "GPX4", "GCLC", "GCLM", "GSS", "TXNRD1"],
-  },
-  {
-    id: "cd8_metabolic",
-    label: "CD8+ T-Cell Metabolic & Effector",
-    genes: ["SLC38A1", "SFXN1", "SLC7A5", "GLS", "SLC1A5", "PHGDH", "PSAT1", "PRF1", "GZMB", "TOX"],
-  },
-  {
-    id: "pdac_lineage",
-    label: "PDAC Subtype & Stroma",
-    genes: ["KRT19", "EPCAM", "GATA6", "VIM", "COL1A1", "ACTA2", "MKI67", "HIF1A"],
-  },
-];
+const DEFAULT_SN_GENES = ["KRAS", "TP53", "GATA6", "EPCAM", "KRT19", "COL1A1", "ACTA2", "CD8A"];
 
 // YlOrRd color interpolation (0..1)
 function ylOrRdColor(t: number): { bg: string; text: string } {
@@ -238,8 +212,7 @@ export default function SingleNucleusResponseHeatmap({
   loadGeneVector,
   onSelectGeneForAtlas,
 }: SingleNucleusResponseHeatmapProps) {
-  const [activePreset, setActivePreset] = useState<string>("resistance_axis");
-  const [genes, setGenes] = useState<string[]>(GENE_PRESETS[1].genes);
+  const [genes, setGenes] = useState<string[]>(DEFAULT_SN_GENES);
   const [compartmentId, setCompartmentId] = useState<CompartmentId>("Malignant");
   const [treatmentRegimenId, setTreatmentRegimenId] = useState<TreatmentRegimenId>("ALL_TREATED");
   const [pairedCohortId, setPairedCohortId] = useState<PairedCohortId>("ALL_43");
@@ -248,6 +221,8 @@ export default function SingleNucleusResponseHeatmap({
   const [activeSubView, setActiveSubView] = useState<"response_heatmap" | "paired_ductal">("response_heatmap");
 
   const [geneInput, setGeneInput] = useState<string>("");
+  const [showPasteBox, setShowPasteBox] = useState<boolean>(false);
+  const [pasteText, setPasteText] = useState<string>("");
   const [showSuggest, setShowSuggest] = useState<boolean>(false);
   const [loadingGenes, setLoadingGenes] = useState<boolean>(false);
   const [geneVectors, setGeneVectors] = useState<Record<string, Float32Array>>({});
@@ -318,7 +293,6 @@ export default function SingleNucleusResponseHeatmap({
         }
       }
       if (valid.length > 0) {
-        setActivePreset("custom");
         setGenes((prev) => [...prev, ...valid].slice(0, 30));
       }
       setGeneInput("");
@@ -730,33 +704,6 @@ export default function SingleNucleusResponseHeatmap({
           </div>
         </div>
 
-        {/* Presets Row */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xxs uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Biological Gene Panel Presets
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {GENE_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setActivePreset(p.id);
-                  setGenes(p.genes);
-                  setSelectedDetailGene(null);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] border transition cursor-pointer ${
-                  activePreset === p.id
-                    ? "bg-rose-500/20 border-rose-500/50 text-rose-200 font-bold"
-                    : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600 hover:text-slate-200"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Treatment Regimen + Compartment + Min Nuclei + Baseline Toggle + Export */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
           {/* Treatment / Cohort Selector */}
@@ -911,7 +858,6 @@ export default function SingleNucleusResponseHeatmap({
               </button>
               <button
                 onClick={() => {
-                  setActivePreset("custom");
                   setGenes((prev) => prev.filter((x) => x !== g));
                 }}
                 className="text-slate-500 hover:text-rose-400 cursor-pointer"
@@ -947,6 +893,29 @@ export default function SingleNucleusResponseHeatmap({
               >
                 <Plus className="w-3.5 h-3.5" /> Add
               </button>
+              <button
+                type="button"
+                onClick={() => setShowPasteBox((v) => !v)}
+                className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1 cursor-pointer transition ${
+                  showPasteBox
+                    ? "bg-sky-950/50 border-sky-500/60 text-sky-300"
+                    : "bg-slate-950 border-slate-700 text-slate-300 hover:border-sky-500/50"
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" /> Paste Gene List
+              </button>
+              {genes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGenes([]);
+                    setSelectedDetailGene(null);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-rose-400 text-xs cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
             </div>
             {showSuggest && suggestions.length > 0 && (
               <div className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-700 rounded-lg shadow-2xl max-h-44 overflow-y-auto">
@@ -963,6 +932,31 @@ export default function SingleNucleusResponseHeatmap({
             )}
           </div>
         </div>
+
+        {showPasteBox && (
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              rows={2}
+              placeholder="Paste gene symbols separated by commas, spaces, tabs, or newlines (up to 30 genes)..."
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:border-teal-500"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (pasteText.trim()) {
+                  handleAddGenes(pasteText);
+                  setPasteText("");
+                  setShowPasteBox(false);
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white shrink-0 cursor-pointer"
+            >
+              Add Parsed Genes
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ─── SUB-VIEW 1: MODERATE vs MINIMAL vs POOR HEATMAP ─── */}
@@ -980,15 +974,15 @@ export default function SingleNucleusResponseHeatmap({
                   Row-scaled patient pseudobulk means (log1p, ≥{minNuclei} nuclei/patient). Click any row to inspect patient-level values.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                <span>Row-scaled:</span>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+                <span className="text-amber-200">Low (0.0)</span>
                 <div
-                  className="w-24 h-2.5 rounded border border-slate-700"
+                  className="w-28 h-3 rounded border border-slate-700"
                   style={{
                     background: "linear-gradient(to right, rgb(255,255,204), rgb(254,178,76), rgb(227,26,28), rgb(128,0,38))",
                   }}
                 />
-                <span>0 → 1</span>
+                <span className="text-rose-400 font-semibold">High (1.0, Row Max)</span>
               </div>
             </div>
 

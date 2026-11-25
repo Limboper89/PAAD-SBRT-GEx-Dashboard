@@ -43,6 +43,7 @@ export function selectModelRoute(
   if (executionResult.datasetResults?.tcga_gtex || executionResult.datasetResults?.gse225767) modalityCount++;
   if (executionResult.datasetResults?.gse202051) modalityCount++;
   if (executionResult.datasetResults?.gse274103) modalityCount++;
+  if (executionResult.datasetResults?.cptac_pdac) modalityCount++;
   if (executionResult.datasetResults?.pathway) modalityCount++;
 
   const multipleModalities = modalityCount > 1;
@@ -135,7 +136,9 @@ export function selectModelRoute(
     "dataset_design_query",
     "multi_gene_quantitative",
     "pathway_ora",
-    "pathway_gsea"
+    "pathway_gsea",
+    "cptac_proteomics_query",
+    "cptac_differential_list"
   ]);
 
   const dResults = executionResult.datasetResults || (executionResult as any).datasets;
@@ -145,6 +148,7 @@ export function selectModelRoute(
     !!dResults?.gse225767 ||
     !!dResults?.gse202051 ||
     !!dResults?.gse274103 ||
+    !!dResults?.cptac_pdac ||
     !!dResults?.availableDatasets ||
     !!dResults?.pathway ||
     !!dResults?.multiGeneResults;
@@ -216,7 +220,7 @@ export function formatVerifiedQuantitativeBlock(
   let blocks: string[] = [];
 
   // 1. Multi-Gene Execution Table
-  if (dResults.multiGeneResults || plan.intent === "multi_gene_quantitative" || (plan.entities.genes.length > 1 && (dResults.tcga_gtex || dResults.gse225767))) {
+  if (dResults.multiGeneResults || plan.intent === "multi_gene_quantitative" || (plan.entities.genes.length > 1 && (dResults.tcga_gtex || dResults.gse225767 || dResults.cptac_pdac))) {
     const multi = dResults.multiGeneResults || {};
     const requestedGenes = plan.entities.genes;
 
@@ -235,6 +239,14 @@ export function formatVerifiedQuantitativeBlock(
           const dir = m.log2FC > 0 ? "Increased post-SBRT" : "Decreased post-SBRT";
           const sig = (m.adjPValue !== undefined ? m.adjPValue < 0.05 : m.pValue < 0.05) ? "Significant" : "Not Significant";
           rows.push(`| **${g}** | SBRT GSE225767 | \`${m.log2FCFormatted}\` | \`${m.pValueFormatted}\` | \`${m.adjPValueFormatted || 'N/A'}\` | ${dir} | ${sig} |`);
+        }
+        if (gData.cptac && gData.cptac.found && gData.cptac.metrics) {
+          const m = gData.cptac.metrics;
+          const ps = gData.cptac.proteomicsStats;
+          const layerTag = gData.cptac.proteinDetected ? "CPTAC-PDAC Protein" : "CPTAC-PDAC mRNA-Only";
+          const dir = m.log2FC > 0 ? "Higher in Tumor" : "Lower in Tumor";
+          const extra = ps?.pearsonR !== null && ps?.pearsonR !== undefined ? `r=${ps.pearsonR.toFixed(2)}` : m.significanceSummary;
+          rows.push(`| **${g}** | ${layerTag} | \`${m.log2FCFormatted}\` | \`${m.pValueFormatted || 'N/A'}\` | \`${m.adjPValueFormatted}\` | ${dir} | ${extra} |`);
         }
         if (gData.sn && gData.sn.found && gData.sn.pseudobulkResults?.length > 0) {
           const topSn = gData.sn.pseudobulkResults.find((r: any) => r.isSignificant) || gData.sn.pseudobulkResults[0];
@@ -400,6 +412,43 @@ export function formatVerifiedQuantitativeBlock(
         blocks.push(spBlock);
       }
     }
+
+    if (dResults.cptac_pdac) {
+      const cp: any = dResults.cptac_pdac;
+      if (cp.type === "gene" && cp.found && cp.metrics) {
+        const gene = cp.gene || plan.entities.genes[0] || "Target Protein";
+        const ps = cp.proteomicsStats || {};
+        const log2FCStr = cp.metrics.log2FCFormatted;
+        const mwPStr = cp.metrics.pValueFormatted || "N/A";
+        const mwQStr = cp.metrics.adjPValueFormatted || "N/A";
+        const rStr = typeof ps.pearsonR === "number" ? `r = ${ps.pearsonR.toFixed(4)} (p = ${ps.pearsonP?.toExponential(2) ?? "N/A"})` : "Not quantified in TMT";
+        const coxStr = typeof ps.coxHR === "number" ? `HR = ${ps.coxHR.toFixed(3)} (p = ${ps.coxP?.toExponential(2) ?? "N/A"})` : "N/A";
+        const layerLabel = cp.proteinDetected
+          ? `TMT Global Proteomics (${ps.nT} Tumors vs ${ps.nN} NATs; ${ps.nPairedNat} paired)`
+          : `Matched Bulk RNA-seq ONLY (${ps.nT} Tumors vs ${ps.nN} NATs; absent from TMT proteomics)`;
+
+        blocks.push(
+          `### Verified BioPortal Evidence (CPTAC-PDAC Proteomics — Cao et al., Cell 2021)\n` +
+          `* **Dataset:** CPTAC-PDAC Discovery Study (PMID: 34534465 | cBioPortal \`paad_cptac_2021\` parity)\n` +
+          `* **Quantification Layer:** ${layerLabel}\n\n` +
+          `| Feature | log2FC (Tumor vs NAT) | MW p-value | BH FDR (q) | Matched mRNA-Protein Concordance | Continuous OS Cox PH |\n` +
+          `| :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+          `| **${gene}** | \`${log2FCStr}\` | \`${mwPStr}\` | \`${mwQStr}\` | ${rStr} | ${coxStr} |\n`
+        );
+      } else if (cp.type === "differential" && cp.success) {
+        const upRows = (cp.topUpregulated || []).slice(0, 10).map((p: any, i: number) =>
+          `| ${i + 1} | **${p.gene}** | \`${p.log2FCFormatted}\` | \`${p.adjPValueFormatted}\` | ${typeof p.pearsonR === "number" ? `\`${p.pearsonR.toFixed(3)}\`` : "N/A"} | ${typeof p.coxHR === "number" ? `\`${p.coxHR.toFixed(2)}\` (${p.coxP < 0.05 ? "*" : "ns"})` : "N/A"} |`
+        ).join("\n");
+        blocks.push(
+          `### Verified BioPortal Evidence (CPTAC-PDAC Top Upregulated Proteins)\n` +
+          `* **Scope:** ${cp.totalProteins.toLocaleString()} quantified proteins (${cp.filteredCount.toLocaleString()} significant MW FDR < 0.05, |log2FC| >= 0.5)\n` +
+          (cp.globalConcordance ? `* **Proteome-Wide Concordance:** Median Pearson r = ${cp.globalConcordance.median_pearson_r}, Median Spearman rho = ${cp.globalConcordance.median_spearman_rho}\n\n` : "\n") +
+          `| Rank | Protein | log2FC (Tumor vs NAT) | MW FDR (q) | mRNA-Prot r | OS Cox HR |\n` +
+          `| :--- | :--- | :--- | :--- | :--- | :--- |\n` +
+          upRows
+        );
+      }
+    }
   }
 
   // Association Notice Block
@@ -446,8 +495,11 @@ export function formatVerifiedQuantitativeBlock(
   }
 
   const actions: string[] = [];
-  if (dResults.tcga_gtex || dResults.gse225767 || (!dResults.gse202051 && !dResults.gse274103)) {
+  if (dResults.tcga_gtex || dResults.gse225767 || (!dResults.gse202051 && !dResults.gse274103 && !dResults.cptac_pdac)) {
     actions.push("[Action: OPEN_DEG]");
+  }
+  if (dResults.cptac_pdac) {
+    actions.push("[Action: OPEN_CPTAC]");
   }
   if (dResults.gse202051 && (plan.intent === "cross_module_synthesis" || plan.targetDatasets.includes("gse202051"))) {
     actions.push("[Action: OPEN_SINGLE_NUCLEUS]");
@@ -481,7 +533,7 @@ export function formatBioPortalDirectResponse(
       md += `  - **Sample Size:** ${sampleStr}\n`;
       md += `  - **Primary Comparison:** ${compStr}\n\n`;
     });
-    md += `*Use PDACopilot to query any gene, cell type, spatial coordinate, or pathway across these datasets.*`;
+    md += `*Use PDACopilot to query any gene, protein, cell type, spatial coordinate, or pathway across these datasets.*`;
     return md;
   }
 
@@ -504,14 +556,16 @@ export function formatBioPortalDirectResponse(
     return md;
   }
 
-  // Case B: Gene Expression / DEG lookup — always read from .metrics (VerifiedGeneMetrics)
+  // Case B: Gene / Protein Expression / DEG lookup — always read from .metrics (VerifiedGeneMetrics)
   const tcgaGeneResult = d.tcga_gtex as any;
   const sbrtGeneResult = d.gse225767 as any;
+  const cptacResult = d.cptac_pdac as any;
 
   const hasTcgaGene = (tcgaGeneResult?.type === "gene" || tcgaGeneResult?.metrics) && tcgaGeneResult?.found !== false && tcgaGeneResult?.metrics;
   const hasSbrtGene = (sbrtGeneResult?.type === "gene" || sbrtGeneResult?.metrics) && sbrtGeneResult?.found !== false && sbrtGeneResult?.metrics;
+  const hasCptac = cptacResult && (cptacResult.found || cptacResult.type === "differential");
 
-  if (hasTcgaGene || hasSbrtGene || plan.intent === "cross_module_synthesis" || d.multiGeneResults) {
+  if (hasTcgaGene || hasSbrtGene || hasCptac || plan.intent === "cross_module_synthesis" || d.multiGeneResults) {
     // Delegate entirely to formatVerifiedQuantitativeBlock — the SINGLE source of truth
     return formatVerifiedQuantitativeBlock(plan, result);
   }

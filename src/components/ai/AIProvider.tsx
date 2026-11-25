@@ -20,7 +20,7 @@ export function assembleProductionResponse(
   selectedGene?: string
 ): string {
   const dResults: Record<string, any> = executionResult.datasetResults || (executionResult as any).datasets || {};
-  const hasQuantitativeData = !!(dResults.tcga_gtex?.metrics || dResults.gse225767?.metrics || dResults.gse202051?.found || dResults.gse274103);
+  const hasQuantitativeData = !!(dResults.tcga_gtex?.metrics || dResults.gse225767?.metrics || dResults.cptac_pdac?.metrics || dResults.gse202051?.found || dResults.gse274103);
 
   const deterministicBlock = formatVerifiedQuantitativeBlock(plan, executionResult);
 
@@ -190,6 +190,19 @@ export interface ActiveModuleContext {
     spatialDescription?: string;
     currentViewMode?: string;
   };
+  cptacStats?: {
+    quantifiedProteins?: number;
+    tumorSamples?: number;
+    natSamples?: number;
+    pairedNatSamples?: number;
+    validOsSamples?: number;
+    medianConcordanceR?: number;
+    log2FC?: number;
+    mwQ?: number;
+    mrnaProteinR?: number;
+    coxHR?: number;
+    coxP?: number;
+  };
   visualState?: {
     zoomLevel?: number;
     selectedSamples?: string[];
@@ -253,20 +266,22 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     role: "assistant",
     content: `Welcome to **PDACopilot** — your global dataset-aware transcriptomic copilot for pancreatic cancer research.
 
-I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single-Nucleus Atlas (GSE202051)**, and **Spatial Visium (GSE274103)** datasets independently of whichever page you are currently viewing.
+I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **CPTAC-PDAC Proteomics (Cell 2021)**, **Single-Nucleus Atlas (GSE202051)**, and **Spatial Visium (GSE274103)** datasets independently of whichever page you are currently viewing.
 
-*How can I assist your transcriptomic research today?*`,
+*How can I assist your multi-omics research today?*`,
     timestamp: new Date(),
     evidence: {
       tcga: true,
       sbrt: true,
       singleNucleus: true,
       spatial: true,
+      cptac: true,
       confidence: 'High'
     },
     provenanceItems: [
       { datasetId: "tcga_gtex", datasetName: "TCGA-PAAD vs GTEx", status: "success", queryDetails: "Tumor vs normal reference" },
       { datasetId: "gse225767", datasetName: "SBRT Bulk (GSE225767)", status: "success", queryDetails: "Radiotherapy pre vs post response" },
+      { datasetId: "cptac_pdac", datasetName: "CPTAC-PDAC Proteomics (Cell 2021)", status: "success", queryDetails: "11,662 proteins, mRNA concordance & OS" },
       { datasetId: "gse202051", datasetName: "Single-Nucleus (GSE202051)", status: "success", queryDetails: "Cell-type lineage atlas" },
       { datasetId: "gse274103", datasetName: "Spatial Visium (GSE274103)", status: "success", queryDetails: "Tumor section localization" }
     ],
@@ -274,6 +289,7 @@ I can analyze **TCGA-PAAD vs GTEx**, **SBRT Radiotherapy (GSE225767)**, **Single
     provenanceText: `**Global Datasets Available**
 - ✓ **TCGA-PAAD vs GTEx**: Tumor vs normal reference
 - ✓ **SBRT Bulk (GSE225767)**: Radiotherapy pre vs post response
+- ✓ **CPTAC-PDAC Proteomics (Cell 2021)**: 11,662 proteins, mRNA concordance & OS
 - ✓ **Single-Nucleus (GSE202051)**: Cell-type lineage atlas
 - ✓ **Spatial Visium (GSE274103)**: Tumor section localization`
   }), []);

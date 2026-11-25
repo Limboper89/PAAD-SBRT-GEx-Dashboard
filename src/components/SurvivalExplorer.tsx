@@ -58,58 +58,6 @@ interface SurvivalExplorerProps {
   onSelectGene?: (gene: string) => void;
 }
 
-const PRESET_SIGNATURES: {
-  id: string;
-  name: string;
-  genes: string[];
-  description: string;
-  badge?: string;
-}[] = [
-  {
-    id: "rsi_10gene",
-    name: "10-Gene Radiosensitivity Index (RSI - Torres-Roca)",
-    genes: ["AR", "ABL1", "STAT1", "JUN", "PRKCB", "HDAC1", "RELA", "IRF1", "SUMO1", "PAK2"],
-    description: "Authentic Torres-Roca 10-gene intrinsic radiosensitivity model (Lancet Oncol 2009, Clin Cancer Res 2012/2015)",
-    badge: "TORRES-ROCA RSI",
-  },
-  {
-    id: "serine_transport",
-    name: "Serine Transport Index",
-    genes: ["SLC1A4", "SLC1A5", "SLC7A5", "SLC38A1", "SLC38A2"],
-    description: "Neutral amino acid & serine membrane influx carriers in PDAC",
-  },
-  {
-    id: "serine_biosynthesis",
-    name: "Serine Biosynthesis (3-Gene)",
-    genes: ["PHGDH", "PSAT1", "PSPH"],
-    description: "Canonical de novo serine synthesis cascade enzymes",
-  },
-  {
-    id: "serine_folate_7gene",
-    name: "Serine/Folate Engine (7-Gene)",
-    genes: ["PHGDH", "PSAT1", "PSPH", "SHMT1", "SHMT2", "MTHFD2", "MTHFD1L"],
-    description: "Combined de novo serine synthesis and mitochondrial 1C folate metabolism",
-  },
-  {
-    id: "nrf2_axis",
-    name: "NRF2 Antioxidant Axis",
-    genes: ["NFE2L2", "NQO1", "HMOX1", "GCLC", "GCLM", "TXNRD1"],
-    description: "Master redox regulator and validated cytoprotective downstream targets",
-  },
-  {
-    id: "cystine_transport",
-    name: "Cystine / Ferroptosis Defense",
-    genes: ["SLC7A11", "SLC3A2", "GPX4"],
-    description: "System xc- cystine-glutamate antiporter and phospholipid hydroperoxide scavenger",
-  },
-  {
-    id: "fibrotic_stroma",
-    name: "Fibrotic Stroma / Desmoplasia",
-    genes: ["COL1A1", "COL1A2", "COL3A1", "ACTA2"],
-    description: "Pancreatic stellate cell activation and dense extracellular collagen matrix",
-  },
-];
-
 export default function SurvivalExplorer({
   basePath,
   activeStudy,
@@ -133,18 +81,15 @@ export default function SurvivalExplorer({
     }
   }, [activeStudy]);
 
-  // Selected genes state
-  const [selectedGenes, setSelectedGenes] = useState<string[]>([
-    "SLC1A4",
-    "SLC1A5",
-    "SLC7A5",
-    "SLC38A1",
-    "SLC38A2",
-  ]);
+  // Selected genes state (starts with single canonical PDAC gene; add any genes for multi-gene index)
+  const [selectedGenes, setSelectedGenes] = useState<string[]>(["KRAS"]);
 
-  // Gene search state
+  // Gene search & paste list state
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showPasteBox, setShowPasteBox] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteNotice, setPasteNotice] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Stratification cutoff mode for TCGA KM
@@ -213,13 +158,6 @@ export default function SurvivalExplorer({
 
   const handleRemoveGene = (gene: string) => {
     setSelectedGenes((prev) => prev.filter((g) => g !== gene));
-  };
-
-  const handleApplyPreset = (presetId: string) => {
-    const preset = PRESET_SIGNATURES.find((p) => p.id === presetId);
-    if (preset) {
-      setSelectedGenes(preset.genes);
-    }
   };
 
   // -------------------------------------------------------------
@@ -352,32 +290,31 @@ export default function SurvivalExplorer({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header (publication-scaled)
+    // 2. Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, "GSE225767: SBRT Pathologic Treatment Response (R vs. NR)", 100, 96, size - 200, 70, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "GSE225767: SBRT Treatment Response (R vs. NR)", 90, 110, size - 180, 98, "bold", PUB_FONT_SANS);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     drawFittedText(
       ctx,
-      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · Unpaired Neoadjuvant SBRT Cohort (N = 55)`,
-      100,
-      156,
-      size - 200,
-      40,
+      `${selectedGenes.length === 1 ? selectedGenes[0] : `${selectedGenes.length} genes`} · Neoadjuvant SBRT Cohort (N = 55)`,
+      90,
+      180,
+      size - 180,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
-    const padLeft = 280;
-    const padRight = 100;
-    const padTop = 320;
-    const padBottom = 440; // Room for X labels, legend, trajectory
+    const padLeft = 320;
+    const padRight = 90;
+    const padTop = 310;
+    const padBottom = 460;
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
-    // Collect all points and means to establish exact Y-scale
     const allPts = [
       ...sbrtResult.groups.Pre_NR.points.map((p) => p.score),
       ...sbrtResult.groups.Pre_R.points.map((p) => p.score),
@@ -389,15 +326,14 @@ export default function SurvivalExplorer({
     const dataMax = Math.max(...allPts);
     const span = Math.max(dataMax - dataMin, 1.0);
 
-    // Extend range with 30% top headroom for brackets
     const minY = Math.floor((dataMin - span * 0.12) * 10) / 10;
-    const maxY = Math.ceil((dataMax + span * 0.32) * 10) / 10;
+    const maxY = Math.ceil((dataMax + span * 0.34) * 10) / 10;
 
     const mapY = (val: number) => padTop + plotH - ((val - minY) / (maxY - minY)) * plotH;
 
     // 4. Gridlines & Y-Axis
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
 
     const numTicks = 6;
     const step = (maxY - minY) / numTicks;
@@ -410,27 +346,25 @@ export default function SurvivalExplorer({
       ctx.lineTo(padLeft + plotW, py);
       ctx.stroke();
 
-      // Outer tick mark on Y-axis
       ctx.beginPath();
-      ctx.moveTo(padLeft - 16, py);
+      ctx.moveTo(padLeft - 18, py);
       ctx.lineTo(padLeft, py);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 66px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(val.toFixed(2), padLeft - 28, py + 16);
+      ctx.fillText(val.toFixed(1), padLeft - 30, py + 22);
     }
 
-    // Zero baseline
     if (minY <= 0 && maxY >= 0) {
       const zeroY = mapY(0);
       ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(padLeft, zeroY);
       ctx.lineTo(padLeft + plotW, zeroY);
@@ -439,20 +373,24 @@ export default function SurvivalExplorer({
 
     // Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Y-Axis Title
     ctx.save();
-    ctx.translate(padLeft - 165, padTop + plotH / 2);
+    ctx.translate(92, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 58px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText(
-      selectedGenes.length > 1 ? "Z-Score Composite Index (Mean ± SE)" : "Normalized Expression (log2)",
+    drawFittedText(
+      ctx,
+      selectedGenes.length > 1 ? "Z-Score Composite Index (Mean ± SE)" : "Normalized Expression (log₂)",
       0,
-      0
+      0,
+      plotH,
+      80,
+      "bold",
+      PUB_FONT_SANS
     );
     ctx.restore();
 
@@ -768,36 +706,36 @@ export default function SurvivalExplorer({
     ctx.fillStyle = isLight ? "#ffffff" : "#020617";
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Header (fitted to prevent right-edge clipping; >=7 pt at 85 mm print width)
+    // 2. Header (GEPIA2-calibrated publication scale)
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     ctx.textAlign = "left";
-    drawFittedText(ctx, "TCGA-PAAD: Kaplan-Meier Overall Survival", 100, 96, size - 200, 74, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, "TCGA-PAAD: Overall Survival", 90, 110, size - 180, 100, "bold", PUB_FONT_SANS);
 
-    ctx.fillStyle = isLight ? "#475569" : "#94a3b8";
+    ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
     const stratLabel =
       stratMethod === "optimal"
-        ? `Optimal Cutpoint (cutoff = ${tcgaResult.cutoff_value ?? "NA"}, ${100 - (tcgaResult.cutoff_percentile ?? 50)}% High / ${tcgaResult.cutoff_percentile ?? 50}% Low)`
+        ? `Optimal Cutpoint (${100 - (tcgaResult.cutoff_percentile ?? 50)}% High / ${tcgaResult.cutoff_percentile ?? 50}% Low)`
         : stratMethod === "tertile"
         ? "Tertiles (Top 33% vs Bottom 33%)"
         : stratMethod === "quartile"
         ? "Quartiles (Top 25% vs Bottom 25%)"
-        : "Median (50/50 Split)";
+        : "Median Split";
     drawFittedText(
       ctx,
-      `Signature (${selectedGenes.length} genes): ${selectedGenes.join(", ")} · ${stratLabel} (N = 177)`,
-      100,
-      160,
-      size - 200,
-      42,
+      `${selectedGenes.length === 1 ? selectedGenes[0] : `${selectedGenes.length} genes`} · ${stratLabel} (N = 177)`,
+      90,
+      180,
+      size - 180,
+      54,
       "bold",
       PUB_FONT_NUM
     );
 
     // 3. Layout Dimensions
-    const padLeft = 360;
+    const padLeft = 340;
     const padRight = 90;
-    const padTop = 240;
-    const padBottom = 640; // Ample room for numbers at risk table
+    const padTop = 245;
+    const padBottom = 680; // Ample room for large numbers at risk table
     const plotW = size - padLeft - padRight;
     const plotH = size - padTop - padBottom;
 
@@ -813,7 +751,7 @@ export default function SurvivalExplorer({
 
     // 4. Gridlines & Ticks (0, 25, 50, 75, 100%)
     ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
 
     [0, 0.25, 0.5, 0.75, 1.0].forEach((prob) => {
       const py = mapY(prob);
@@ -825,30 +763,30 @@ export default function SurvivalExplorer({
 
       // Outer tick on Y-axis
       ctx.beginPath();
-      ctx.moveTo(padLeft - 16, py);
+      ctx.moveTo(padLeft - 18, py);
       ctx.lineTo(padLeft, py);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 52px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 70px ${PUB_FONT_NUM}`;
       ctx.textAlign = "right";
-      ctx.fillText(`${Math.round(prob * 100)}%`, padLeft - 28, py + 17);
+      ctx.fillText(`${Math.round(prob * 100)}%`, padLeft - 30, py + 24);
     });
 
     // 50% Median Survival Reference Dashed Line
     const medianY = mapY(0.5);
     ctx.strokeStyle = isLight ? "#64748b" : "#94a3b8";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.setLineDash([14, 10]);
     ctx.beginPath();
     ctx.moveTo(padLeft, medianY);
     ctx.lineTo(padLeft + plotW, medianY);
     ctx.stroke();
-    ctx.setLineDash([]); // Reset
+    ctx.setLineDash([]);
 
     // X-Axis Time Ticks
     const timeTicks = [0, 12, 24, 36, 48, 60, 72, 84].filter((t) => t <= maxAxisTime);
@@ -859,48 +797,47 @@ export default function SurvivalExplorer({
       ctx.lineTo(px, padTop + plotH);
       ctx.stroke();
 
-      // Outer tick on bottom axis
       ctx.beginPath();
       ctx.moveTo(px, padTop + plotH);
-      ctx.lineTo(px, padTop + plotH + 18);
+      ctx.lineTo(px, padTop + plotH + 20);
       ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.strokeStyle = isLight ? "rgba(226, 232, 240, 0.9)" : "rgba(30, 41, 59, 0.6)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
 
       ctx.fillStyle = isLight ? "#1e293b" : "#94a3b8";
-      ctx.font = `bold 50px ${PUB_FONT_NUM}`;
+      ctx.font = `bold 70px ${PUB_FONT_NUM}`;
       ctx.textAlign = "center";
-      ctx.fillText(`${t} mo`, px, padTop + plotH + 64);
+      ctx.fillText(`${t}`, px, padTop + plotH + 84);
     });
 
     // Axes Box
     ctx.strokeStyle = isLight ? "#0f172a" : "#64748b";
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
     ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
     // Y-Axis Title
     ctx.save();
-    ctx.translate(padLeft - 185, padTop + plotH / 2);
+    ctx.translate(92, padTop + plotH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 84px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Overall Survival Probability (%)", 0, 0);
+    ctx.fillText("Overall Survival (%)", 0, 0);
     ctx.restore();
 
     // X-Axis Title
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
-    ctx.font = `bold 60px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 84px ${PUB_FONT_SANS}`;
     ctx.textAlign = "center";
-    ctx.fillText("Overall Survival Time (Months)", padLeft + plotW / 2, padTop + plotH + 144);
+    ctx.fillText("Overall Survival Time (Months)", padLeft + plotW / 2, padTop + plotH + 190);
 
     // 5. Draw Stepped Curves (High = Crimson #d9534f, Low = Royal Blue #0275d8)
     const drawCurve = (curve: typeof tcgaResult.high_curve, color: string) => {
       if (curve.length === 0) return;
       ctx.strokeStyle = color;
-      ctx.lineWidth = 7;
+      ctx.lineWidth = 8;
       ctx.beginPath();
 
       let lastX = mapX(curve[0].time);
@@ -921,15 +858,15 @@ export default function SurvivalExplorer({
       ctx.stroke();
 
       // Censor vertical ticks
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = color;
       curve.forEach((pt) => {
         if (pt.is_censor) {
           const cx = mapX(pt.time);
           const cy = mapY(pt.survival);
           ctx.beginPath();
-          ctx.moveTo(cx, cy - 16);
-          ctx.lineTo(cx, cy + 16);
+          ctx.moveTo(cx, cy - 20);
+          ctx.lineTo(cx, cy + 20);
           ctx.stroke();
         }
       });
@@ -938,13 +875,13 @@ export default function SurvivalExplorer({
     drawCurve(tcgaResult.low_curve, "#0275d8");
     drawCurve(tcgaResult.high_curve, "#d9534f");
 
-    // 6. In-Plot Publication Annotation Box (Top-Right)
-    const annW = 920;
-    const annH = 335;
+    // 6. In-Plot Publication Annotation Box (Top-Right, GEPIA2-calibrated)
+    const annW = 1140;
+    const annH = 420;
     const annX = padLeft + plotW - annW - 30;
-    const annY = padTop + 32;
+    const annY = padTop + 30;
 
-    ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.98)" : "rgba(15, 23, 42, 0.98)";
+    ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.96)" : "rgba(15, 23, 42, 0.96)";
     ctx.fillRect(annX, annY, annW, annH);
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
     ctx.lineWidth = 3.5;
@@ -955,41 +892,40 @@ export default function SurvivalExplorer({
     ctx.textAlign = "left";
     const pStr =
       tcgaResult.logrank_p_value < 0.0001
-        ? tcgaResult.logrank_p_value.toExponential(3)
+        ? tcgaResult.logrank_p_value.toExponential(2)
         : tcgaResult.logrank_p_value.toFixed(4);
-    drawFittedText(ctx, `Log-Rank Test: p = ${pStr}${isSig ? " *" : " (ns)"}`, annX + 30, annY + 64, annW - 60, 48, "bold", PUB_FONT_SANS);
+    drawFittedText(ctx, `Log-Rank p = ${pStr}${isSig ? " *" : " (ns)"}`, annX + 36, annY + 84, annW - 72, 62, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = isLight ? "#0f172a" : "#f8fafc";
     drawFittedText(
       ctx,
-      `HR: ${tcgaResult.hazard_ratio.toFixed(2)} (95% CI: ${tcgaResult.hr_ci_lower.toFixed(2)}-${tcgaResult.hr_ci_upper.toFixed(2)})`,
-      annX + 30,
-      annY + 136,
-      annW - 60,
-      42,
+      `HR = ${tcgaResult.hazard_ratio.toFixed(2)} (95% CI: ${tcgaResult.hr_ci_lower.toFixed(2)}–${tcgaResult.hr_ci_upper.toFixed(2)})`,
+      annX + 36,
+      annY + 174,
+      annW - 72,
+      56,
       "bold",
       PUB_FONT_NUM
     );
 
-    const highMed = tcgaResult.high_median_os ? `${tcgaResult.high_median_os.toFixed(1)} mo` : "NR";
-    const lowMed = tcgaResult.low_median_os ? `${tcgaResult.low_median_os.toFixed(1)} mo` : "NR";
+    const highMed = tcgaResult.high_median_os ? `${tcgaResult.high_median_os.toFixed(1)}m` : "NR";
+    const lowMed = tcgaResult.low_median_os ? `${tcgaResult.low_median_os.toFixed(1)}m` : "NR";
     const highN = tcgaResult.high_n;
     const lowN = tcgaResult.low_n;
 
-    ctx.font = `bold 42px ${PUB_FONT_SANS}`;
     ctx.fillStyle = "#d9534f";
-    ctx.fillText(`• High Index: Median = ${highMed} (n = ${highN})`, annX + 30, annY + 210);
+    drawFittedText(ctx, `• High: Med = ${highMed} (n = ${highN})`, annX + 36, annY + 266, annW - 72, 58, "bold", PUB_FONT_SANS);
 
     ctx.fillStyle = "#0275d8";
-    ctx.fillText(`• Low Index:  Median = ${lowMed} (n = ${lowN})`, annX + 30, annY + 282);
+    drawFittedText(ctx, `• Low:  Med = ${lowMed} (n = ${lowN})`, annX + 36, annY + 354, annW - 72, 58, "bold", PUB_FONT_SANS);
 
     // 7. Publication Numbers at Risk Table
-    const tableTop = padTop + plotH + 210;
-    const rowH = 84;
+    const tableTop = padTop + plotH + 250;
+    const rowH = 104;
     const tableLabelX = 50;
 
     ctx.strokeStyle = isLight ? "#cbd5e1" : "#334155";
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(tableLabelX, tableTop);
     ctx.lineTo(padLeft + plotW, tableTop);
@@ -997,48 +933,48 @@ export default function SurvivalExplorer({
 
     // Table Header
     ctx.fillStyle = isLight ? "#334155" : "#94a3b8";
-    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 56px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Time (Mo)", tableLabelX, tableTop + 56);
+    ctx.fillText("Time (Mo)", tableLabelX, tableTop + 68);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
-        ctx.fillText(`${r.time}`, rx, tableTop + 56);
+        ctx.font = `bold 58px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.time}`, rx, tableTop + 68);
       }
     });
 
     // High Index Row
     const highRowY = tableTop + rowH;
     ctx.fillStyle = "#d9534f";
-    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 56px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("High Index", tableLabelX, highRowY + 56);
+    ctx.fillText("High", tableLabelX, highRowY + 68);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
-        ctx.fillText(`${r.high_risk}`, rx, highRowY + 56);
+        ctx.font = `bold 58px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.high_risk}`, rx, highRowY + 68);
       }
     });
 
     // Low Index Row
     const lowRowY = tableTop + rowH * 2;
     ctx.fillStyle = "#0275d8";
-    ctx.font = `bold 44px ${PUB_FONT_SANS}`;
+    ctx.font = `bold 56px ${PUB_FONT_SANS}`;
     ctx.textAlign = "left";
-    ctx.fillText("Low Index", tableLabelX, lowRowY + 56);
+    ctx.fillText("Low", tableLabelX, lowRowY + 68);
 
     tcgaResult.risk_table.forEach((r) => {
       const rx = mapX(r.time);
       if (rx <= padLeft + plotW) {
         ctx.textAlign = "center";
-        ctx.font = `bold 46px ${PUB_FONT_NUM}`;
-        ctx.fillText(`${r.low_risk}`, rx, lowRowY + 56);
+        ctx.font = `bold 58px ${PUB_FONT_NUM}`;
+        ctx.fillText(`${r.low_risk}`, rx, lowRowY + 68);
       }
     });
 
@@ -1121,53 +1057,31 @@ export default function SurvivalExplorer({
 
       {/* 2. Gene Signature Controls */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
-        {/* Curated Presets */}
-        <div>
-          <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-300 mb-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Select Biological Gene Set:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_SIGNATURES.map((preset) => {
-              const isPresetActive =
-                preset.genes.length === selectedGenes.length &&
-                preset.genes.every((g) => selectedGenes.includes(g));
-
-              return (
-                <button
-                  key={preset.id}
-                  onClick={() => handleApplyPreset(preset.id)}
-                  className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all text-left flex items-center gap-1.5 shadow-sm border ${
-                    isPresetActive
-                      ? "bg-teal-500/20 border-teal-500/60 text-teal-200 font-bold ring-1 ring-teal-500/30"
-                      : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300 hover:text-slate-100"
-                  }`}
-                  title={preset.description}
-                >
-                  {preset.badge && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-bold tracking-tight">
-                      {preset.badge}
-                    </span>
-                  )}
-                  <span>{preset.name}</span>
-                  <span className="text-xs text-slate-500 font-mono">({preset.genes.length})</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Selected Gene Tags & Add Gene Search */}
-        <div className="pt-2 border-t border-slate-800/80">
+        <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs sm:text-sm font-semibold text-slate-200">
                 Active Genes in Index ({selectedGenes.length}):
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasteBox((v) => !v);
+                  setPasteNotice(null);
+                }}
+                className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1 transition cursor-pointer ${
+                  showPasteBox
+                    ? "bg-teal-950/40 border-teal-500/60 text-teal-300"
+                    : "bg-slate-950 border-slate-700 text-slate-300 hover:border-teal-500/50"
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" /> Paste Gene List
+              </button>
               {selectedGenes.length > 0 && (
                 <button
                   onClick={() => setSelectedGenes([])}
-                  className="text-xs text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1 ml-2"
+                  className="text-xs text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1 ml-1"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Clear All
@@ -1232,6 +1146,58 @@ export default function SurvivalExplorer({
             )}
           </div>
 
+          {/* Expandable Paste Gene List Drawer */}
+          {showPasteBox && (
+            <div className="mb-3 rounded-xl border border-slate-800 bg-slate-950/90 p-3 flex flex-col gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  rows={2}
+                  placeholder="Paste gene symbols separated by commas, spaces, tabs, or newlines (e.g. KRAS, TP53, SMAD4, GATA6)..."
+                  className="flex-1 rounded-lg border border-slate-700 bg-slate-900 p-2 text-xs text-slate-200 placeholder-slate-500 font-mono focus:outline-none focus:border-teal-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lookup = new Map<string, string>();
+                    allGenes.forEach((g) => lookup.set(g.toUpperCase(), g));
+                    const tokens = pasteText
+                      .split(/[\s,;|\n\t]+/)
+                      .map((s) => s.trim().toUpperCase())
+                      .filter(Boolean);
+                    const matched: string[] = [];
+                    const missing: string[] = [];
+                    for (const tok of Array.from(new Set(tokens))) {
+                      const canonical = lookup.get(tok);
+                      if (canonical) {
+                        if (!selectedGenes.includes(canonical)) matched.push(canonical);
+                      } else {
+                        missing.push(tok);
+                      }
+                    }
+                    if (matched.length > 0) {
+                      setSelectedGenes((prev) => Array.from(new Set([...prev, ...matched])));
+                      setPasteText("");
+                    }
+                    setPasteNotice(
+                      `Added ${matched.length} gene(s)` +
+                        (missing.length > 0
+                          ? ` · ${missing.length} not found (${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""})`
+                          : "")
+                    );
+                  }}
+                  className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-xs font-semibold text-white shrink-0 cursor-pointer"
+                >
+                  Add Parsed Genes
+                </button>
+              </div>
+              {pasteNotice && (
+                <div className="text-[11px] font-mono text-teal-300">{pasteNotice}</div>
+              )}
+            </div>
+          )}
+
           {/* Active Tags */}
           <div className="flex flex-wrap items-center gap-2 p-2.5 bg-slate-950 rounded-xl border border-slate-800 min-h-[44px]">
             {selectedGenes.map((gene) => (
@@ -1293,7 +1259,7 @@ export default function SurvivalExplorer({
           <Layers className="w-10 h-10 mx-auto mb-3 opacity-30 text-teal-400" />
           <h3 className="text-base font-semibold text-slate-300 mb-1">No Genes Selected</h3>
           <p className="text-xs sm:text-sm max-w-md mx-auto text-slate-500">
-            Please choose a preset above or type a gene symbol to compute clinical treatment response.
+            Search or add one or more gene symbols above to compute clinical survival or treatment response.
           </p>
         </div>
       ) : cohortMode === "sbrt" ? (

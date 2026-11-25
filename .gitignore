@@ -55,3 +55,7 @@ manuscript_analysis/
 /src/types/crispr.ts
 scripts/audit_crispr_data.mjs
 scripts/generate_crispr_dataset.mjs
+
+# python cache
+__pycache__/
+*.py[cod]

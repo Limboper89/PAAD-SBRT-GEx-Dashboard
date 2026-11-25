@@ -21,6 +21,7 @@ export interface EvidenceChecklist {
   sbrt: boolean;
   singleNucleus: boolean;
   spatial: boolean;
+  cptac?: boolean;
   confidence: 'High' | 'Moderate' | 'Low (limited data)' | 'Low';
 }
 
@@ -80,6 +81,8 @@ export function buildRequiredAnswerContract(intentObj: QuestionIntent): string {
     studyDesignRule = "Respect study design: GSE225767 is UNPAIRED pre-SBRT (n=26) vs post-SBRT (n=29) cohort resections (NOT longitudinal paired tracking).";
   } else if (intentObj.requiredDatasetIds.includes("gse202051")) {
     studyDesignRule = "Respect study design: GSE202051 single-nucleus pseudobulk. Always cite the exact cohort comparison (e.g. Standard CRT [n=14] vs Naïve [n=18], or All Treated [n=25] vs Naïve [n=18]) and cell lineage metrics from the deterministic table. Do NOT conflate with the aggregate All-Treated cohort or report endothelial results when epithelial or other lineages are queried.";
+  } else if (intentObj.requiredDatasetIds.includes("cptac_pdac")) {
+    studyDesignRule = "Respect study design: CPTAC-PDAC (Cao et al., Cell 2021; PMID:34534465) TMT global proteomics across 140 primary tumors vs 75 normal adjacent tissues (67 case-matched Tumor-NAT pairs), paired RSEM RNA-seq (140 tumors), and 134 clinical overall survival patients. If a requested gene (e.g. NFE2L2, HIF1A, SLC7A11) is marked as mRNA-only / absent in TMT proteomics, state that explicitly and never fabricate protein values.";
   }
 
   return `- Address EXCLUSIVELY the user's requested task: '${intentObj.requestedTask}' and entities: [${entityStr}].${focusStr}
@@ -184,6 +187,7 @@ STRICT SCIENTIFIC EVIDENCE-CONSISTENCY & ANTI-HALLUCINATION RULES:
    - When discussing spatial Visium localization, you may append '[Action: OPEN_SPATIAL]' on its own line at the end of your response.
    - When discussing pathway enrichment or GSEA, you may append '[Action: OPEN_PATHWAYS]' on its own line at the end of your response.
    - When discussing differential expression or volcano plots, you may append '[Action: OPEN_DEG]' on its own line at the end of your response.
+   - When discussing CPTAC-PDAC proteomics, mRNA-protein concordance, or protein survival validation, you may append '[Action: OPEN_CPTAC]' on its own line at the end of your response.
 
 13. SELECTED TARGET PLOT / FIGURE FOCUS:
    - The user can dynamically select which specific plot or visualization is active for analysis (e.g. Expression Heatmap, Correlation Scatter Plot, Volcano Plot, UMAP Atlas).
@@ -211,6 +215,7 @@ export function buildContextualPrompt(
     sbrt: plan.targetDatasets.includes("gse225767"),
     singleNucleus: plan.targetDatasets.includes("gse202051"),
     spatial: plan.targetDatasets.includes("gse274103"),
+    cptac: plan.targetDatasets.includes("cptac_pdac"),
     confidence: executionResult.confidence
   };
 
@@ -341,6 +346,25 @@ export function buildContextualPrompt(
     }
   }
 
+  if (executionResult.datasetResults.cptac_pdac) {
+    const cptac: any = executionResult.datasetResults.cptac_pdac;
+    if (cptac.type === "gene" && cptac.found && cptac.metrics) {
+      const ps = cptac.proteomicsStats || {};
+      const statusStr = cptac.proteinDetected
+        ? "Quantified in TMT Global Proteomics + Matched RNA-seq"
+        : "Matched RNA-seq ONLY (below TMT global proteomics detection limit)";
+      toolDataText += `\n[DETERMINISTIC CPTAC-PDAC PROTEOGENOMICS TABLE (Cao et al., Cell 2021)]\n` +
+        `* Status: ${statusStr}\n` +
+        `| Target | Layer | log2FC (Tumor vs NAT) | MW FDR (q) | mRNA-Protein r (p) | Continuous Cox HR (p) |\n` +
+        `|---|---|---|---|---|---|\n` +
+        `| **${cptac.gene}** | ${cptac.proteinDetected ? "Global Protein" : "mRNA-Only"} | \`${cptac.metrics.log2FCFormatted}\` | \`${cptac.metrics.adjPValueFormatted}\` | ${typeof ps.pearsonR === "number" ? `\`${ps.pearsonR.toFixed(4)}\` (${ps.pearsonP?.toExponential(2) ?? "N/A"})` : "ND in TMT"} | ${typeof ps.coxHR === "number" ? `\`${ps.coxHR.toFixed(3)}\` (${ps.coxP?.toExponential(2) ?? "N/A"})` : "N/A"} |\n`;
+    } else if (cptac.type === "differential" && cptac.success) {
+      const topUp = cptac.topUpregulated?.slice(0, 8).map((p: any, i: number) => `| ${i + 1} | **${p.gene}** | \`${p.log2FCFormatted}\` | \`${p.adjPValueFormatted}\` | ${typeof p.pearsonR === "number" ? `\`${p.pearsonR.toFixed(3)}\`` : "N/A"} |`).join("\n") || "";
+      toolDataText += `\n[DETERMINISTIC CPTAC-PDAC DIFFERENTIAL PROTEINS TABLE (${cptac.totalProteins} proteins, ${cptac.filteredCount} sig)]\n` +
+        `| Rank | Protein | log2FC (Tumor vs NAT) | MW FDR | mRNA-Protein r |\n|---|---|---|---|---|\n${topUp}\n`;
+    }
+  }
+
 
   const correctionBlock = correctionDirective ? `\n[CORRECTION DIRECTIVE - RETRY MANDATE]\n${correctionDirective}\n` : "";
 
@@ -351,7 +375,8 @@ export function buildContextualPrompt(
   const quantitativeNotice = (
     executionResult.datasetResults.tcga_gtex?.metrics ||
     executionResult.datasetResults.gse225767?.metrics ||
-    (executionResult.plan.intent === "cross_module_synthesis" && (executionResult.datasetResults.gse202051?.found || executionResult.datasetResults.gse274103))
+    executionResult.datasetResults.cptac_pdac?.metrics ||
+    (executionResult.plan.intent === "cross_module_synthesis" && (executionResult.datasetResults.gse202051?.found || executionResult.datasetResults.gse274103 || executionResult.datasetResults.cptac_pdac?.found))
   )
     ? "\n[MANDATORY NO-TABLE RULE]\n" +
       "A verified BioPortal quantitative evidence table is AUTOMATICALLY rendered above your text response.\n" +

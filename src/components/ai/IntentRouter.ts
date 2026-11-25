@@ -42,6 +42,7 @@ export interface QueryExecutionResult {
     gse225767?: GeneQueryResult | DifferentialQueryResult | TopExpressedQueryResult | any;
     gse202051?: SingleNucleusQueryResult;
     gse274103?: SpatialQueryResult;
+    cptac_pdac?: any;
     availableDatasets?: any[];
     pathway?: any;
     multiGeneResults?: Record<string, any>;
@@ -77,7 +78,9 @@ export class IntentRouter {
       "GET", "FIND", "GIVE", "TELL", "TOP", "MOST", "ABUNDANT", "ABUNDANCE", "BOTH", "ALL", "ANY", "EACH", "MORE", "LESS",
       "AFTER", "BEFORE", "DURING", "ABOUT", "INTO", "OVER", "ALSO", "THAN", "THEN", "FROM", "THEM", "THAT", "THIS", "THESE", "THOSE",
       "AMONG", "ONES", "ABOVE", "THESE", "THOSE", "THEIR", "STRONGLY", "ASSOCIATED", "BIOLOGY", "BIOLOGICAL", "RELEVANT", "ACROSS", "TRANSCRIPTOMIC",
-      "INTEGRATE", "INTEGRATING", "WORKFLOW", "STRATEGY", "OBTAINED", "ALONE", "EXPECT", "LOCALIZED"
+      "INTEGRATE", "INTEGRATING", "WORKFLOW", "STRATEGY", "OBTAINED", "ALONE", "EXPECT", "LOCALIZED",
+      "PROTEIN", "PROTEINS", "PROTEOMIC", "PROTEOMICS", "PROTEOME", "PROTEOGENOMIC", "PROTEOGENOMICS",
+      "CPTAC", "TMT", "MAXSTAT", "CONCORDANCE", "DECOUPLING", "FERROPTOSIS"
     ]);
 
     for (const m of matches) {
@@ -110,7 +113,10 @@ export class IntentRouter {
         qLower.includes("workflow") ||
         qLower.includes("cannot be obtained") ||
         qLower.includes("alone") ||
-        qLower.includes("spatial transcriptomics");
+        qLower.includes("spatial transcriptomics") ||
+        qLower.includes("proteomic dataset") ||
+        qLower.includes("which proteins") ||
+        qLower.includes("top proteins");
 
       if (!isConceptualOrMethodQuery) {
         const activeGene = currentPageContext.gene.toUpperCase();
@@ -346,6 +352,16 @@ export class IntentRouter {
     if (qLower.includes("spatial") || qLower.includes("visium") || qLower.includes("gse274103")) {
       matchedModalities.push("gse274103");
     }
+    if (
+      qLower.includes("cptac") ||
+      qLower.includes("paad_cptac") ||
+      qLower.includes("proteom") ||
+      qLower.includes("proteogenom") ||
+      qLower.includes("mrna-protein") ||
+      qLower.includes("mrna vs protein")
+    ) {
+      matchedModalities.push("cptac_pdac");
+    }
 
     const hasCrossModulePhrase =
       qLower.includes("all modules") ||
@@ -370,7 +386,9 @@ export class IntentRouter {
     if (!isDatasetDiscoveryOnly && (hasCrossModulePhrase || matchedModalities.length >= 2)) {
       const targetDs =
         hasCrossModulePhrase || matchedModalities.length >= 3
-          ? ["tcga_gtex", "gse225767", "gse202051", "gse274103"]
+          ? (matchedModalities.includes("cptac_pdac") || qLower.includes("proteom") || qLower.includes("cptac")
+              ? ["tcga_gtex", "gse225767", "gse202051", "gse274103", "cptac_pdac"]
+              : ["tcga_gtex", "gse225767", "gse202051", "gse274103"])
           : matchedModalities;
       const snFilters = this.extractSingleNucleusFilters(question, currentPageContext);
 
@@ -497,13 +515,70 @@ export class IntentRouter {
         (qLower.includes("data") && qLower.includes("sbrt") && (qLower.includes("available") || qLower.includes("structure") || qLower.includes("cohort")))
       )
     ) {
-      const targetDs = qLower.includes("sbrt") ? ["gse225767"] : ["tcga_gtex", "gse225767", "gse202051", "gse274103"];
+      const wantsAllModalities =
+        !qLower.includes("transcriptomic") &&
+        (qLower.includes("proteom") || qLower.includes("multi-omics") || qLower.includes("all datasets"));
+      const targetDs = qLower.includes("sbrt")
+        ? ["gse225767"]
+        : wantsAllModalities
+        ? ["tcga_gtex", "gse225767", "gse202051", "gse274103", "cptac_pdac"]
+        : ["tcga_gtex", "gse225767", "gse202051", "gse274103"];
       return {
         intent: "list_available_datasets",
         entities: { genes: [] }, // Suppress active page gene context for dataset metadata queries
         targetDatasets: targetDs,
         isPageSpecificQuestion: false,
         reasoning: "Dataset metadata & structure query. Routing to dataset registry indices."
+      };
+    }
+
+    // Rule 2.0: CPTAC-PDAC Proteomics / Proteogenomics / mRNA-Protein Concordance / CPTAC Survival
+    if (
+      qLower.includes("cptac") ||
+      qLower.includes("paad_cptac") ||
+      qLower.includes("proteom") ||
+      qLower.includes("proteogenom") ||
+      qLower.includes("mrna-protein") ||
+      qLower.includes("mrna vs protein") ||
+      qLower.includes("protein abundance") ||
+      qLower.includes("protein level") ||
+      qLower.includes("protein expression") ||
+      qLower.includes("post-translational") ||
+      qLower.includes("decoupling") ||
+      qLower.includes("maxstat") ||
+      (currentPageContext.dataset.toUpperCase().includes("CPTAC") &&
+        !qLower.includes("tcga") &&
+        !qLower.includes("sbrt") &&
+        !qLower.includes("gse225767") &&
+        !qLower.includes("gse202051") &&
+        !qLower.includes("gse274103"))
+    ) {
+      const wantsProteinList =
+        explicitGenesInQuestion.length === 0 &&
+        (qLower.includes("which proteins") ||
+          qLower.includes("top proteins") ||
+          qLower.includes("upregulated proteins") ||
+          qLower.includes("downregulated proteins") ||
+          qLower.includes("differential protein"));
+
+      if (wantsProteinList) {
+        return {
+          intent: "cptac_differential_list",
+          entities: { genes: [] },
+          comparison: { type: "tumor_vs_nat_proteomics" },
+          targetDatasets: ["cptac_pdac"],
+          isPageSpecificQuestion: false,
+          reasoning: "CPTAC-PDAC top differential proteins query detected. Routing to cptac_pdac."
+        };
+      }
+
+      return {
+        intent: "cptac_proteomics_query",
+        entities: { genes: extractedGenes },
+        comparison: { type: "cptac_proteogenomics" },
+        targetDatasets: ["cptac_pdac"],
+        isPageSpecificQuestion: false,
+        reasoning: "CPTAC-PDAC proteomics / proteogenomics concordance / survival query detected. Routing to cptac_pdac."
       };
     }
 
@@ -760,6 +835,7 @@ export class IntentRouter {
     if (currentPageContext.dataset.toLowerCase().includes("gse225767")) fallbackDatasets = ["gse225767"];
     if (currentPageContext.dataset.toLowerCase().includes("gse202051")) fallbackDatasets = ["gse202051"];
     if (currentPageContext.dataset.toLowerCase().includes("gse274103")) fallbackDatasets = ["gse274103"];
+    if (currentPageContext.dataset.toUpperCase().includes("CPTAC")) fallbackDatasets = ["cptac_pdac"];
 
     const snFilters = fallbackDatasets.includes("gse202051") 
       ? this.extractSingleNucleusFilters(question, currentPageContext) 
@@ -1070,6 +1146,45 @@ export class IntentRouter {
       });
     }
 
+    // 5.5. Query CPTAC-PDAC Proteomics if targeted
+    if (targetSet.has("cptac_pdac")) {
+      if (plan.intent === "cptac_differential_list" || !primaryGene) {
+        const diffRes = await queryEngine.queryCptacDifferential(10);
+        datasetResults.cptac_pdac = diffRes;
+        provenance.push({
+          datasetId: "cptac_pdac",
+          datasetName: DATASET_REGISTRY.cptac_pdac.name,
+          status: diffRes.success ? "success" : "failed",
+          operation: "queryCptacDifferential",
+          queryDetails: diffRes.success
+            ? `Queried ${diffRes.totalProteins} CPTAC-PDAC proteins (${diffRes.filteredCount} significant MW FDR < 0.05, |log2FC| >= 0.5)`
+            : "Failed to query CPTAC-PDAC differential protein list"
+        });
+      } else {
+        const cptacRes = await queryEngine.queryCptacProteomics(primaryGene);
+        datasetResults.cptac_pdac = cptacRes;
+        provenance.push({
+          datasetId: "cptac_pdac",
+          datasetName: DATASET_REGISTRY.cptac_pdac.name,
+          status: cptacRes.success && cptacRes.found ? "success" : "failed",
+          operation: "queryCptacProteomics",
+          queryDetails:
+            cptacRes.found && cptacRes.metrics
+              ? cptacRes.proteinDetected
+                ? `Retrieved ${primaryGene} Protein Tumor vs NAT log2FC=${cptacRes.metrics.log2FCFormatted}, MW FDR=${cptacRes.metrics.adjPValueFormatted}, mRNA-Prot r=${cptacRes.proteomicsStats?.pearsonR?.toFixed(3) ?? "N/A"}`
+                : `${primaryGene} quantified in matched RNA-seq only (below TMT detection limit; mRNA log2FC=${cptacRes.metrics.log2FCFormatted})`
+              : `Query failed: '${primaryGene}' not found in CPTAC-PDAC proteome or RNA-seq index`
+        });
+      }
+    } else {
+      provenance.push({
+        datasetId: "cptac_pdac",
+        datasetName: DATASET_REGISTRY.cptac_pdac.name,
+        status: "not_required",
+        queryDetails: "Not queried for this question"
+      });
+    }
+
     // Single unified confidence calculation rule
     const successCount = provenance.filter(p => p.status === "success").length;
     const failedCount = provenance.filter(p => p.status === "failed").length;
@@ -1101,13 +1216,15 @@ export class IntentRouter {
             ) 
           : null;
         const spatialRes = targetSet.has("gse274103") ? await queryEngine.querySpatialExpression(gene) : null;
+        const cptacRes = targetSet.has("cptac_pdac") ? await queryEngine.queryCptacProteomics(gene) : null;
 
         datasetResults.multiGeneResults[gene] = {
           tcga: tcgaRes,
           sbrt: sbrtRes,
           sn: snRes,
           spatial: spatialRes,
-          found: (tcgaRes && tcgaRes.found) || (sbrtRes && sbrtRes.found) || (snRes && snRes.found) || (spatialRes && spatialRes.found) || false
+          cptac: cptacRes,
+          found: (tcgaRes && tcgaRes.found) || (sbrtRes && sbrtRes.found) || (snRes && snRes.found) || (spatialRes && spatialRes.found) || (cptacRes && cptacRes.found) || false
         };
       }
     }
@@ -1122,7 +1239,8 @@ export class IntentRouter {
       "spatial_conceptual",
       "dataset_design_query",
       "research_strategy",
-      "differential_expression_list"
+      "differential_expression_list",
+      "cptac_differential_list"
     ]);
 
     if (!nonGeneIntents.has(plan.intent) && plan.entities.genes.length > 0) {
@@ -1132,6 +1250,7 @@ export class IntentRouter {
         if (datasetResults.gse225767?.type === "gene" && datasetResults.gse225767.found && (datasetResults.gse225767.gene || "").toUpperCase() === g.toUpperCase()) found = true;
         if (datasetResults.gse202051?.found && (datasetResults.gse202051.gene || "").toUpperCase() === g.toUpperCase()) found = true;
         if (datasetResults.gse274103?.found && (datasetResults.gse274103.gene || "").toUpperCase() === g.toUpperCase()) found = true;
+        if (datasetResults.cptac_pdac?.found && (datasetResults.cptac_pdac.gene || "").toUpperCase() === g.toUpperCase()) found = true;
         if (datasetResults.multiGeneResults && datasetResults.multiGeneResults[g]?.found) found = true;
 
         if (!found) {
