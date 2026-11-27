@@ -86,7 +86,17 @@ const getExpressionColor = (val: number, maxVal: number, opacity: number) => {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
-export default function SpatialPrototypeView() {
+export type SpatialViewMode = "he_only" | "he_spots" | "expression";
+
+interface SpatialPrototypeViewProps {
+  activeViewMode?: SpatialViewMode;
+  onViewModeChange?: (mode: SpatialViewMode) => void;
+}
+
+export default function SpatialPrototypeView({
+  activeViewMode,
+  onViewModeChange,
+}: SpatialPrototypeViewProps = {}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   
@@ -102,7 +112,12 @@ export default function SpatialPrototypeView() {
   const [loading, setLoading] = useState<boolean>(true);
   
   // UI states
-  const [viewMode, setViewMode] = useState<"he_only" | "he_spots" | "expression">("he_spots");
+  const [internalViewMode, setInternalViewMode] = useState<SpatialViewMode>(activeViewMode || "he_spots");
+  const viewMode = activeViewMode ?? internalViewMode;
+  const setViewMode = (next: SpatialViewMode) => {
+    setInternalViewMode(next);
+    onViewModeChange?.(next);
+  };
   const [spotOpacity, setSpotOpacity] = useState<number>(0.6);
   const [activeGene, setActiveGene] = useState<string | null>(null);
   const [selectedGeneInfo, setSelectedGeneInfo] = useState<MasterGene | null>(null);

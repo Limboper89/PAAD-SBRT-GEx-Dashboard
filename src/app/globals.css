@@ -226,3 +226,50 @@ html.light .recharts-default-tooltip {
   pointer-events: none;
 }
 
+/* Interactive Cohort & Analysis Tab Active Glows */
+.cohort-glow-teal {
+  box-shadow: 0 0 22px -5px rgba(20, 184, 166, 0.45), inset 0 0 0 1px rgba(45, 212, 191, 0.25);
+}
+.cohort-glow-cyan {
+  box-shadow: 0 0 22px -5px rgba(6, 182, 212, 0.45), inset 0 0 0 1px rgba(34, 211, 238, 0.25);
+}
+.cohort-glow-amber {
+  box-shadow: 0 0 22px -5px rgba(245, 158, 11, 0.45), inset 0 0 0 1px rgba(251, 191, 36, 0.25);
+}
+.cohort-glow-rose {
+  box-shadow: 0 0 22px -5px rgba(244, 63, 94, 0.45), inset 0 0 0 1px rgba(251, 113, 133, 0.25);
+}
+.cohort-glow-violet {
+  box-shadow: 0 0 22px -5px rgba(139, 92, 246, 0.45), inset 0 0 0 1px rgba(167, 139, 250, 0.25);
+}
+.cohort-glow-indigo {
+  box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.45), inset 0 0 0 1px rgba(129, 140, 248, 0.25);
+}
+.cohort-glow-emerald {
+  box-shadow: 0 0 20px -5px rgba(16, 185, 129, 0.45), inset 0 0 0 1px rgba(52, 211, 153, 0.25);
+}
+
+/* Light mode: crisp colored elevation & ring instead of dark-mode neon bloom */
+html.light .cohort-glow-teal {
+  box-shadow: 0 6px 18px -6px rgba(13, 148, 136, 0.28), 0 0 0 1px rgba(13, 148, 136, 0.35);
+}
+html.light .cohort-glow-cyan {
+  box-shadow: 0 6px 18px -6px rgba(2, 132, 199, 0.28), 0 0 0 1px rgba(2, 132, 199, 0.35);
+}
+html.light .cohort-glow-amber {
+  box-shadow: 0 6px 18px -6px rgba(217, 119, 6, 0.28), 0 0 0 1px rgba(217, 119, 6, 0.35);
+}
+html.light .cohort-glow-rose {
+  box-shadow: 0 6px 18px -6px rgba(225, 29, 72, 0.28), 0 0 0 1px rgba(225, 29, 72, 0.35);
+}
+html.light .cohort-glow-violet {
+  box-shadow: 0 6px 18px -6px rgba(124, 58, 237, 0.28), 0 0 0 1px rgba(124, 58, 237, 0.35);
+}
+html.light .cohort-glow-indigo {
+  box-shadow: 0 6px 18px -6px rgba(79, 70, 229, 0.28), 0 0 0 1px rgba(79, 70, 229, 0.35);
+}
+html.light .cohort-glow-emerald {
+  box-shadow: 0 6px 18px -6px rgba(5, 150, 105, 0.28), 0 0 0 1px rgba(5, 150, 105, 0.35);
+}
+
+

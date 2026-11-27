@@ -49,6 +49,7 @@ interface PathwayExplorerProps {
   initialRankedGenes?: RankedGene[];
   initialMetadata?: DegTransferMetadata;
   onSelectGene?: (gene: string) => void;
+  hideDatasetSelector?: boolean;
 }
 
 // ============================================================
@@ -129,7 +130,8 @@ export default function PathwayExplorer({
   initialDegList,
   initialRankedGenes,
   initialMetadata,
-  onSelectGene
+  onSelectGene,
+  hideDatasetSelector = false,
 }: PathwayExplorerProps) {
 
   // ── Analysis Source: 4 independent workflows ──────────────
@@ -184,6 +186,32 @@ export default function PathwayExplorer({
   });
   const [cohortGseaRankedGenes, setCohortGseaRankedGenes] = useState<RankedGene[]>([]);
   const [cohortGseaResults, setCohortGseaResults] = useState<PathwayEnrichmentResult[]>([]);
+
+  // Sync datasetId when parent cohort changes
+  useEffect(() => {
+    if (initialDatasetId && initialDatasetId !== datasetId) {
+      setDatasetId(initialDatasetId);
+      setCohortGseaResults([]);
+      setCohortGseaRankedGenes([]);
+      const cfg = DATASET_CONFIG[initialDatasetId];
+      if (cfg) {
+        setCohortGseaQC({
+          datasetId: initialDatasetId,
+          datasetName: cfg.label,
+          contrastLabel: cfg.contrast,
+          rankingMethod: cfg.rankingMethod,
+          totalRanked: 0,
+          mappedCount: 0,
+          unmappedCount: 0,
+          metricMin: 0,
+          metricMax: 0,
+          geneSetsAvailable: pathwayDatabases.length,
+          status: "idle"
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDatasetId]);
 
   // ── Custom ORA state ──────────────────────────────────────
   const [customOraGeneText, setCustomOraGeneText] = useState<string>(
@@ -707,17 +735,23 @@ export default function PathwayExplorer({
                 <div className="text-slate-500 text-xxs">Precomputed ORA against DEG list from selected cohort</div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400 font-bold uppercase text-xxs">Dataset:</span>
-              <select
-                value={datasetId}
-                onChange={e => setDatasetId(e.target.value)}
-                className="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg px-3 py-1.5 font-medium focus:outline-none focus:border-teal-500 cursor-pointer"
-              >
-                <option value="tcga_gtex">TCGA-PAAD vs GTEx Pancreas (Tumor vs Normal)</option>
-                <option value="gse225767">GSE225767 SBRT Radiotherapy (Post vs Pre)</option>
-              </select>
-            </div>
+            {!hideDatasetSelector ? (
+              <div className="flex items-center gap-3">
+                <span className="text-slate-400 font-bold uppercase text-xxs">Dataset:</span>
+                <select
+                  value={datasetId}
+                  onChange={e => setDatasetId(e.target.value)}
+                  className="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg px-3 py-1.5 font-medium focus:outline-none focus:border-teal-500 cursor-pointer"
+                >
+                  <option value="tcga_gtex">TCGA-PAAD vs GTEx Pancreas (Tumor vs Normal)</option>
+                  <option value="gse225767">GSE225767 SBRT Radiotherapy (Post vs Pre)</option>
+                </select>
+              </div>
+            ) : (
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-teal-300 font-semibold text-xxs">
+                {datasetId === "tcga_gtex" ? "Tumor vs Normal" : "Bulk SBRT"}
+              </span>
+            )}
           </div>
         )}
 
@@ -730,41 +764,47 @@ export default function PathwayExplorer({
                 <Layers className="w-4 h-4 text-indigo-400" />
                 <div>
                   <div className="font-bold text-indigo-300 text-xs">COHORT GENE SET ENRICHMENT ANALYSIS</div>
-                  <div className="text-slate-500 text-xxs">Genome-wide ranked transcriptome from selected dataset</div>
+                  <div className="text-slate-500 text-xxs">Genome-wide ranked transcriptome from active cohort</div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-400 font-bold uppercase text-xxs">Dataset:</span>
-                <select
-                  value={datasetId}
-                  onChange={e => {
-                    setDatasetId(e.target.value);
-                    // Reset GSEA state when dataset changes
-                    setCohortGseaResults([]);
-                    setCohortGseaRankedGenes([]);
-                    const cfg = DATASET_CONFIG[e.target.value];
-                    if (cfg) {
-                      setCohortGseaQC({
-                        datasetId: e.target.value,
-                        datasetName: cfg.label,
-                        contrastLabel: cfg.contrast,
-                        rankingMethod: cfg.rankingMethod,
-                        totalRanked: 0,
-                        mappedCount: 0,
-                        unmappedCount: 0,
-                        metricMin: 0,
-                        metricMax: 0,
-                        geneSetsAvailable: pathwayDatabases.length,
-                        status: "idle"
-                      });
-                    }
-                  }}
-                  className="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg px-3 py-1.5 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
-                >
-                  <option value="tcga_gtex">TCGA-PAAD vs GTEx Pancreas (Tumor vs Normal)</option>
-                  <option value="gse225767">GSE225767 SBRT Radiotherapy (Post vs Pre)</option>
-                </select>
-              </div>
+              {!hideDatasetSelector ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-400 font-bold uppercase text-xxs">Dataset:</span>
+                  <select
+                    value={datasetId}
+                    onChange={e => {
+                      setDatasetId(e.target.value);
+                      // Reset GSEA state when dataset changes
+                      setCohortGseaResults([]);
+                      setCohortGseaRankedGenes([]);
+                      const cfg = DATASET_CONFIG[e.target.value];
+                      if (cfg) {
+                        setCohortGseaQC({
+                          datasetId: e.target.value,
+                          datasetName: cfg.label,
+                          contrastLabel: cfg.contrast,
+                          rankingMethod: cfg.rankingMethod,
+                          totalRanked: 0,
+                          mappedCount: 0,
+                          unmappedCount: 0,
+                          metricMin: 0,
+                          metricMax: 0,
+                          geneSetsAvailable: pathwayDatabases.length,
+                          status: "idle"
+                        });
+                      }
+                    }}
+                    className="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg px-3 py-1.5 font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    <option value="tcga_gtex">TCGA-PAAD vs GTEx Pancreas (Tumor vs Normal)</option>
+                    <option value="gse225767">GSE225767 SBRT Radiotherapy (Post vs Pre)</option>
+                  </select>
+                </div>
+              ) : (
+                <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-indigo-300 font-semibold text-xxs">
+                  {datasetId === "tcga_gtex" ? "Tumor vs Normal" : "Bulk SBRT"}
+                </span>
+              )}
             </div>
 
             {/* GSEA Input Panel: shows ranked transcriptome info + Run button */}

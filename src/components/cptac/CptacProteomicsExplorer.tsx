@@ -27,18 +27,29 @@ interface CptacProteomicsExplorerProps {
   basePath: string;
   selectedGene: string;
   onSelectGene: (gene: string) => void;
+  activeSubTab?: CptacSubTab;
+  onSubTabChange?: (tab: CptacSubTab) => void;
+  hideInternalTabs?: boolean;
 }
 
-type CptacSubTab = "abundance" | "concordance" | "heatmap" | "survival";
+export type CptacSubTab = "abundance" | "concordance" | "heatmap" | "survival";
 
 export default function CptacProteomicsExplorer({
   basePath,
   selectedGene,
   onSelectGene,
+  activeSubTab,
+  onSubTabChange,
+  hideInternalTabs = false,
 }: CptacProteomicsExplorerProps) {
   const { registerModuleContext } = useAIContext();
 
-  const [subTab, setSubTab] = useState<CptacSubTab>("abundance");
+  const [internalSubTab, setInternalSubTab] = useState<CptacSubTab>(activeSubTab || "abundance");
+  const subTab = activeSubTab ?? internalSubTab;
+  const setSubTab = (next: CptacSubTab) => {
+    setInternalSubTab(next);
+    onSubTabChange?.(next);
+  };
   const [metadata, setMetadata] = useState<CptacMetadata | null>(null);
   const [proteins, setProteins] = useState<CptacProteinRecord[]>([]);
   const [mrnaOnly, setMrnaOnly] = useState<CptacMrnaOnlyRecord[]>([]);
@@ -232,7 +243,8 @@ export default function CptacProteomicsExplorer({
           </a>
         </div>
 
-        {/* Sub-Navigation Pills */}
+        {/* Sub-Navigation Pills (hidden when controlled by PortalNavigationDock) */}
+        {!hideInternalTabs && (
         <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-800/80">
           {(
             [
@@ -276,6 +288,7 @@ export default function CptacProteomicsExplorer({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Sub-Views */}

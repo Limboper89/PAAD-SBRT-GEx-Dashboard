@@ -56,6 +56,7 @@ interface SurvivalExplorerProps {
     expressions: { [gene: string]: number[] };
   } | null;
   onSelectGene?: (gene: string) => void;
+  hideCohortSwitch?: boolean;
 }
 
 export default function SurvivalExplorer({
@@ -66,6 +67,7 @@ export default function SurvivalExplorer({
   geneIndexLookup,
   sbrtExpressionData,
   onSelectGene,
+  hideCohortSwitch = false,
 }: SurvivalExplorerProps) {
   // Cohort mode: default to sbrt if active study is GSE225767, else tcga
   const [cohortMode, setCohortMode] = useState<"sbrt" | "tcga">(
@@ -1020,7 +1022,8 @@ export default function SurvivalExplorer({
             </p>
           </div>
 
-          {/* Cohort Switch Buttons */}
+          {/* Cohort Switch Buttons (hidden when controlled by top Cohort Dock) */}
+          {!hideCohortSwitch && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
             <button
               onClick={() => setCohortMode("sbrt")}
@@ -1052,6 +1055,7 @@ export default function SurvivalExplorer({
               </span>
             </button>
           </div>
+          )}
         </div>
       </div>
 

@@ -30,6 +30,11 @@ import SummaryCard from "@/components/SummaryCard";
 import PathwayExplorer from "@/components/pathways/PathwayExplorer";
 import SurvivalExplorer from "@/components/SurvivalExplorer";
 import CptacProteomicsExplorer from "@/components/cptac/CptacProteomicsExplorer";
+import PortalNavigationDock, {
+  CptacSubTabId,
+  SnSubTabId,
+  SpatialViewModeId,
+} from "@/components/PortalNavigationDock";
 import { useAIContext } from "@/components/ai/AIProvider";
 import { RankedGene } from "@/utils/pathwayEngine";
 import { DegTransferMetadata } from "@/components/GeneTable";
@@ -75,6 +80,9 @@ export default function Dashboard() {
   // Hard‑coded base path for static export
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const [activeTab, setActiveTab] = useState<"de" | "correlation" | "tme" | "sn" | "survival" | "cptac" | "about" | "pathway">("de");
+  const [cptacSubTab, setCptacSubTab] = useState<CptacSubTabId>("abundance");
+  const [snSubTab, setSnSubTab] = useState<SnSubTabId>("atlas");
+  const [spatialViewMode, setSpatialViewMode] = useState<SpatialViewModeId>("he_spots");
   const [portalTheme, setPortalTheme] = useState<"dark" | "light">("dark");
 
   // Initialize and sync Light / Dark theme class on <html>
@@ -333,20 +341,51 @@ export default function Dashboard() {
     }
   }, [activeStudy, activeTab, tcgaGtexExpressions, tcgaGtexData.length, isTcgaGtexDataLoading, isTcgaGtexExpressionsLoading]);
 
-  // Sync activeStudy selection to tabs
+  // Sync activeStudy selection while preserving the current analysis view whenever possible
   const handleStudyChange = (studyId: string) => {
+    const isBulkTab =
+      activeTab === "de" ||
+      activeTab === "correlation" ||
+      activeTab === "pathway" ||
+      activeTab === "survival";
+
     setActiveStudy(studyId);
+
     if (studyId === "CPTAC_PDAC") {
+      if (activeTab === "correlation") setCptacSubTab("heatmap");
+      else if (activeTab === "survival") setCptacSubTab("survival");
+      else if (activeTab === "de") setCptacSubTab("abundance");
       setActiveTab("cptac");
     } else if (studyId === "GSE274103" || studyId === "PDAC_Spatial") {
       setActiveTab("tme");
     } else if (studyId === "GSE202051") {
+      if (activeTab === "pathway") setSnSubTab("pathway_analysis");
       setActiveTab("sn");
-    } else if (studyId === "TCGA_GTEX") {
-      setActiveTab("de");
-      loadTcgaGtexData();
-    } else {
-      setActiveTab("de");
+    } else if (studyId === "TCGA_GTEX" || studyId === "GSE225767") {
+      if (studyId === "TCGA_GTEX") {
+        if (tcgaGtexData.length === 0 && !isTcgaGtexDataLoading) {
+          loadTcgaGtexData();
+        }
+        if ((activeTab === "correlation" || activeTab === "survival") && !tcgaGtexExpressions && !isTcgaGtexExpressionsLoading) {
+          lazyLoadTcgaGtexExpressions();
+        }
+      }
+
+      if (isBulkTab) {
+        // Stay on the exact same analysis page (Volcano, Correlation, Pathways, or Response/Survival)
+        return;
+      }
+
+      // Map equivalent analysis when coming from Proteomics or Single-Nucleus
+      if (activeTab === "cptac") {
+        if (cptacSubTab === "heatmap") setActiveTab("correlation");
+        else if (cptacSubTab === "survival" && studyId === "TCGA_GTEX") setActiveTab("survival");
+        else setActiveTab("de");
+      } else if (activeTab === "sn" && snSubTab === "pathway_analysis") {
+        setActiveTab("pathway");
+      } else {
+        setActiveTab("de");
+      }
     }
   };
 
@@ -876,21 +915,20 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Active Dataset Selector Dropdown */}
-          <div className="relative flex items-center bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-300 font-mono">
-            <span className="text-slate-500 font-semibold mr-2 uppercase tracking-wide">STUDY:</span>
-            <select
-              value={activeStudy}
-              onChange={(e) => handleStudyChange(e.target.value)}
-              className="bg-transparent text-slate-100 font-medium focus:outline-none cursor-pointer pr-4"
-            >
-              {STUDIES.map(st => (
-                <option key={st.id} value={st.id} className="bg-slate-950 text-slate-200">
-                  [{st.type}] {st.id}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* About / Methods Compact Header Trigger */}
+          <button
+            type="button"
+            onClick={() => setActiveTab(activeTab === "about" ? (activeStudy === "CPTAC_PDAC" ? "cptac" : activeStudy === "GSE202051" ? "sn" : activeStudy === "GSE274103" ? "tme" : "de") : "about")}
+            title="About PDAC BioPortal & Methods"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-mono font-medium transition-all cursor-pointer shadow-sm ${
+              activeTab === "about"
+                ? "bg-teal-500/15 border-teal-400/60 text-teal-300"
+                : "border-slate-800 bg-slate-950 hover:bg-slate-800 text-slate-300"
+            }`}
+          >
+            <HelpCircle className="w-4 h-4 text-teal-400" />
+            <span>Methods</span>
+          </button>
 
           {/* Light / Dark Mode Toggle Button */}
           <button
@@ -915,24 +953,39 @@ export default function Dashboard() {
       </header>
 
       {/* Main Viewport Container */}
-      <main className="flex-1 p-6 flex flex-col gap-6 max-w-7xl mx-auto w-full">
-        {/* Global Cross-Study Disclaimer / Provenance Panel */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex gap-2.5 shadow-xl text-xxs font-mono text-slate-400">
-          <Info className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
-          {activeStudy === "CPTAC_PDAC" ? (
-            <p className="leading-relaxed">
-              <strong>CPTAC-PDAC Discovery Proteomics &amp; Proteogenomics (Cao et al., Cell 2021; PMID:34534465):</strong> Authentic TMT log2 global protein abundance (11,662 proteins across 140 primary tumors and 75 normal adjacent tissues, including 67 case-matched Tumor–NAT pairs), paired RSEM log2 RNA-seq (140 tumors, 21 NATs), and 134 overall survival cases (LinkedOmics + cBioPortal <code>paad_cptac_2021</code> verified parity).
-            </p>
-          ) : activeStudy === "TCGA_GTEX" ? (
-            <p className="leading-relaxed">
-              <strong>TCGA vs GTEx Baseline Transcriptomics:</strong> log₂(TPM + 0.001) values from uniformly processed Toil RNA-seq data were used for relative expression visualization across samples. TCGA and GTEx RNA-seq data were reprocessed through a common Toil computational pipeline, reducing computational processing heterogeneity and improving cross-cohort comparability. Residual cohort, pre-analytical, biological, and tissue-composition differences may remain.
-            </p>
-          ) : (
-            <p className="leading-relaxed">
-              <strong>Cross-Study Notice:</strong> GSE225767, GSE202051, and GSE274103 are independent studies involving different patient cohorts. Cross-modal views in this BioPortal provide complementary biological context and should not be interpreted as matched multi-omics measurements.
-            </p>
-          )}
-        </div>
+      <main className="flex-1 p-6 flex flex-col gap-5 max-w-7xl mx-auto w-full">
+        {/* Interactive Cohort Switcher + Context-Aware Analysis Tabs (Above Gene & Summary Cards) */}
+        <PortalNavigationDock
+          activeStudy={activeStudy}
+          activeTab={activeTab}
+          cptacSubTab={cptacSubTab}
+          snSubTab={snSubTab}
+          spatialViewMode={spatialViewMode}
+          onSelectStudy={handleStudyChange}
+          onSelectBulkTab={(tab) => {
+            setActiveTab(tab);
+            if (tab === "survival" && activeStudy === "TCGA_GTEX") {
+              if (tcgaGtexData.length === 0) loadTcgaGtexData();
+              if (!tcgaGtexExpressions) lazyLoadTcgaGtexExpressions();
+            }
+          }}
+          onSelectCptacSubTab={(sub) => {
+            setActiveStudy("CPTAC_PDAC");
+            setActiveTab("cptac");
+            setCptacSubTab(sub);
+          }}
+          onSelectSnSubTab={(sub) => {
+            setActiveStudy("GSE202051");
+            setActiveTab("sn");
+            setSnSubTab(sub);
+          }}
+          onSelectSpatialViewMode={(mode) => {
+            setActiveStudy("GSE274103");
+            setActiveTab("tme");
+            setSpatialViewMode(mode);
+          }}
+          onExitAbout={() => handleStudyChange(activeStudy)}
+        />
 
         {/* Global Active Gene Highlight card */}
         {activeGeneData && activeTab !== "cptac" && (
@@ -1024,144 +1077,28 @@ export default function Dashboard() {
           ))}
         </section>
 
-        {/* Tab Controllers */}
-        <div id="main-tab-controllers" className="flex flex-wrap border-b border-slate-900 bg-slate-900/20 p-1 rounded-xl self-start gap-1">
-          <button
-            onClick={() => { 
-              if (activeTab !== "de" && activeTab !== "correlation") {
-                setActiveTab("de");
-              }
-              setActiveStudy(activeStudy === "TCGA_GTEX" ? "TCGA_GTEX" : "GSE225767"); 
-            }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              (activeTab === "de" || activeTab === "correlation")
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            Bulk Transcriptomics
-          </button>
-
-          <button
-            onClick={() => setActiveTab("pathway")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "pathway"
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <GitFork className="w-4 h-4 text-teal-400" />
-            Pathway Explorer
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("survival");
-              if (activeStudy === "TCGA_GTEX") {
-                if (tcgaGtexData.length === 0) loadTcgaGtexData();
-                if (!tcgaGtexExpressions) lazyLoadTcgaGtexExpressions();
-              }
-            }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "survival"
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Activity className="w-4 h-4 text-emerald-400" />
-            Treatment Response & Survival
-          </button>
-          
-          <button
-            onClick={() => { setActiveTab("sn"); setActiveStudy("GSE202051"); }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "sn"
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            Single-Nucleus Explorer
-          </button>
-          
-          <button
-            onClick={() => { setActiveTab("tme"); setActiveStudy("GSE274103"); }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "tme"
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Activity className="w-4 h-4" />
-            Spatial Transcriptomics
-          </button>
-
-          <button
-            onClick={() => { setActiveTab("cptac"); setActiveStudy("CPTAC_PDAC"); }}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "cptac"
-                ? "bg-slate-900 text-amber-300 border border-amber-500/40 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <Database className="w-4 h-4 text-amber-400" />
-            CPTAC-PDAC Proteomics
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("about")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-              activeTab === "about"
-                ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-md"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            <HelpCircle className="w-4 h-4" />
-            About / Methods
-          </button>
-        </div>
-
         {/* Tab Content Rendering */}
         <section className="flex-1 flex flex-col gap-6">
-          {/* Sub-tab selection for Bulk Transcriptomics views */}
+          {/* Bulk Transcriptomics Download Utility Strip */}
           {(activeTab === "de" || activeTab === "correlation") && (
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-900/40 p-2 rounded-lg border border-slate-850 self-stretch">
-              <div className="flex gap-1.5 bg-slate-950 p-1 rounded-md text-xxs font-mono border border-slate-900">
-                <button
-                  onClick={() => setActiveTab("de")}
-                  className={`px-3 py-1.5 rounded font-semibold transition ${activeTab === "de" ? "bg-slate-900 text-teal-400 border border-slate-800 shadow-sm" : "text-slate-400 hover:text-white"}`}
+            <div className="flex justify-end items-center gap-2.5 text-xxs font-mono">
+              {activeStudy === "TCGA_GTEX" ? (
+                <a
+                  href={`${basePath}/data/tcga_gtex/tcga_gtex_DEG_results.json`}
+                  download="tcga_gtex_DEG_results.json"
+                  className="bg-teal-500 hover:bg-teal-600 text-slate-950 px-3 py-1.5 rounded-lg font-bold shadow-md transition-colors"
                 >
-                  Differential Expression
-                </button>
-                <button
-                  onClick={() => setActiveTab("correlation")}
-                  className={`px-3 py-1.5 rounded font-semibold transition ${activeTab === "correlation" ? "bg-slate-950 text-teal-400 border border-slate-800 shadow-sm" : "text-slate-400 hover:text-white"}`}
+                  Download TCGA-GTEx DEGs (7.1 MB JSON)
+                </a>
+              ) : (
+                <a
+                  href={`${basePath}/data/GSE225767_DEG_results_with_names.csv`}
+                  download="GSE225767_DEG_results_with_names.csv"
+                  className="bg-indigo-500 hover:bg-indigo-600 text-slate-100 px-3 py-1.5 rounded-lg font-bold shadow-md transition-colors"
                 >
-                  Co-Expression & Heatmap
-                </button>
-              </div>
-              
-              {/* Downloader panel (TCGA-GTEx vs SBRT) */}
-              <div className="flex items-center gap-2.5 text-xxs font-mono">
-                {activeStudy === "TCGA_GTEX" ? (
-                  <a
-                    href={`${basePath}/data/tcga_gtex/tcga_gtex_DEG_results.json`}
-                    download="tcga_gtex_DEG_results.json"
-                    className="bg-teal-500 hover:bg-teal-600 text-slate-950 px-3 py-1.5 rounded font-bold shadow-md transition-colors"
-                  >
-                    Download TCGA-GTEx DEGs (7.1 MB JSON)
-                  </a>
-                ) : (
-                  <a
-                    href={`${basePath}/data/GSE225767_DEG_results_with_names.csv`}
-                    download="GSE225767_DEG_results_with_names.csv"
-                    className="bg-indigo-500 hover:bg-indigo-600 text-slate-100 px-3 py-1.5 rounded font-bold shadow-md transition-colors"
-                  >
-                    Download SBRT DEGs (805 KB CSV)
-                  </a>
-                )}
-              </div>
+                  Download SBRT DEGs (805 KB CSV)
+                </a>
+              )}
             </div>
           )}
 
@@ -1616,6 +1553,7 @@ export default function Dashboard() {
                 initialRankedGenes={pathwayInputRankedGenes}
                 initialMetadata={pathwayInputMetadata}
                 onSelectGene={handleSelectGene}
+                hideDatasetSelector={true}
               />
             </div>
           )}
@@ -1630,19 +1568,27 @@ export default function Dashboard() {
                 geneIndexLookup={tcgaGtexGeneIndexLookup}
                 sbrtExpressionData={expressionData}
                 onSelectGene={handleSelectGene}
+                hideCohortSwitch={true}
               />
             </div>
           )}
 
           {activeTab === "tme" && (
             <div className="flex-1">
-              <SpatialTranscriptomicsView />
+              <SpatialTranscriptomicsView
+                activeViewMode={spatialViewMode}
+                onViewModeChange={setSpatialViewMode}
+              />
             </div>
           )}
 
           {activeTab === "sn" && (
             <div className="flex-1">
-              <SingleNucleusExplorer />
+              <SingleNucleusExplorer
+                activeSubTab={snSubTab}
+                onSubTabChange={setSnSubTab}
+                hideInternalTabs={true}
+              />
             </div>
           )}
 
@@ -1652,6 +1598,9 @@ export default function Dashboard() {
                 basePath={basePath}
                 selectedGene={selectedGene || "NQO1"}
                 onSelectGene={handleSelectGene}
+                activeSubTab={cptacSubTab}
+                onSubTabChange={setCptacSubTab}
+                hideInternalTabs={true}
               />
             </div>
           )}

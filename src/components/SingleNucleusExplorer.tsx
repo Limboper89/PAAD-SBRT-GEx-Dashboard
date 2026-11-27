@@ -189,7 +189,17 @@ function getComparisonLabel(cohort: CohortFilter): string {
   }
 }
 
-export default function SingleNucleusExplorer() {
+interface SingleNucleusExplorerProps {
+  activeSubTab?: AnalysisTab;
+  onSubTabChange?: (tab: AnalysisTab) => void;
+  hideInternalTabs?: boolean;
+}
+
+export default function SingleNucleusExplorer({
+  activeSubTab,
+  onSubTabChange,
+  hideInternalTabs = false,
+}: SingleNucleusExplorerProps = {}) {
   const basePath = "/PAAD-SBRT-GEx-Dashboard";
   const DATA = `${basePath}/data/gse202051`;
 
@@ -215,7 +225,12 @@ export default function SingleNucleusExplorer() {
   const [colorMode, setColorMode] = useState<ColorMode>("broad");
   const [selectedCohort, setSelectedCohort] = useState<CohortFilter>("ALL");
   const [selectedPid, setSelectedPid] = useState("ALL");
-  const [activeTab, setActiveTab] = useState<AnalysisTab>("atlas");
+  const [internalActiveTab, setInternalActiveTab] = useState<AnalysisTab>(activeSubTab || "atlas");
+  const activeTab = activeSubTab ?? internalActiveTab;
+  const setActiveTab = (next: AnalysisTab) => {
+    setInternalActiveTab(next);
+    onSubTabChange?.(next);
+  };
   const [comparisonLevel, setComparisonLevel] = useState<"broad" | "level2">("broad");
 
   const [query, setQuery]         = useState("");
@@ -1097,7 +1112,8 @@ export default function SingleNucleusExplorer() {
           </p>
         </div>
 
-        {/* Primary View Mode Switcher */}
+        {/* Primary View Mode Switcher (hidden when controlled by PortalNavigationDock) */}
+        {!hideInternalTabs && (
         <div className="flex items-center gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800 font-mono text-xs">
           <button
             onClick={() => setActiveTab("atlas")}
@@ -1145,6 +1161,7 @@ export default function SingleNucleusExplorer() {
             Response Heatmap (Mod/Min/Poor)
           </button>
         </div>
+        )}
       </div>
 
       {/* 2. Clinical Cohort Safeguard & Context Banner */}
